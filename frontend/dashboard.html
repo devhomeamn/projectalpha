@@ -4,118 +4,34 @@
   <meta charset="UTF-8">
   <title>Dashboard</title>
   <link rel="stylesheet" href="css/dashboard.css">
+  <script src="js/auth-guard.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <h2 class="logo">SFRMS</h2>
-      <ul id="menuList"></ul>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </aside>
+    <!-- Sidebar (shared component) -->
+    <div id="sidebar"></div>
 
     <!-- Main Content -->
     <main class="main-content">
-      <header class="topbar">
-        <div class="welcome-text">
-          <h2>Welcome back, <span id="name"></span> 👋</h2>
-          <p id="roleLabel"></p>
-        </div>
+      <!-- Topbar (shared component) -->
+      <div id="topbar"></div>
 
-        <div class="user-info">
-          <div class="profile-icon">👤</div>
-          <div>
-            <p class="user-name" id="username"></p>
-            <p class="user-role" id="role"></p>
-          </div>
-        </div>
-      </header>
-
+      <!-- Page-specific content -->
       <section class="stats">
-        <div class="card green">
-          <h3>2000+</h3>
-          <p>Clients Success</p>
-        </div>
-        <div class="card purple">
-          <h3>26 Yrs</h3>
-          <p>Consultant Experience</p>
-        </div>
-        <div class="card blue">
-          <h3>120+</h3>
-          <p>Countries Served</p>
-        </div>
-        <div class="card orange">
-          <h3>$230K</h3>
-          <p>Savings Membership</p>
-        </div>
-        <div class="card yellow">
-          <h3>99%</h3>
-          <p>Customer Satisfaction</p>
-        </div>
-        <div class="card red">
-          <h3>50+</h3>
-          <p>Team Members</p>
-        </div>
+        <div class="card green"><h3>20</h3><p>Total Sections</p></div>
+        <div class="card purple"><h3>26 </h3><p>Number of records</p></div>
+        <div class="card blue"><h3>120+</h3><p>Countries Served</p></div>
+        <div class="card orange"><h3>$230K</h3><p>Savings Membership</p></div>
+        <div class="card yellow"><h3>99%</h3><p>Customer Satisfaction</p></div>
+        <div class="card red"><h3>50+</h3><p>Team Members</p></div>
       </section>
     </main>
   </div>
 
-  <script>
-    // Retrieve login details from localStorage
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    const username = localStorage.getItem('username');
-    const name = localStorage.getItem('name');
-
-    // Redirect if user is not logged in
-    if (!token) {
-      window.location.href = 'login.html';
-    }
-
-    // Define role-based menus
-    const menuItems = [
-      { name: 'Dashboard', icon: '🏠', roles: ['Admin', 'Master', 'General'], link: 'dashboard.html' },
-      { name: 'Add Record', icon: '👤', roles: ['Admin', 'Master', 'General'], link: 'add-record.html' },
-      { name: 'View Record', icon: '📂', roles: ['Admin', 'Master', 'General'], link: 'view-record.html' },
-      { name: 'Add Section', icon: '💳', roles: ['Admin', 'Master'], link: 'add-section.html' },
-      { name: 'Approve User', icon: '⚙️', roles: ['Admin'], link: 'approve-user.html' },
-      { name: 'Help', icon: '❓', roles: ['Admin', 'Master', 'General'], link: 'help.html' }
-    ];
-
-    // Filter menus based on role
-    const allowedMenus = menuItems.filter(item => item.roles.includes(role));
-
-    // Render sidebar menu
-    document.getElementById('menuList').innerHTML = allowedMenus
-      .map((item, index) =>
-        `<li onclick="navigateTo(${index})"><span class="icon">${item.icon}</span> ${item.name}</li>`
-      )
-      .join('');
-
-    // Display user info
-    document.getElementById('name').textContent = name || 'User';
-    document.getElementById('username').textContent = username || 'Not available';
-    document.getElementById('role').textContent = role || 'Unknown';
-    document.getElementById('roleLabel').textContent = `Your Role: ${role || 'Guest'}`;
-
-    // Menu navigation
-    function navigateTo(index) {
-      const items = document.querySelectorAll('.sidebar ul li');
-      items.forEach(li => li.classList.remove('active'));
-      items[index].classList.add('active');
-
-      const selectedMenu = allowedMenus[index];
-      if (selectedMenu.link) {
-        window.location.href = selectedMenu.link;
-      }
-    }
-
-    // Logout functionality
-    function logout() {
-      localStorage.clear();
-      window.location.href = 'login.html';
-    }
+  <!-- ✅ Use the new shared layout.js -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("dashboard.html"); // highlights "Dashboard" in the sidebar
   </script>
-
 </body>
 </html>

@@ -1,35 +1,47 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const Section = require('./sectionModel');
-const Subcategory = require('./subcategoryModel');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/db");
+const Section = require("./sectionModel");
+const Subcategory = require("./subcategoryModel");
+const Rack = require("./rackModel");
 
-const Record = sequelize.define('Record', {
+const Record = sequelize.define("Record", {
   file_name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
   },
-  rack_no: {
+  bd_no: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true,
+  },
+  section_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  subcategory_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  rack_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   },
   description: {
-    type: DataTypes.TEXT
+    type: DataTypes.TEXT,
   },
   added_by: {
-    type: DataTypes.STRING, // user email বা username
-    allowNull: false
+    type: DataTypes.STRING,
+    allowNull: true,
   },
-  is_moved_to_central: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  }
 });
 
-// Relation setup
-Section.hasMany(Record, { foreignKey: 'section_id', onDelete: 'SET NULL' });
-Record.belongsTo(Section, { foreignKey: 'section_id' });
+// 🧩 Relationships
+Section.hasMany(Record, { foreignKey: "section_id", onDelete: "CASCADE" });
+Record.belongsTo(Section, { foreignKey: "section_id" });
 
-Subcategory.hasMany(Record, { foreignKey: 'subcategory_id', onDelete: 'SET NULL' });
-Record.belongsTo(Subcategory, { foreignKey: 'subcategory_id' });
+Subcategory.hasMany(Record, { foreignKey: "subcategory_id", onDelete: "SET NULL" });
+Record.belongsTo(Subcategory, { foreignKey: "subcategory_id" });
+
+Rack.hasMany(Record, { foreignKey: "rack_id", onDelete: "SET NULL" });
+Record.belongsTo(Rack, { foreignKey: "rack_id" });
 
 module.exports = Record;

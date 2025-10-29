@@ -4,7 +4,7 @@
 --
 -- Host: 127.0.0.1
 -- Generation Time: Oct 21, 2025 at 08:59 PM
--- Server version: 8.0.43
+-- Server version: 8.0.433
 -- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";

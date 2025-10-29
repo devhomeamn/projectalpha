@@ -29,10 +29,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/records', recordRoutes);
 
-// ✅ Manual test route (backend check)
-app.get('/api/test', (req, res) => {
-  res.json({ message: '✅ Manual route working fine' });
-});
 
 // ✅ Static serve (সবচেয়ে শেষে)
 app.use(express.static(path.join(__dirname, 'frontend')));
@@ -43,9 +39,14 @@ app.get('/', (req, res) => {
 });
 
 // ✅ Database sync
-sequelize.sync({ alter: true })
-  .then(() => console.log('✅ Database synced'))
-  .catch(err => console.error(err));
+sequelize.sync({ alter: true }) // 🔧 auto create/update tables
+  .then(() => console.log("✅ Database synced"))
+  .catch(console.error);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Send API base URL from backend (.env)
+app.get('/api/config', (req, res) => {
+  res.json({ apiBase: process.env.API_BASE });
+});
+

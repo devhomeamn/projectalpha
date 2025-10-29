@@ -4,45 +4,69 @@
   <meta charset="UTF-8">
   <title>Add Record</title>
   <link rel="stylesheet" href="css/dashboard.css">
+  <script src="js/auth-guard.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
-    <aside class="sidebar">
-      <h2 class="logo">Creativo</h2>
-      <ul>
-        <li><a href="dashboard.html">Dashboard</a></li>
-        <li><a href="view-record.html">View Record</a></li>
-        <li class="active">📂 Add Record</li>
-      </ul>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </aside>
+    <!-- Sidebar -->
+    <div id="sidebar"></div>
 
+    <!-- Main Content -->
     <main class="main-content">
-      <header class="topbar">
-        <h2>Add New Record</h2>
-        <p id="userInfo"></p>
-      </header>
+      <!-- Topbar -->
+      <div id="topbar"></div>
 
       <section class="content">
-        <form id="recordForm">
-          <input type="text" id="file_name" placeholder="File Name" required>
+        <h2>Add New Record</h2>
 
-          <select id="section_id">
-            <option value="">-- Select Section --</option>
-          </select>
+        <form id="recordForm" class="form-card">
+          <div class="form-group">
+            <label for="file_name">File Name</label>
+            <input type="text" id="file_name" placeholder="Enter File Name" required>
+          </div>
 
-          <select id="subcategory_id">
-            <option value="">-- Select Subcategory --</option>
-          </select>
+          <div class="form-group">
+            <label for="bd_no">BD No.</label>
+            <input type="text" id="bd_no" placeholder="Enter BD No." required>
+          </div>
 
-          <input type="text" id="rack_no" placeholder="Rack Number" required>
-          <textarea id="description" placeholder="Description"></textarea>
-          <button type="submit">Add Record</button>
+          <div class="form-group">
+            <label for="section_id">Select Section</label>
+            <select id="section_id" required></select>
+          </div>
+
+          <div class="form-group">
+            <label for="subcategory_id">Select Subcategory</label>
+            <select id="subcategory_id">
+              <option value="">-- Select Subcategory --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="rack_id">Select Rack</label>
+            <select id="rack_id" required>
+              <option value="">-- Select Rack --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder="Add Description (optional)"></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary">➕ Add Record</button>
         </form>
       </section>
     </main>
   </div>
 
+  <!-- ✅ Shared Layout -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("add-record.html");
+  </script>
+
+  <!-- Page-specific JS -->
   <script src="js/add-record.js"></script>
 </body>
 </html>

@@ -4,45 +4,100 @@
   <meta charset="UTF-8">
   <title>Add Section</title>
   <link rel="stylesheet" href="css/dashboard.css">
+  <script src="js/auth-guard.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
-    <aside class="sidebar">
-      <h2 class="logo">Creativo</h2>
-      <ul>
-        <li><a href="dashboard.html">🏠 Dashboard</a></li>
-        <li class="active">📁 Add Section</li>
-      </ul>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </aside>
+    <!-- Sidebar (shared) -->
+    <div id="sidebar"></div>
 
+    <!-- Main Content -->
     <main class="main-content">
-      <header class="topbar">
-        <h2>Add New Section</h2>
-      </header>
+      <!-- Topbar (shared) -->
+      <div id="topbar"></div>
 
-      <section class="content">
-        <form id="sectionForm">
-          <input type="text" id="sectionName" placeholder="Section Name" required>
-          <textarea id="sectionDesc" placeholder="Description"></textarea>
-          <button type="submit">Add Section</button>
+      <!-- Page-specific content -->
+      <section class="content section-page">
+        <header class="page-header">
+          <h2>Add New Section</h2>
+          <p class="subtext">Create a new section and manage related subcategories and racks below.</p>
+        </header>
+
+        <!-- Add Section Form -->
+        <form id="sectionForm" class="form-card">
+          <div class="form-group">
+            <label for="sectionName">Section Name</label>
+            <input type="text" id="sectionName" placeholder="Enter Section Name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="sectionDesc">Description</label>
+            <textarea id="sectionDesc" placeholder="Describe this section"></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary">➕ Add Section</button>
         </form>
 
         <div class="divider"></div>
 
-        <h3>Add Subcategory</h3>
-        <form id="subForm">
-          <select id="sectionSelect"></select>
-          <input type="text" id="subName" placeholder="Subcategory Name" required>
-          <button type="submit">Add Subcategory</button>
+        <!-- Add Subcategory -->
+        <header class="page-header">
+          <h3>Add Subcategory</h3>
+        </header>
+
+        <form id="subForm" class="form-card">
+          <div class="form-group">
+            <label for="sectionSelect">Select Section</label>
+            <select id="sectionSelect"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="subName">Subcategory Name</label>
+            <input type="text" id="subName" placeholder="Enter Subcategory Name" required>
+          </div>
+
+          <button type="submit" class="btn-secondary">📁 Add Subcategory</button>
         </form>
 
-        <div id="sectionList"></div>
+        <div class="divider"></div>
+
+        <!-- Add Rack -->
+        <header class="page-header">
+          <h3>Add Rack</h3>
+        </header>
+
+        <form id="rackForm" class="form-card">
+          <div class="form-group">
+            <label for="sectionSelectRack">Select Section</label>
+            <select id="sectionSelectRack"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="rackName">Rack Name / Number</label>
+            <input type="text" id="rackName" placeholder="Enter Rack Name or Number" required>
+          </div>
+
+          <div class="form-group">
+            <label for="rackDesc">Description</label>
+            <textarea id="rackDesc" placeholder="Optional description"></textarea>
+          </div>
+
+          <button type="submit" class="btn-tertiary">🗂️ Add Rack</button>
+        </form>
+
+        <!-- Section List Display -->
+        <div id="sectionList" class="section-list"></div>
       </section>
     </main>
   </div>
 
-  <!-- External JS -->
+  <!-- ✅ Shared Layout Loader -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("add-section.html");
+  </script>
+
+  <!-- Page-specific logic -->
   <script src="js/add-section.js"></script>
 </body>
 </html>
