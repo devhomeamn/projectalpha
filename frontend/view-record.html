@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>View Records</title>
   <link rel="stylesheet" href="css/dashboard.css">
+ 
 
   <style>
     /* --- Table Styles --- */
@@ -148,6 +149,26 @@
     }
   </style>
 </head>
+
+<!-- ✅ Confirm Modal -->
+<div id="confirmModal" class="modal">
+  <div class="modal-content" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 id="confirmTitle"></h3>
+      <button class="close-btn" onclick="closeConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMessage"></p>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+      <button id="confirmCancel" class="btn-primary" onclick="closeConfirm()">No</button>
+      <button id="confirmYes" class="btn-secondary">Yes</button>
+    </div>
+  </div>
+</div>
+
+
+
 <body>
   <div class="dashboard-container">
     <!-- Sidebar (shared) -->
@@ -208,5 +229,6 @@
 
   <!-- Page-specific script -->
   <script src="js/view-record.js"></script>
+  <script src="js/confirm-util.js"></script>
 </body>
 </html>

@@ -17,7 +17,9 @@ exports.addRecord = async (req, res) => {
     } = req.body;
 
     if (!file_name || !section_id || !rack_id) {
-      return res.status(400).json({ error: "File name, Section, and Rack are required" });
+      return res
+        .status(400)
+        .json({ error: "File name, Section, and Rack are required" });
     }
 
     const record = await Record.create({
@@ -28,6 +30,7 @@ exports.addRecord = async (req, res) => {
       rack_id,
       description,
       added_by,
+      status: "active",
     });
 
     res.json({ message: "✅ Record added successfully", record });
@@ -55,19 +58,21 @@ exports.getRecords = async (req, res) => {
   }
 };
 
-// ================== MOVE TO CENTRAL (IF USED) ==================
+// ================== MOVE TO CENTRAL ==================
 exports.moveToCentral = async (req, res) => {
   try {
     const { id } = req.params;
     const record = await Record.findByPk(id);
-    if (!record) return res.status(404).json({ error: "Record not found" });
 
-    record.section_id = null;
-    record.subcategory_id = null;
-    record.rack_id = null;
+    if (!record) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+
+    // ✅ Mark as moved to central instead of nulling FKs
+    record.status = "central";
     await record.save();
 
-    res.json({ message: "✅ Record moved to central", record });
+    res.json({ message: "✅ Record moved to central successfully", record });
   } catch (err) {
     console.error("❌ moveToCentral error:", err);
     res.status(500).json({ error: err.message });

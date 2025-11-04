@@ -32,6 +32,12 @@ const Record = sequelize.define("Record", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  // 🟢 New field to track record location
+  status: {
+    type: DataTypes.ENUM("active", "central"),
+    allowNull: false,
+    defaultValue: "active",
+  },
 });
 
 // 🧩 Relationships

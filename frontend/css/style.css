@@ -50,3 +50,31 @@ button:hover {
   margin-top: 10px;
   color: red;
 }
+
+#confirmModal .modal-content {
+  text-align: center;
+  padding: 24px;
+}
+
+#confirmModal .modal-header h3 {
+  margin: 0;
+  color: #111827;
+}
+
+#confirmModal .btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+#confirmModal .btn-secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+#confirmModal .btn-primary:hover {
+  background: #1d4ed8;
+}
+
+#confirmModal .btn-secondary:hover {
+  background: #d1d5db;
+}

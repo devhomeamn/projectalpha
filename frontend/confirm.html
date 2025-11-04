@@ -1,0 +1,16 @@
+<!-- ✅ Global Confirm Modal -->
+<div id="confirmModal" class="modal">
+  <div class="modal-content" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 id="confirmTitle">Confirm Action</h3>
+      <button class="close-btn" onclick="closeConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMessage">Are you sure you want to proceed?</p>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+      <button id="confirmCancel" class="btn-secondary" onclick="closeConfirm()">No</button>
+      <button id="confirmYes" class="btn-primary">Yes</button>
+    </div>
+  </div>
+</div>
