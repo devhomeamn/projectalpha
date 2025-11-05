@@ -1,4 +1,14 @@
 /* ========== GLOBAL BASE ========== */
+@import url('https://fonts.googleapis.com/css?family=Poppins:400,500,600,700&display=swap');
+*{
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: 'Poppins', sans-serif;
+}
+
+
+
 :root {
   --sidebar-bg: #111827;
   --sidebar-hover: #1f2937;
@@ -16,7 +26,7 @@
 
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+ 
   background: #f9f9f9;
   color: #111827;
 }
@@ -503,4 +513,22 @@ position: relative;
   border-radius: 8px;
   padding: 20px;
   box-shadow: inset 0 0 0 1px #e5e7eb;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+}
+
+.logo-text .logo-link {
+  text-decoration: none;
+  color: #eb0d44; /* your red accent color */
+  transition: color 0.3s ease;
+}
+
+.logo-text .logo-link:hover {
+  color: #4070f4; /* blue hover effect for consistency */
+  text-shadow: 0 0 5px rgba(64, 112, 244, 0.4);
 }

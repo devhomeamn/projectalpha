@@ -1,29 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Register | Office File System</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <div class="container">
-    <h2>Register</h2>
-    <form id="registerForm">
-      <input type="text" id="name" placeholder="Full Name" required />
-      <input type="text" id="serviceid" placeholder="Serviceid" required />
-      <input type="text" id="username" placeholder="Username" required />
-      <input type="password" id="password" placeholder="Password" required />
-      <select id="role">
-        <option value="General">General User</option>
-        <option value="Master">Master</option>
-        <option value="Admin">Admin</option>
-      </select>
-      <button type="submit">Register</button>
-      <p>Already have an account? <a href="login.html">Login</a></p>
-    </form>
-    <div id="message"></div>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Register | Office File System</title>
+    <link rel="stylesheet" href="css/auth.css" />
+  </head>
+  <body>
+    <div class="wrapper">
+      <h1>SFC Air FRMS</h1>
+      <h2>Sign UP</h2>
+      <form id="registerForm">
+        <div class="input-box">
+          <input type="text" id="name" placeholder="Full Name" required />
+        </div>
+        <div class="input-box">
+          <input type="text" id="serviceid" placeholder="Serviceid" required />
+        </div>
+        <div class="input-box">
+          <input
+            type="text"
+            id="username"
+            placeholder=" your username"
+            required
+          />
+        </div>
+        <div class="input-box">
+          <input
+            type="password"
+            id="password"
+            placeholder="Password"
+            required
+          />
+        </div>
 
-  <script src="js/auth.js"></script>
-</body>
+       <div class="input-box">
+  <select id="role" required>
+    
+    <option value="General">General User</option>
+    <option value="Master">Master</option>
+    <option value="Admin">Admin</option>
+  </select>
+</div>
+
+
+        <div class="input-box button">
+          <input type="Submit" value="Register" />
+        </div>
+        <p>Already have an account? <a href="login.html">Login</a></p>
+      </form>
+      <div id="message"></div>
+    </div>
+
+    <script src="js/auth.js"></script>
+  </body>
 </html>
