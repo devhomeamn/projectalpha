@@ -39,11 +39,12 @@ app.get('/', (req, res) => {
 });
 
 // ✅ Database sync
-sequelize.sync({ alter: true }) // 🔧 auto create/update tables
-  .then(() => console.log("✅ Database synced"))
+sequelize.sync({ alter: false })
+  .then(() => console.log("✅ Database synced with approval system"))
   .catch(console.error);
 
-const PORT = process.env.PORT || 5000;
+
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 // Send API base URL from backend (.env)
 app.get('/api/config', (req, res) => {

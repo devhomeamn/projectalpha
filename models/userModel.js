@@ -11,9 +11,10 @@ const User = sequelize.define('User', {
     unique: true,
     allowNull: false,
   },
-   serviceid: {
+  serviceid: {
     type: DataTypes.INTEGER,
-       allowNull: false,
+    unique: true,
+    allowNull: false,
   },
   password: {
     type: DataTypes.STRING,
@@ -22,6 +23,10 @@ const User = sequelize.define('User', {
   role: {
     type: DataTypes.ENUM('Admin', 'Master', 'General'),
     defaultValue: 'General',
+  },
+  status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'pending', // ✅ new field for approval
   }
 });
 

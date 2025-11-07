@@ -11,7 +11,10 @@ const sequelize = new Sequelize(
     dialect: process.env.DB_DIALECT || 'mysql',
     logging: false,
     dialectOptions: {
-      ssl: false, // ❌ force disable SSL
+      ssl: {
+        require: true,
+        rejectUnauthorized: false, // 👈 Change to true if you’re using a CA certificate
+      },
       connectTimeout: 10000, // 10s timeout
     },
   }

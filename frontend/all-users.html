@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>All Users</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    th {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+    }
+    tr:hover { background: #f9fafb; cursor: pointer; }
+    .status {
+      padding: 5px 10px;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 500;
+    }
+    .approved { background: #10b981; }
+    .pending { background: #f59e0b; }
+    .rejected { background: #ef4444; }
+    .search-box {
+      margin: 15px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 40%;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content">
+        <header class="page-header">
+          <h2>All Registered Users</h2>
+        </header>
+
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="🔍 Search by username or service ID...">
+        </div>
+
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Service ID</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Registered Date</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("all-users.html");
+  </script>
+
+  <script src="js/auth-guard.js"></script>
+  <script src="js/all-users.js"></script>
+</body>
+</html>

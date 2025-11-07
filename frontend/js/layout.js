@@ -26,8 +26,10 @@ export async function initLayout(activePage) {
     { name: "Dashboard", roles: ["Admin", "Master", "General"], link: "dashboard.html" },
     { name: "Add Record", roles: ["Admin", "Master", "General"], link: "add-record.html" },
     { name: "View Record", roles: ["Admin", "Master", "General"], link: "view-record.html" },
+    { name: "View Central Record", roles: ["Admin", "Master", "General"], link: "central-record.html" },
     { name: "Add Section", roles: ["Admin", "Master"], link: "add-section.html" },
     { name: "Approve User", roles: ["Admin"], link: "approve-user.html" },
+    { name: "All Users", roles: ["Admin"], link: "all-users.html" },
     { name: "Help", roles: ["Admin", "Master", "General"], link: "help.html" }
   ];
 

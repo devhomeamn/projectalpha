@@ -78,8 +78,8 @@ function initForms() {
 
       if (res.ok) {
         message.style.color = 'green';
-        message.innerText = '✅ Registration Successful!';
-        setTimeout(() => (window.location.href = 'login.html'), 1500);
+        message.innerText = 'Registration Successful, wait for approval!';
+        setTimeout(() => (window.location.href = 'login.html'), 15000);
       } else {
         message.innerText = data.error || '❌ Registration Failed';
       }

@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const Record = require("../models/recordModel");
 const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
@@ -43,7 +44,18 @@ exports.addRecord = async (req, res) => {
 // ================== GET ALL RECORDS ==================
 exports.getRecords = async (req, res) => {
   try {
+    const q = req.query.q || "";
+
     const records = await Record.findAll({
+      where: {
+        ...(q && {
+          [Op.or]: [
+            { file_name: { [Op.like]: `%${q}%` } },
+            { bd_no: { [Op.like]: `%${q}%` } },
+            { description: { [Op.like]: `%${q}%` } },
+          ],
+        }),
+      },
       include: [
         { model: Section, attributes: ["id", "name"] },
         { model: Subcategory, attributes: ["id", "name"] },
@@ -51,6 +63,7 @@ exports.getRecords = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+
     res.json(records);
   } catch (err) {
     console.error("❌ getRecords error:", err);
@@ -75,6 +88,58 @@ exports.moveToCentral = async (req, res) => {
     res.json({ message: "✅ Record moved to central successfully", record });
   } catch (err) {
     console.error("❌ moveToCentral error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================== GET CENTRAL RECORDS (with search) ==================
+exports.getCentralRecords = async (req, res) => {
+  try {
+    const q = req.query.q || "";
+
+    const records = await Record.findAll({
+      where: {
+        status: "central",
+        ...(q && {
+          [Op.or]: [
+            { file_name: { [Op.like]: `%${q}%` } },
+            { bd_no: { [Op.like]: `%${q}%` } },
+            { description: { [Op.like]: `%${q}%` } },
+          ],
+        }),
+      },
+      include: [
+        { model: Section, attributes: ["id", "name"] },
+        { model: Subcategory, attributes: ["id", "name"] },
+        { model: Rack, attributes: ["id", "name"] },
+      ],
+      order: [["updatedAt", "DESC"]],
+    });
+
+    // 🧾 Optional CSV export (if ?export=csv is passed)
+    if (req.query.export === "csv") {
+      const { Parser } = require("json2csv");
+      const fields = [
+        "id",
+        "file_name",
+        "bd_no",
+        "Section.name",
+        "Rack.name",
+        "description",
+        "added_by",
+        "status",
+      ];
+      const parser = new Parser({ fields });
+      const csv = parser.parse(records.map((r) => r.toJSON()));
+
+      res.header("Content-Type", "text/csv");
+      res.attachment(`central_records_${new Date().toISOString().slice(0, 10)}.csv`);
+      return res.send(csv);
+    }
+
+    res.json(records);
+  } catch (err) {
+    console.error("❌ getCentralRecords error:", err);
     res.status(500).json({ error: err.message });
   }
 };

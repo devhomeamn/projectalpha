@@ -169,3 +169,4 @@ document.addEventListener("DOMContentLoaded", () => {
     userInfo.textContent = `Logged in as: ${localStorage.getItem("username") || "Unknown User"}`;
   loadConfig();
 });
+
