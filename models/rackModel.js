@@ -5,18 +5,24 @@ const Section = require('./sectionModel');
 const Rack = sequelize.define('Rack', {
   name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
   },
   description: {
-    type: DataTypes.TEXT
+    type: DataTypes.TEXT,
   },
   section_id: {
     type: DataTypes.INTEGER,
-    allowNull: false
-  }
+    allowNull: true, // central rack-এর জন্য null রাখা যাবে
+  },
+  is_central: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  
 });
 
-// 🧩 Relationships
+// Relations
 Section.hasMany(Rack, { foreignKey: 'section_id', onDelete: 'CASCADE' });
 Rack.belongsTo(Section, { foreignKey: 'section_id' });
 

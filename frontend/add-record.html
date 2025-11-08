@@ -20,21 +20,27 @@
         <h2>Add New Record</h2>
 
         <form id="recordForm" class="form-card">
+          <!-- File Name -->
           <div class="form-group">
-            <label for="file_name">File Name</label>
+            <label for="file_name">File Name <span style="color:red">*</span></label>
             <input type="text" id="file_name" placeholder="Enter File Name" required>
           </div>
 
+          <!-- BD No -->
           <div class="form-group">
             <label for="bd_no">BD No.</label>
-            <input type="text" id="bd_no" placeholder="Enter BD No." required>
+            <input type="text" id="bd_no" placeholder="Enter BD No.">
           </div>
 
+          <!-- Section -->
           <div class="form-group">
-            <label for="section_id">Select Section</label>
-            <select id="section_id" required></select>
+            <label for="section_id">Select Section <span style="color:red">*</span></label>
+            <select id="section_id" required>
+              <option value="">-- Select Section --</option>
+            </select>
           </div>
 
+          <!-- Subcategory -->
           <div class="form-group">
             <label for="subcategory_id">Select Subcategory</label>
             <select id="subcategory_id">
@@ -42,13 +48,21 @@
             </select>
           </div>
 
+          <!-- Rack -->
           <div class="form-group">
-            <label for="rack_id">Select Rack</label>
+            <label for="rack_id">Select Rack <span style="color:red">*</span></label>
             <select id="rack_id" required>
               <option value="">-- Select Rack --</option>
             </select>
           </div>
 
+          <!-- Serial No -->
+          <div class="form-group">
+            <label for="serial_no">Serial No.</label>
+            <input type="text" id="serial_no" readonly placeholder="Auto-generated">
+          </div>
+
+          <!-- Description -->
           <div class="form-group">
             <label for="description">Description</label>
             <textarea id="description" placeholder="Add Description (optional)"></textarea>

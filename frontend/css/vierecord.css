@@ -1,0 +1,237 @@
+/* ================================
+   📄 View Records Page Styles
+   ================================ */
+
+/* --- Table Styles --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+th, td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+th {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+
+tr:hover {
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+/* --- Status Labels --- */
+.status {
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.central {
+  background: #10b981;
+}
+
+.section {
+  background: #f97316;
+}
+
+/* --- Action Buttons --- */
+.btn-move {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.btn-move:hover {
+  background: #1d4ed8;
+}
+
+/* --- Toolbar --- */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  margin-top: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#searchInput,
+#sectionFilter {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+#searchInput {
+  width: 220px;
+}
+
+/* --- Buttons --- */
+#exportBtn,
+.btn-primary {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+#exportBtn:hover,
+.btn-primary:hover {
+  background: #059669;
+}
+
+.btn-secondary {
+  background: #9ca3af;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #6b7280;
+}
+
+/* --- Pagination --- */
+#paginationInfo {
+  margin-top: 10px;
+  font-size: 0.95rem;
+  color: #4b5563;
+  text-align: right;
+}
+
+#paginationControls {
+  margin: 12px 0;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+#paginationControls button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#paginationControls button:hover {
+  background: #1e40af;
+}
+
+/* --- Modal --- */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  float: right;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.modal-body p {
+  margin: 8px 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #paginationInfo {
+    text-align: center;
+  }
+
+  #searchInput {
+    width: 100%;
+  }
+}
+#pageSizeControl select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #fff;
+}
+#pageSizeControl label {
+  margin-right: 6px;
+  color: #374151;
+  font-weight: 500;
+}

@@ -1,90 +1,86 @@
-console.log("✅ add-section.js loaded");
+console.log("add-section.js loaded");
 
 let API_BASE = "";
 
-// 🔧 Load backend API base from server (.env -> /api/config)
+// Load config
 async function loadConfig() {
   try {
     const res = await fetch("/api/config");
     const data = await res.json();
     API_BASE = data.apiBase ? `${data.apiBase}/api` : `${window.location.origin}/api`;
-    console.log("✅ API Base loaded:", API_BASE);
+    console.log("API Base:", API_BASE);
     initPage();
   } catch (err) {
-    console.error("⚠️ Could not load backend config:", err);
+    console.error("Config load error:", err);
     API_BASE = `${window.location.origin}/api`;
     initPage();
   }
 }
 
-// ================== PAGE INIT ==================
 function initPage() {
-  const sectionForm = document.getElementById("sectionForm");
-  if (sectionForm) sectionForm.addEventListener("submit", onAddSection);
-
-  const subForm = document.getElementById("subForm");
-  if (subForm) subForm.addEventListener("submit", onAddSubcategory);
-
-  const rackForm = document.getElementById("rackForm");
-  if (rackForm) rackForm.addEventListener("submit", onAddRack);
+  document.getElementById("sectionForm")?.addEventListener("submit", onAddSection);
+  document.getElementById("subForm")?.addEventListener("submit", onAddSubcategory);
+  document.getElementById("rackForm")?.addEventListener("submit", onAddRack);
+  document.getElementById("centralRackForm")?.addEventListener("submit", onAddCentralRack);
 
   fetchSections();
+  fetchCentralRacks();
 }
 
 // ================== FETCH SECTIONS ==================
 async function fetchSections() {
   try {
-    console.log("📡 Fetching sections...");
     const res = await fetch(`${API_BASE}/sections`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
     const sectionSelect = document.getElementById("sectionSelect");
     const sectionSelectRack = document.getElementById("sectionSelectRack");
     const sectionList = document.getElementById("sectionList");
 
-    if (sectionSelect) sectionSelect.innerHTML = "";
-    if (sectionSelectRack) sectionSelectRack.innerHTML = "";
+    if (sectionSelect) sectionSelect.innerHTML = '<option value="">-- Select Section --</option>';
+    if (sectionSelectRack) sectionSelectRack.innerHTML = '<option value="">-- Select Section --</option>';
     if (sectionList) sectionList.innerHTML = "";
 
     data.forEach((sec) => {
-      // dropdown for subcategory
+      if (sec.name.toLowerCase() === "central room") return; // hide central room from dropdown
+
       if (sectionSelect) {
-        const opt1 = document.createElement("option");
-        opt1.value = sec.id;
-        opt1.textContent = sec.name;
-        sectionSelect.appendChild(opt1);
+        const opt = document.createElement("option");
+        opt.value = sec.id;
+        opt.textContent = sec.name;
+        sectionSelect.appendChild(opt);
       }
 
-      // dropdown for rack
       if (sectionSelectRack) {
-        const opt2 = document.createElement("option");
-        opt2.value = sec.id;
-        opt2.textContent = sec.name;
-        sectionSelectRack.appendChild(opt2);
+        const opt = document.createElement("option");
+        opt.value = sec.id;
+        opt.textContent = sec.name;
+        sectionSelectRack.appendChild(opt);
       }
 
-      // section display
       if (sectionList) {
-        const subs = sec.Subcategories?.map((s) => `<li>${s.name}</li>`).join("") || "";
+        const subs = sec.Subcategories?.map(s => `<li>${s.name}</li>`).join("") || "<li>No subcategories</li>";
         sectionList.innerHTML += `
           <div class="section-block">
             <h4>${sec.name}</h4>
+            <p>${sec.description || "No description"}</p>
             <ul>${subs}</ul>
           </div>`;
       }
     });
   } catch (err) {
-    console.error("❌ fetchSections error:", err);
-    alert("Server error — check if backend is running!");
+    console.error("fetchSections error:", err);
+    alert("Failed to load sections!");
   }
 }
 
-// ================== ADD NEW SECTION ==================
+// ================== ADD SECTION ==================
 async function onAddSection(e) {
   e.preventDefault();
   const name = document.getElementById("sectionName").value.trim();
   const description = document.getElementById("sectionDesc").value.trim();
+
+  if (!name) return alert("Section name required!");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add`, {
@@ -93,14 +89,12 @@ async function onAddSection(e) {
       body: JSON.stringify({ name, description }),
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await res.json();
-    alert("✅ Section added successfully!");
-
+    if (!res.ok) throw new Error((await res.json()).error);
+    alert("Section added successfully!");
     e.target.reset();
     fetchSections();
   } catch (err) {
-    console.error("❌ addSection error:", err);
+    alert(err.message);
   }
 }
 
@@ -110,10 +104,7 @@ async function onAddSubcategory(e) {
   const sectionId = document.getElementById("sectionSelect").value;
   const name = document.getElementById("subName").value.trim();
 
-  if (!sectionId || !name) {
-    alert("⚠️ Please select a section and enter subcategory name!");
-    return;
-  }
+  if (!sectionId || !name) return alert("Select section and enter name!");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add-sub`, {
@@ -121,15 +112,12 @@ async function onAddSubcategory(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sectionId, name }),
     });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await res.json();
-    alert("✅ Subcategory added!");
-
+    if (!res.ok) throw new Error((await res.json()).error);
+    alert("Subcategory added!");
     e.target.reset();
     fetchSections();
   } catch (err) {
-    console.error("❌ addSubcategory error:", err);
+    alert(err.message);
   }
 }
 
@@ -140,10 +128,7 @@ async function onAddRack(e) {
   const name = document.getElementById("rackName").value.trim();
   const description = document.getElementById("rackDesc").value.trim();
 
-  if (!sectionId || !name) {
-    alert("⚠️ Please select a section and enter rack name!");
-    return;
-  }
+  if (!sectionId || !name) return alert("Select section and enter rack name!");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add-rack`, {
@@ -151,23 +136,51 @@ async function onAddRack(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sectionId, name, description }),
     });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await res.json();
-
-    alert("✅ Rack added successfully!");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert(data.message);
     e.target.reset();
   } catch (err) {
-    console.error("❌ addRack error:", err);
-    alert("Server error while adding rack!");
+    alert(err.message);
   }
 }
 
-// ================== LOGOUT ==================
-function logout() {
-  localStorage.clear();
-  window.location.href = "login.html";
+// ================== ADD CENTRAL ROOM RACK ==================
+async function onAddCentralRack(e) {
+  e.preventDefault();
+  const name = document.getElementById("centralRackName").value.trim();
+  const description = document.getElementById("centralRackDesc").value.trim();
+  if (!name) return alert("Please enter rack name!");
+
+  try {
+    const res = await fetch(`${API_BASE}/sections/add-rack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description, centralRoom: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert(data.message);
+    e.target.reset();
+    fetchCentralRacks();
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
-// ================== BOOT ==================
+// ================== FETCH CENTRAL ROOM RACKS ==================
+async function fetchCentralRacks() {
+  try {
+    const res = await fetch(`${API_BASE}/sections/central/racks`);
+    const racks = await res.json();
+
+    const list = document.getElementById("centralRackList");
+    list.innerHTML = racks.length
+      ? racks.map(r => `<div class="rack-item">${r.name} — ${r.description || ""}</div>`).join("")
+      : "<p>No racks in Central Room yet.</p>";
+  } catch (err) {
+    console.error("fetchCentralRacks error:", err);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", loadConfig);

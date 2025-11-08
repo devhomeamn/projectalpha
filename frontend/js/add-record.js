@@ -1,16 +1,17 @@
-console.log("✅ add-record.js loaded");
+console.log("add-record.js loaded");
 
 let API_BASE = "";
 
+// ================== CONFIG LOAD ==================
 async function loadConfig() {
   try {
     const res = await fetch("/api/config");
     const data = await res.json();
     API_BASE = data.apiBase ? `${data.apiBase}/api` : `${window.location.origin}/api`;
-    console.log("✅ API Base loaded:", API_BASE);
+    console.log("API Base loaded:", API_BASE);
     initPage();
   } catch (err) {
-    console.error("⚠️ Could not load backend config:", err);
+    console.error("Could not load backend config:", err);
     API_BASE = `${window.location.origin}/api`;
     initPage();
   }
@@ -38,28 +39,37 @@ async function loadSections() {
     const sectionSelect = document.getElementById("section_id");
     const subSelect = document.getElementById("subcategory_id");
     const rackSelect = document.getElementById("rack_id");
+    const serialInput = document.getElementById("serial_no");
 
+    // Clear options
     sectionSelect.innerHTML = '<option value="">-- Select Section --</option>';
     subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
     rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
+    serialInput.value = "";
 
+    // ✅ Populate sections except “Central Room”
     data.forEach((sec) => {
+      if (sec.name.trim().toLowerCase() === "central room") return; // hide central room
       const opt = document.createElement("option");
       opt.value = sec.id;
       opt.textContent = sec.name;
       sectionSelect.appendChild(opt);
     });
 
-    // When section changes
+    // ================== SECTION CHANGE ==================
     sectionSelect.addEventListener("change", async () => {
       const sectionId = sectionSelect.value;
+
       subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
       rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
+      serialInput.value = "";
 
       if (!sectionId) return;
 
       const selected = data.find((s) => s.id == sectionId);
-      if (selected && selected.Subcategories) {
+
+      // Subcategories
+      if (selected?.Subcategories?.length) {
         selected.Subcategories.forEach((sub) => {
           const opt = document.createElement("option");
           opt.value = sub.id;
@@ -68,18 +78,54 @@ async function loadSections() {
         });
       }
 
-      // 🧩 Load racks dynamically
-      const resRack = await fetch(`${API_BASE}/sections/racks/${sectionId}`);
-      const racks = await resRack.json();
-      racks.forEach((r) => {
-        const opt = document.createElement("option");
-        opt.value = r.id;
-        opt.textContent = r.name;
-        rackSelect.appendChild(opt);
-      });
+      // Load Racks dynamically
+      try {
+        const resRack = await fetch(`${API_BASE}/sections/racks/${sectionId}`);
+        const racks = await resRack.json();
+        rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
+        racks.forEach((r) => {
+          const opt = document.createElement("option");
+          opt.value = r.id;
+          opt.textContent = r.name;
+          rackSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Rack load error:", err);
+      }
+    });
+
+    // ================== RACK CHANGE → AUTO SERIAL ==================
+    rackSelect.addEventListener("change", async () => {
+      const rackId = rackSelect.value;
+      if (!rackId) {
+        serialInput.value = "";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
+        const records = await res.json();
+
+        // get all existing serial numbers and calculate next available
+        const used = records
+          .map(r => r.serial_no)
+          .filter(n => n != null)
+          .map(Number)
+          .sort((a, b) => a - b);
+
+        let next = 1;
+        for (let num of used) {
+          if (num === next) next++;
+          else break;
+        }
+        serialInput.value = next;
+      } catch (err) {
+        console.error("Serial fetch error:", err);
+        serialInput.value = "1";
+      }
     });
   } catch (err) {
-    console.error("❌ Error loading sections/racks:", err);
+    console.error("Error loading sections/racks:", err);
     alert("Failed to load sections or racks!");
   }
 }
@@ -93,11 +139,17 @@ async function onAddRecord(e) {
   const section_id = document.getElementById("section_id").value;
   const subcategory_id = document.getElementById("subcategory_id").value;
   const rack_id = document.getElementById("rack_id").value;
+  const serial_no = document.getElementById("serial_no").value.trim();
   const description = document.getElementById("description").value.trim();
   const added_by = localStorage.getItem("username") || "Unknown User";
 
   if (!file_name || !section_id || !rack_id) {
-    alert("⚠️ Please fill in all required fields!");
+    alert("Please fill in all required fields!");
+    return;
+  }
+
+  if (!serial_no) {
+    alert("Please select a Rack to generate Serial No.");
     return;
   }
 
@@ -111,22 +163,21 @@ async function onAddRecord(e) {
         section_id,
         subcategory_id,
         rack_id,
+        serial_no,
         description,
         added_by,
       }),
     });
 
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to add record");
 
-    if (res.ok) {
-      alert("✅ Record Added Successfully!");
-      e.target.reset();
-    } else {
-      alert(`❌ Failed to Add Record: ${data.error || "Unknown error"}`);
-    }
+    alert("✅ Record Added Successfully!");
+    e.target.reset();
+    document.getElementById("serial_no").value = "";
   } catch (err) {
-    console.error("❌ addRecord error:", err);
-    alert("Server error while adding record!");
+    console.error("addRecord error:", err);
+    alert("❌ " + err.message);
   }
 }
 

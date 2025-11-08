@@ -15,7 +15,7 @@ const Record = sequelize.define("Record", {
   },
   section_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // ✅ এখন central move এ null দেওয়া যাবে
   },
   subcategory_id: {
     type: DataTypes.INTEGER,
@@ -25,6 +25,10 @@ const Record = sequelize.define("Record", {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  serial_no: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // প্রথমে null, পরে generate হবে
+  },
   description: {
     type: DataTypes.TEXT,
   },
@@ -32,12 +36,31 @@ const Record = sequelize.define("Record", {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  // 🟢 New field to track record location
+  // 🟢 Track current status
   status: {
     type: DataTypes.ENUM("active", "central"),
     allowNull: false,
     defaultValue: "active",
   },
+
+  // 🟢 Track previous location info
+  previous_section_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  previous_subcategory_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  previous_rack_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  moved_by: {
+  type: DataTypes.STRING,
+  allowNull: true,
+  comment: "User who moved this record to central",
+},
 });
 
 // 🧩 Relationships

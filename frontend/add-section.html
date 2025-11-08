@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <title>Add Section</title>
   <link rel="stylesheet" href="css/dashboard.css">
-  
 </head>
+
 <body>
   <div class="dashboard-container">
     <!-- Sidebar (shared) -->
@@ -16,14 +16,14 @@
       <!-- Topbar (shared) -->
       <div id="topbar"></div>
 
-      <!-- Page-specific content -->
+      <!-- Content -->
       <section class="content section-page">
         <header class="page-header">
           <h2>Add New Section</h2>
-          <p class="subtext">Create a new section and manage related subcategories and racks below.</p>
+          <p class="subtext">Manage Sections, Subcategories, and Racks (including Central Racks).</p>
         </header>
 
-        <!-- Add Section Form -->
+        <!-- ✅ Add Section -->
         <form id="sectionForm" class="form-card">
           <div class="form-group">
             <label for="sectionName">Section Name</label>
@@ -32,7 +32,7 @@
 
           <div class="form-group">
             <label for="sectionDesc">Description</label>
-            <textarea id="sectionDesc" placeholder="Describe this section"></textarea>
+            <textarea id="sectionDesc" placeholder="Describe this section (optional)"></textarea>
           </div>
 
           <button type="submit" class="btn-primary">➕ Add Section</button>
@@ -40,7 +40,7 @@
 
         <div class="divider"></div>
 
-        <!-- Add Subcategory -->
+        <!-- ✅ Add Subcategory -->
         <header class="page-header">
           <h3>Add Subcategory</h3>
         </header>
@@ -48,7 +48,7 @@
         <form id="subForm" class="form-card">
           <div class="form-group">
             <label for="sectionSelect">Select Section</label>
-            <select id="sectionSelect"></select>
+            <select id="sectionSelect" required></select>
           </div>
 
           <div class="form-group">
@@ -61,7 +61,7 @@
 
         <div class="divider"></div>
 
-        <!-- Add Rack -->
+        <!-- ✅ Add Rack -->
         <header class="page-header">
           <h3>Add Rack</h3>
         </header>
@@ -69,7 +69,7 @@
         <form id="rackForm" class="form-card">
           <div class="form-group">
             <label for="sectionSelectRack">Select Section</label>
-            <select id="sectionSelectRack"></select>
+            <select id="sectionSelectRack" required></select>
           </div>
 
           <div class="form-group">
@@ -85,19 +85,49 @@
           <button type="submit" class="btn-tertiary">🗂️ Add Rack</button>
         </form>
 
-        <!-- Section List Display -->
+        <div class="divider"></div>
+
+        <!-- ✅ Add Central Rack -->
+        <header class="page-header">
+          <h3>Add Central Rack</h3>
+        </header>
+
+        <form id="centralRackForm" class="form-card">
+          <div class="form-group">
+            <label for="centralRackName">Rack Name <span style="color:red">*</span></label>
+            <input type="text" id="centralRackName" placeholder="e.g., CR-01, CR-02" required>
+          </div>
+
+          <div class="form-group">
+            <label for="centralRackDesc">Description (optional)</label>
+            <textarea id="centralRackDesc" placeholder="Purpose of this central rack"></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary">➕ Add Central Rack</button>
+        </form>
+
+        <h4 style="margin-top: 20px;">Existing Central Racks</h4>
+        <div id="centralRackList" class="rack-list"></div>
+
+        <div class="divider"></div>
+
+        <!-- ✅ Section Overview -->
+        <header class="page-header">
+          <h3>All Sections Overview</h3>
+        </header>
         <div id="sectionList" class="section-list"></div>
+
       </section>
     </main>
   </div>
 
-  <!-- ✅ Shared Layout Loader -->
+  <!-- Shared Layout Loader -->
   <script type="module">
     import { initLayout } from "./js/layout.js";
     initLayout("add-section.html");
   </script>
 
-  <!-- Page-specific logic -->
+  <!-- Page Logic -->
   <script src="js/add-section.js"></script>
   <script src="js/auth-guard.js"></script>
 </body>
