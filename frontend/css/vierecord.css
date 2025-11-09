@@ -1,5 +1,5 @@
 /* ================================
-   📄 View Records Page Styles
+   📄 View Records Page Styles (Reduced Font)
    ================================ */
 
 /* --- Table Styles --- */
@@ -11,10 +11,11 @@ table {
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem; /* Reduced font size */
 }
 
 th, td {
-  padding: 12px 15px;
+  padding: 10px 12px;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
 }
@@ -23,6 +24,7 @@ th {
   background: #2563eb;
   color: #fff;
   font-weight: 600;
+  font-size: 0.95rem; /* Slightly smaller */
 }
 
 tr:hover {
@@ -32,11 +34,11 @@ tr:hover {
 
 /* --- Status Labels --- */
 .status {
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 6px;
   color: #fff;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.8rem; /* Reduced from 0.9rem */
 }
 
 .central {
@@ -52,10 +54,11 @@ tr:hover {
   background: #2563eb;
   color: #fff;
   border: none;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.85rem;
   transition: background 0.2s ease;
 }
 
@@ -69,24 +72,25 @@ tr:hover {
   justify-content: space-between;
   align-items: center;
   background: #fff;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   margin-top: 15px;
   flex-wrap: wrap;
   gap: 10px;
+  font-size: 0.9rem;
 }
 
 #searchInput,
 #sectionFilter {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 #searchInput {
-  width: 220px;
+  width: 200px;
 }
 
 /* --- Buttons --- */
@@ -95,10 +99,11 @@ tr:hover {
   background: #10b981;
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding: 7px 14px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.85rem;
   transition: background 0.2s ease;
 }
 
@@ -111,9 +116,10 @@ tr:hover {
   background: #9ca3af;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 7px 14px;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .btn-secondary:hover {
@@ -123,7 +129,7 @@ tr:hover {
 /* --- Pagination --- */
 #paginationInfo {
   margin-top: 10px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #4b5563;
   text-align: right;
 }
@@ -141,10 +147,11 @@ tr:hover {
   background: #2563eb;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.85rem;
 }
 
 #paginationControls button:hover {
@@ -167,12 +174,13 @@ tr:hover {
 
 .modal-content {
   background: #fff;
-  padding: 25px;
+  padding: 20px;
   border-radius: 12px;
-  width: 480px;
+  width: 460px;
   max-width: 90%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.25s ease-in-out;
+  font-size: 0.9rem;
 }
 
 @keyframes fadeIn {
@@ -189,7 +197,7 @@ tr:hover {
 .close-btn {
   background: transparent;
   border: none;
-  font-size: 22px;
+  font-size: 20px;
   float: right;
   cursor: pointer;
   color: #6b7280;
@@ -197,16 +205,18 @@ tr:hover {
 
 .modal-content h3 {
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   color: #111827;
   border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
+  font-size: 1rem;
 }
 
 .modal-body p {
-  margin: 8px 0;
+  margin: 6px 0;
   color: #374151;
-  line-height: 1.5;
+  line-height: 1.4;
+  font-size: 0.9rem;
 }
 
 /* --- Responsive Adjustments --- */
@@ -224,14 +234,19 @@ tr:hover {
     width: 100%;
   }
 }
+
+/* --- Page Size Dropdown --- */
 #pageSizeControl select {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   padding: 4px 8px;
   background: #fff;
+  font-size: 0.85rem;
 }
+
 #pageSizeControl label {
   margin-right: 6px;
   color: #374151;
   font-weight: 500;
+  font-size: 0.9rem;
 }

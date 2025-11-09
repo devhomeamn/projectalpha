@@ -63,7 +63,7 @@ exports.addRecord = async (req, res) => {
   }
 };
 
-// ================== GET ALL RECORDS (with pagination + filter) ==================
+// ================== GET ALL RECORDS (with pagination + filter + rack search) ==================
 exports.getRecords = async (req, res) => {
   try {
     const q = req.query.q || "";
@@ -79,6 +79,8 @@ exports.getRecords = async (req, res) => {
           { bd_no: { [Op.like]: `%${q}%` } },
           { description: { [Op.like]: `%${q}%` } },
           { moved_by: { [Op.like]: `%${q}%` } },
+          { serial_no: { [Op.like]: `%${q}%` } },     // ✅ search by serial number
+          { "$Rack.name$": { [Op.like]: `%${q}%` } }, // ✅ search by rack name/number
         ],
       }),
       ...(sectionFilter && { section_id: sectionFilter }),
@@ -139,6 +141,7 @@ exports.getRecords = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // ================== MOVE SINGLE RECORD TO CENTRAL ==================
 exports.moveToCentral = async (req, res) => {
@@ -320,5 +323,58 @@ exports.bulkMoveRecords = async (req, res) => {
     await t.rollback();
     console.error("❌ bulkMoveRecords error:", err);
     res.status(500).json({ error: err.message || "Failed to move records." });
+  }
+};
+// ================== UPDATE RECORD ==================
+exports.updateRecord = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const {
+      file_name,
+      bd_no,
+      section_id,
+      subcategory_id,
+      rack_id,
+      description,
+      updated_by,
+    } = req.body;
+
+    const record = await Record.findByPk(id);
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    record.file_name = file_name ?? record.file_name;
+    record.bd_no = bd_no ?? record.bd_no;
+    record.section_id = section_id ?? record.section_id;
+    record.subcategory_id = subcategory_id ?? record.subcategory_id;
+    record.rack_id = rack_id ?? record.rack_id;
+    record.description = description ?? record.description;
+    record.updated_by = updated_by || req.user?.name || "Unknown User";
+
+    await record.save();
+    res.json({ message: "✅ Record updated successfully", record });
+  } catch (err) {
+    console.error("❌ updateRecord error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================== DELETE RECORD (Admin Only) ==================
+exports.deleteRecord = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userRole = req.user?.role || req.body.role; // frontend will send role too
+
+    if (!["admin", "master"].includes(userRole.toLowerCase())) {
+      return res.status(403).json({ error: "Only admin or master can delete records" });
+    }
+
+    const record = await Record.findByPk(id);
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    await record.destroy();
+    res.json({ message: "🗑️ Record deleted successfully" });
+  } catch (err) {
+    console.error("❌ deleteRecord error:", err);
+    res.status(500).json({ error: err.message });
   }
 };

@@ -2,10 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title> View Records</title>
+  <title>View Records</title>
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/vierecord.css">
   <script src="js/auth-guard.js"></script>
+  <style>
+    .action-icons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    .action-icons i {
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: color 0.2s ease;
+    }
+    .icon-edit { color: #2563eb; }      /* Blue */
+    .icon-move { color: #059669; }      /* Green */
+    .icon-delete { color: #dc2626; }    /* Red */
+    .icon-edit:hover { color: #1e40af; }
+    .icon-move:hover { color: #047857; }
+    .icon-delete:hover { color: #b91c1c; }
+  </style>
 </head>
 
 <body>
@@ -20,8 +39,8 @@
 
       <section class="content">
         <header class="page-header">
-          <h2> View Records</h2>
-          <p>Manage and move records to the Central Room.</p>
+          <h2>View Records</h2>
+          <p>Manage, edit, move, or delete records.</p>
         </header>
 
         <!-- Toolbar -->
@@ -76,9 +95,9 @@
 
         <!-- Pagination Controls -->
         <div id="paginationControls">
-          <button id="prevPage"> Prev</button>
+          <button id="prevPage">Prev</button>
           <span id="pageDisplay">Page 1</span>
-          <button id="nextPage">Next </button>
+          <button id="nextPage">Next</button>
         </div>
       </section>
     </main>
@@ -93,23 +112,46 @@
     </div>
   </div>
 
+  <!-- ✅ Edit Record Modal -->
+  <div id="editRecordModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeEditModal()">✖</button>
+      <h3>✏️ Edit Record</h3>
+      <form id="editRecordForm">
+        <input type="hidden" id="editRecordId">
+        <div class="form-group">
+          <label>File Name</label>
+          <input type="text" id="editFileName" required>
+        </div>
+        <div class="form-group">
+          <label>BD No</label>
+          <input type="text" id="editBdNo">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="editDescription"></textarea>
+        </div>
+        <div class="form-group" style="text-align:right;">
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ✅ Single Move Modal -->
   <div id="singleMoveModal" class="modal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeSingleMove()">✖</button>
-      <h3>📦 Move Record to Central Room</h3>
+      <h3>🚚 Move Record to Central Room</h3>
       <p><strong>Current Location:</strong> <span id="currentLocation">-</span></p>
-
       <div class="form-group">
         <label for="singleMoveRack">Select Central Rack</label>
         <select id="singleMoveRack"></select>
       </div>
-
       <div class="form-group">
         <label for="singleMoveSerial">Auto Serial No</label>
         <input type="text" id="singleMoveSerial" readonly placeholder="Auto-generated">
       </div>
-
       <div class="form-group" style="text-align:right;">
         <button id="singleMoveConfirm" class="btn-primary">Move Now</button>
       </div>
@@ -117,29 +159,25 @@
   </div>
 
   <!-- ✅ Bulk Move Modal -->
- <button id="openBulkMove" class="btn-primary">📦 Bulk Move</button>
-
-<div id="bulkMoveModal" class="modal">
-  <div class="modal-content">
-    <button class="close-btn" id="bulkClose">✖</button>
-    <h3>📦 Bulk Move to Central Room</h3>
-
-    <div class="form-group">
-      <label for="bulkRackId">Select Central Rack</label>
-      <select id="bulkRackId"></select>
-    </div>
-
-    <div class="form-group">
-      <label for="bulkStartSerial">Starting Serial (auto if blank)</label>
-      <input type="number" id="bulkStartSerial" placeholder="Auto">
-    </div>
-
-    <div class="form-group" style="text-align:right;">
-      <button id="bulkConfirm" class="btn-primary">Confirm</button>
-      <button id="bulkCancel" class="btn-secondary">Cancel</button>
+  <div id="bulkMoveModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" id="bulkClose">✖</button>
+      <h3>📦 Bulk Move to Central Room</h3>
+      <div class="form-group">
+        <label for="bulkRackId">Select Central Rack</label>
+        <select id="bulkRackId"></select>
+      </div>
+      <div class="form-group">
+        <label for="bulkStartSerial">Starting Serial (auto if blank)</label>
+        <input type="number" id="bulkStartSerial" placeholder="Auto">
+      </div>
+      <div class="form-group" style="text-align:right;">
+        <button id="bulkConfirm" class="btn-primary">Confirm</button>
+        <button id="bulkCancel" class="btn-secondary">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
+
   <!-- ✅ Shared Layout -->
   <script type="module">
     import { initLayout } from "./js/layout.js";
