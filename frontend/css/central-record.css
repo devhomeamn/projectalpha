@@ -1,0 +1,258 @@
+/* ===========================================
+   CENTRAL RECORD PAGE (page-specific only)
+   Works with layout.css, no conflicts
+=========================================== */
+
+/* ------------------------------------------------
+   Reserve space for fixed sidebar + topbar
+   (only for this page)
+------------------------------------------------ */
+.dashboard-container .main-content {
+  margin-left: 250px;  /* sidebar width */
+  margin-top: 70px;    /* topbar height */
+  padding: 0;          /* content নিজে padding নেবে */
+  width: calc(100% - 250px);
+  transition: 0.3s ease;
+}
+
+/* Page wrapper inside main-content */
+.content {
+  padding: 20px;
+}
+
+/* Header */
+.content .page-header {
+  margin-bottom: 14px;
+}
+
+.content .page-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* ===========================================
+   SEARCH + EXPORT BAR
+=========================================== */
+.search-export {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.search-export input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s ease;
+  background: #fafafa;
+}
+
+.search-export input:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+.btn-export {
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #10b981; /* green */
+  color: #fff;
+  transition: 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-export:hover {
+  background: #059669;
+}
+
+/* ===========================================
+   TABLE + MOBILE HORIZONTAL SCROLL
+=========================================== */
+#recordsTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  font-size: 14px;
+}
+
+/* Header row */
+#recordsTable thead {
+  background: #f3f4f6;
+}
+
+#recordsTable th {
+  text-align: left;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+/* Body cells */
+#recordsTable td {
+  padding: 11px 14px;
+  color: #374151;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+/* Hover */
+#recordsTable tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Status badge (if you output status text with class) */
+#recordsTable td .status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+#recordsTable td .status.central {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+#recordsTable td .status.section {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* Horizontal scroll on smaller screens */
+@media (max-width: 900px) {
+  .content {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  #recordsTable {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #recordsTable thead,
+  #recordsTable tbody {
+    display: table;
+    width: max-content; /* enables scroll */
+    min-width: 100%;
+  }
+}
+
+/* ===========================================
+   MODAL (DETAILS)
+=========================================== */
+#recordModal.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 800;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+#recordModal .modal-content {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  overflow: hidden;
+  animation: crFadeUp 0.25s ease-out;
+}
+
+@keyframes crFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#recordModal .modal-header {
+  background: #f9fafb;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+#recordModal .modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+#recordModal .close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #444;
+  line-height: 1;
+}
+
+#recordModal .modal-body {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #374151;
+}
+
+#recordModal .modal-body p {
+  margin-bottom: 8px;
+}
+
+/* ===========================================
+   MOBILE POLISH + sidebar drawer support
+=========================================== */
+@media (max-width: 768px) {
+
+  /* when sidebar becomes drawer, main-content full width */
+  .dashboard-container .main-content {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 70px;
+  }
+
+  .search-export {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-export input,
+  .btn-export {
+    width: 100%;
+  }
+
+  #recordsTable th,
+  #recordsTable td {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  #recordModal .modal-content {
+    max-width: 95vw;
+  }
+}

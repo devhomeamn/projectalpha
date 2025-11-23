@@ -2,202 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Users Dashboard</title>
-  <link rel="stylesheet" href="css/dashboard.css">
-  <style>
-    body { font-family: Arial, sans-serif; background:#f3f4f6; margin:0; }
-    .tabs { display: flex; gap: 10px; margin:20px; }
-    .tab-btn { padding:10px 20px; cursor:pointer; border:none; border-radius:6px; background:#e5e7eb; font-weight:600; }
-    .tab-btn.active { background:#2563eb; color:#fff; }
-    .tab-content { display:none; padding:20px; background:#fff; margin:0 20px 20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    .tab-content.active { display:block; }
-    table { width:100%; border-collapse:collapse; margin-top:10px; }
-    th,td { padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; }
-    th { background:#2563eb; color:#fff; font-weight:600; }
-    tr:hover { background:#f9fafb; cursor:pointer; }
-    .status { padding:5px 10px; border-radius:6px; color:#fff; font-weight:500; font-size:0.85rem; }
-    .approved { background:#10b981; }
-    .pending { background:#f59e0b; }
-    .rejected { background:#ef4444; }
-    .btn-move { padding:5px 10px; border:none; border-radius:6px; cursor:pointer; color:#fff; font-weight:500; margin-right:5px; }
-    .btn-approve { background:#10b981; }
-    .btn-reject { background:#ef4444; }
-    .search-box { margin-bottom:10px; }
-    .search-box input { padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; width:50%; }
-  </style>
+  <title>User Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+ <link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/dashboard.css">
+
+  <script src="js/auth-guard.js"></script>
 </head>
+
 <body>
 
-  <h2 style="margin:20px;">Admin Users Dashboard</h2>
+  <!-- ⬇️ Overlay for mobile sidebar click-to-close -->
+  <div id="overlay" class="overlay"></div>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="pending">Pending Users</button>
-    <button class="tab-btn" data-tab="all">All Users</button>
+  <div class="dashboard-container">
+
+    <!-- Sidebar (shared component) -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- Topbar (shared component) -->
+      <div id="topbar"></div>
+
+      <!-- Page-specific content -->
+      <section class="stats">
+
+        <div class="stat-card green">
+          <h3>20</h3>
+          <p>Total Sections</p>
+        </div>
+
+        <div class="stat-card purple">
+          <h3>26</h3>
+          <p>Number of Records</p>
+        </div>
+
+        <div class="stat-card blue">
+          <h3>120+</h3>
+          <p>Countries Served</p>
+        </div>
+
+        <div class="stat-card orange">
+          <h3>$230K</h3>
+          <p>Savings Membership</p>
+        </div>
+
+        <div class="stat-card yellow">
+          <h3>99%</h3>
+          <p>Customer Satisfaction</p>
+        </div>
+
+        <div class="stat-card red">
+          <h3>50+</h3>
+          <p>Team Members</p>
+        </div>
+
+      </section>
+
+    </main>
   </div>
 
-  <!-- Tab Contents -->
-  <div id="pending" class="tab-content active">
-    <table id="pendingUsers">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Username</th>
-          <th>Service ID</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div id="all" class="tab-content">
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Search by username or service ID">
-    </div>
-    <table id="allUsers">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Username</th>
-          <th>Service ID</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Registered Date</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <!-- Confirm Modal (reuse your existing) -->
-  <div id="confirmModal" class="modal">
-    <div class="modal-content" style="max-width:400px;">
-      <div class="modal-header">
-        <h3 id="confirmTitle"></h3>
-        <button class="close-btn" onclick="closeConfirm()">×</button>
-      </div>
-      <div class="modal-body">
-        <p id="confirmMessage"></p>
-      </div>
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-        <button id="confirmCancel" class="btn-primary" onclick="closeConfirm()">No</button>
-        <button id="confirmYes" class="btn-secondary">Yes</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="js/confirm-util.js"></script>
-
-  <script>
-    // 🔹 Tab switching
-    const tabBtns = document.querySelectorAll(".tab-btn");
-    const tabContents = document.querySelectorAll(".tab-content");
-
-    tabBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        tabBtns.forEach(b => b.classList.remove("active"));
-        tabContents.forEach(c => c.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById(btn.dataset.tab).classList.add("active");
-      });
-    });
-
-    const token = localStorage.getItem('token');
-
-    // 🔹 Pending Users
-    async function loadPendingUsers() {
-      const tbody = document.querySelector("#pendingUsers tbody");
-      try {
-        const res = await fetch("/api/pending", { headers:{Authorization:`Bearer ${token}`}});
-        const users = await res.json();
-        if (!users.length) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No pending users</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = users.map(u => `
-          <tr>
-            <td>${u.name}</td>
-            <td>${u.username}</td>
-            <td>${u.serviceid}</td>
-            <td><span class="status pending">${u.status}</span></td>
-            <td>
-              <button class="btn-move btn-approve" onclick="approveUser(${u.id})">Approve</button>
-              <button class="btn-move btn-reject" onclick="rejectUser(${u.id})">Reject</button>
-            </td>
-          </tr>`).join('');
-      } catch(err){
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error loading users</td></tr>`;
-      }
-    }
-
-    async function approveUser(id){
-      showConfirm({
-        title:"Approve User",
-        message:"Are you sure?",
-        onConfirm: async ()=>{
-          const res = await fetch(`/api/approve/${id}`, {method:"POST", headers:{Authorization:`Bearer ${token}`}});
-          const data = await res.json();
-          alert(data.message || "Done");
-          loadPendingUsers();
-          loadAllUsers();
-        }
-      });
-    }
-
-    async function rejectUser(id){
-      showConfirm({
-        title:"Reject User",
-        message:"Are you sure?",
-        onConfirm: async ()=>{
-          const res = await fetch(`/api/reject/${id}`, {method:"POST", headers:{Authorization:`Bearer ${token}`}});
-          const data = await res.json();
-          alert(data.message || "Done");
-          loadPendingUsers();
-          loadAllUsers();
-        }
-      });
-    }
-
-    // 🔹 All Users
-    async function loadAllUsers() {
-      const tbody = document.querySelector("#allUsers tbody");
-      const searchInput = document.getElementById("searchInput");
-      try {
-        const res = await fetch("/api/users/all", { headers:{Authorization:`Bearer ${token}`}});
-        let users = await res.json();
-        renderUsers(users);
-
-        searchInput.addEventListener("input", ()=>{
-          const keyword = searchInput.value.toLowerCase();
-          const filtered = users.filter(u => 
-            u.username.toLowerCase().includes(keyword) || u.serviceid.toLowerCase().includes(keyword)
-          );
-          renderUsers(filtered);
-        });
-      } catch(err){
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Failed to load users</td></tr>`;
-      }
-    }
-
-    function renderUsers(users){
-      const tbody = document.querySelector("#allUsers tbody");
-      tbody.innerHTML = users.map(u=>`
-        <tr>
-          <td>${u.name}</td>
-          <td>${u.username}</td>
-          <td>${u.serviceid}</td>
-          <td>${u.role}</td>
-          <td><span class="status ${u.status.toLowerCase()}">${u.status}</span></td>
-          <td>${new Date(u.createdAt).toLocaleDateString()}</td>
-        </tr>
-      `).join('');
-    }
-
-    // 🔹 Initial load
-    loadPendingUsers();
-    loadAllUsers();
+  <!-- Layout Loader -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("dashboard.html");
   </script>
+
+  <!-- Sidebar Close on Outside Click -->
+  <script>
+    document.getElementById("overlay").addEventListener("click", () => {
+      const sidebar = document.querySelector(".sidebar");
+      const overlay = document.getElementById("overlay");
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+    });
+  </script>
+
 </body>
 </html>

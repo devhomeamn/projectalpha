@@ -1,0 +1,235 @@
+/* ===========================================
+   LAYOUT.CSS — SIDEBAR + TOPBAR + GLOBAL FONT
+   Poppins font for whole project
+=========================================== */
+
+/* ✅ Google Font (Poppins) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* ✅ GLOBAL FONT APPLY (whole project) */
+html, body,
+button, input, select, textarea {
+  font-family: "Poppins", sans-serif;
+}
+
+/* ---------- SIDEBAR ---------- */
+.sidebar {
+  width: 250px;
+  background: #1e1f29;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  transition: width 0.3s ease, transform 0.3s ease;
+  z-index: 300;
+}
+
+.sidebar .sidebar-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.sidebar .logo-link {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+}
+
+.sidebar .sidebar-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar .sidebar-menu li {
+  margin: 4px 0;
+}
+
+/* link */
+.sidebar .sidebar-menu a {
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #cfcfcf;
+  text-decoration: none;
+  font-size: 15px;
+  border-left: 4px solid transparent;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* hover + active (li.active or a.active both supported) */
+.sidebar .sidebar-menu a:hover,
+.sidebar .sidebar-menu li.active > a,
+.sidebar .sidebar-menu a.active {
+  background: #2c2d3b;
+  color: #fff;
+  border-left-color: #4c9aff;
+}
+
+/* footer */
+.sidebar .sidebar-footer {
+  margin-top: auto;
+  padding: 15px;
+}
+
+.sidebar .logout-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #e74c3c;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.2s ease;
+}
+
+.sidebar .logout-btn:hover {
+  background: #c0392b;
+}
+
+/* ---------- TOPBAR ---------- */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 250px;                      /* aligns with sidebar width */
+  width: calc(100% - 250px);
+  height: 70px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 22px;
+  z-index: 200;
+  transition: left 0.3s ease, width 0.3s ease;
+}
+
+.topbar .topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar .greeting h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.topbar .subtext {
+  margin: 0;
+  font-size: 13px;
+  color: #777;
+}
+
+/* user profile section */
+.topbar .user-profile {
+  background: #f8f9fb;
+  padding: 6px 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.topbar .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.topbar .user-details {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.topbar .user-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.topbar .user-role {
+  font-size: 13px;
+  color: #777;
+}
+
+.topbar .logout-icon {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #444;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.topbar .logout-icon:hover {
+  background: #ececec;
+}
+
+/* hamburger icon (inserted in topbar.html) */
+.topbar .hamburger {
+  font-size: 28px;
+  display: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.topbar .hamburger:hover {
+  background: #f2f2f2;
+}
+
+/* ---------- MOBILE BEHAVIOR ---------- */
+@media (max-width: 768px) {
+
+  /* sidebar becomes drawer */
+  .sidebar {
+    width: 230px;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 12px rgba(0,0,0,0.3);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* topbar full width on mobile */
+  .topbar {
+    left: 0;
+    width: 100%;
+    padding: 0 14px;
+  }
+
+  .topbar .hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* optional overlay class (if you use #overlay) */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 250;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.overlay.show {
+  display: block;
+  opacity: 1;
+}

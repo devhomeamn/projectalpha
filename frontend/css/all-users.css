@@ -1,0 +1,165 @@
+/* ===========================================
+   ALL USERS PAGE (page-specific only)
+   Safe with layout.css, no global conflicts
+=========================================== */
+
+/* ------------------------------------------------
+   Reserve space for fixed sidebar + topbar
+------------------------------------------------ */
+.dashboard-container .main-content {
+  margin-left: 250px;  /* sidebar width */
+  margin-top: 70px;    /* topbar height */
+  padding: 0;
+  width: calc(100% - 250px);
+  transition: 0.3s ease;
+}
+
+/* Content wrapper */
+.content {
+  padding: 20px;
+}
+
+/* Header */
+.content .page-header {
+  margin-bottom: 10px;
+}
+
+.content .page-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* ===========================================
+   SEARCH BAR
+=========================================== */
+.search-box {
+  margin: 12px 0 10px;
+  background: #fff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  display: flex;
+  justify-content: flex-start;
+}
+
+.search-box input#searchInput {
+  width: 40%;
+  min-width: 220px;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background: #fafafa;
+  transition: 0.2s;
+}
+
+.search-box input#searchInput:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+/* ===========================================
+   TABLE (Users)
+=========================================== */
+#usersTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  font-size: 14px;
+}
+
+/* Header row */
+#usersTable thead {
+  background: #2563eb;
+}
+
+#usersTable th {
+  padding: 12px 14px;
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Body */
+#usersTable td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  white-space: nowrap;
+}
+
+#usersTable tbody tr:hover {
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+/* Status badges */
+.status {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status.approved { background: #10b981; }
+.status.pending  { background: #f59e0b; }
+.status.rejected { background: #ef4444; }
+
+/* ===========================================
+   MOBILE RESPONSIVE + horizontal scroll
+=========================================== */
+@media (max-width: 768px) {
+
+  /* sidebar drawer mode => content full width */
+  .dashboard-container .main-content {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 70px;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  /* search full width */
+  .search-box {
+    padding: 10px 12px;
+  }
+
+  .search-box input#searchInput {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Table horizontal scroll on mobile */
+  #usersTable {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  #usersTable thead,
+  #usersTable tbody {
+    display: table;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  #usersTable th,
+  #usersTable td {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}

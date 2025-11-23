@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>View Records</title>
-  <link rel="stylesheet" href="css/dashboard.css">
-  <link rel="stylesheet" href="css/vierecord.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/viewrecord.css">
+
+  
+ 
+
   <script src="js/auth-guard.js"></script>
   <style>
     .action-icons {
@@ -71,27 +75,28 @@
             <option value="100">100</option>
           </select>
         </div>
-
-        <!-- Records Table -->
-        <table id="recordTable">
-          <thead>
-            <tr>
-              <th>SL</th>
-              <th><input type="checkbox" id="checkAll"></th>
-              <th>File Name</th>
-              <th>BD No</th>
-              <th>Section</th>
-              <th>Subcategory</th>
-              <th>Rack</th>
-              <th>R. SL</th>
-              <th>Added By</th>
-              <th>Moved By</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+<!-- Records Table -->
+<div class="table-wrapper">
+  <table id="recordTable">
+    <thead>
+      <tr>
+        <th>SL</th>
+        <th><input type="checkbox" id="checkAll"></th>
+        <th>File Name</th>
+        <th>BD No</th>
+        <th>Section</th>
+        <th>Subcategory</th>
+        <th>Rack</th>
+        <th>R. SL</th>
+        <th>Added By</th>
+        <th>Moved By</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
         <!-- Pagination Controls -->
         <div id="paginationControls">
@@ -183,6 +188,7 @@
     import { initLayout } from "./js/layout.js";
     initLayout("view-record.html");
   </script>
+  
 
   <!-- Page JS -->
   <script src="js/view-record.js"></script>

@@ -40,18 +40,27 @@ function initForms() {
       const message = document.getElementById('message');
 
       if (res.ok) {
-        message.style.color = 'green';
-        message.innerText = '✅ Login Successful!';
+  message.style.color = 'green';
+  message.innerText = '✅ Login Successful!';
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.user.role);
-        localStorage.setItem('username', data.user.username);
-        localStorage.setItem('name', data.user.name);
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('role', data.user.role);
+  localStorage.setItem('username', data.user.username);
+  localStorage.setItem('name', data.user.name);
 
-        setTimeout(() => (window.location.href = 'dashboard.html'), 1000);
-      } else {
-        message.innerText = data.error || '❌ Login Failed';
-      }
+  const role = (data.user.role || "").toLowerCase();
+
+  setTimeout(() => {
+    if (role === "admin" || role === "master") {
+      window.location.href = "dashboard.html";
+    } else {
+      window.location.href = "dashboard-user.html";
+    }
+  }, 1000);
+} else {
+  message.innerText = data.error || '❌ Login Failed';
+}
+
     });
   }
 

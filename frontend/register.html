@@ -1,56 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Register | Office File System</title>
-    <link rel="stylesheet" href="css/auth.css" />
-  </head>
-  <body>
-    <div class="wrapper">
-      <h1>SFC Air FRMS</h1>
-      <h2>Sign UP</h2>
-      <form id="registerForm">
-        <div class="input-box">
-          <input type="text" id="name" placeholder="Full Name" required />
-        </div>
-        <div class="input-box">
-          <input type="text" id="serviceid" placeholder="Serviceid" required />
-        </div>
-        <div class="input-box">
-          <input
-            type="text"
-            id="username"
-            placeholder=" your username"
-            required
-          />
-        </div>
-        <div class="input-box">
-          <input
-            type="password"
-            id="password"
-            placeholder="Password"
-            required
-          />
-        </div>
+<head>
+    <meta charset="UTF-8">
+    <title>Register | SFC Air FRMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-       <div class="input-box">
-  <select id="role" required>
-    
-    <option value="General">General User</option>
-    <option value="Master">Master</option>
-    <option value="Admin">Admin</option>
-  </select>
+    <!-- Same CSS as login page -->
+    <link rel="stylesheet" href="css/auth.css">
+
+    <!-- Bootstrap (optional but improves spacing + responsiveness) -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet">
+</head>
+
+<body class="bg-light d-flex justify-content-center align-items-center vh-100">
+
+    <div class="wrapper shadow p-4 rounded bg-white">
+        <h1 class="text-center mb-2">SFC Air FRMS</h1>
+        <h2 class="text-center mb-4">Sign Up</h2>
+
+        <form id="registerForm">
+
+            <div class="input-box mb-3">
+                <input type="text" id="name" placeholder="Full Name" required>
+            </div>
+
+            <div class="input-box mb-3">
+                <input type="text" id="serviceid" placeholder="Service ID" required>
+            </div>
+
+            <div class="input-box mb-3">
+                <input type="text" id="username" placeholder="Choose a Username" required>
+            </div>
+
+            <div class="input-box mb-3">
+                <input type="password" id="password" placeholder="Password" required>
+            </div>
+
+            <div class="input-box mb-4">
+    <select id="role" class="modern-select" required>
+        <option value="" disabled selected>Select Role</option>
+        <option value="General">General User</option>
+        <option value="Master">Master</option>
+        <option value="Admin">Admin</option>
+    </select>
 </div>
 
 
-        <div class="input-box button">
-          <input type="Submit" value="Register" />
-        </div>
-        <p>Already have an account? <a href="login.html">Login</a></p>
-      </form>
-      <div id="message"></div>
+            <div class="input-box button mb-3">
+                <input type="submit" value="Register" class="btn btn-primary w-100">
+            </div>
+
+            <p class="text-center">
+                Already have an account?
+                <a href="login.html">Login</a>
+            </p>
+
+        </form>
+
+        <div id="message" class="text-center text-danger fw-semibold"></div>
     </div>
 
     <script src="js/auth.js"></script>
-  </body>
+</body>
 </html>

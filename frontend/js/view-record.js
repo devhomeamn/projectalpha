@@ -10,6 +10,7 @@ let selectedSection = "";
 let pageSize = 10;
 let currentUser = localStorage.getItem("username") || "Unknown User";
 
+
 /* ================== TOAST ================== */
 function showToast(message, type = "success") {
   const toast = document.createElement("div");
@@ -379,6 +380,7 @@ function showDetails(rec) {
   body.innerHTML = html;
   modal.style.display = "flex";
 }
+
 
 function closeModal() {
   document.getElementById("recordModal").style.display = "none";

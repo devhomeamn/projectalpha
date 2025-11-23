@@ -1,136 +1,143 @@
-@import url('https://fonts.googleapis.com/css?family=Poppins:400,500,600,700&display=swap');
-*{
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-font-family: 'Poppins', sans-serif;
+/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: #f5f6fa;
+    margin: 0;
+    padding: 0;
 }
 
-
-
-
-body{
-min-height: 100vh;
-display: flex;
-align-items: center;
-justify-content: center;
-background: #DDE5F4;
-}
-.wrapper{
-margin-top: 80px;
-margin-bottom: 80px;
-position: relative;
-max-width: 430px;
-width: 100%;
-background: #fff;
-padding: 34px;
-border-radius: 6px;
-box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+/* Wrapper box styling */
+.wrapper {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 30px 28px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    animation: fadeIn 0.4s ease;
 }
 
-.wrapper h1{
-text-align: center;
-position: center;
-font-size: 26px;
-font-weight: 600;
-color: #eb0d44;
+/* Title styles */
+.wrapper h1 {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-align: center;
 }
 
-.wrapper h2{
-position: relative;
-font-size: 22px;
-font-weight: 600;
-color: #333;
-}
-.wrapper h2::before{
-content: '';
-position: absolute;
-left: 0;
-bottom: 0;
-height: 3px;
-width: 28px;
-border-radius: 12px;
-background: #4070f4;
-}
-.wrapper form{
-margin-top: 30px;
-}
-.wrapper form .input-box{
-height: 52px;
-margin: 18px 0;
-}
-form .input-box input{
-height: 100%;
-width: 100%;
-outline: none;
-padding: 0 15px;
-font-size: 17px;
-font-weight: 400;
-color: #333;
-border: 1.5px solid #C7BEBE;
-border-bottom-width: 2.5px;
-border-radius: 6px;
-transition: all 0.3s ease;
-}
-.input-box input:focus,
-.input-box input:valid{
-border-color: #4070f4;
-}
-form .policy{
-display: flex;
-align-items: center;
-}
-form h3{
-color: #707070;
-font-size: 14px;
-font-weight: 500;
-margin-left: 10px;
-}
-.input-box.button input{
-color: #fff;
-letter-spacing: 1px;
-border: none;
-background: #4070f4;
-cursor: pointer;
-}
-.input-box.button input:hover{
-background: #0e4bf1;
-}
-form .text h3{
-color: #333;
-width: 100%;
-text-align: center;
-}
-form .text h3 a{
-color: #4070f4;
-text-decoration: none;
-}
-form .text h3 a:hover{
-text-decoration: underline;
-}
-/* Dropdown styling to match input boxes */
-form .input-box select {
-width: 95%;
-padding: 10px;
-margin: 8px 0;
-border: 1px solid #ccc;
-border-radius: 5px;
-background-color: #fff;
-font-size: 14px;
-color: #333;
-cursor: pointer;
-transition: border-color 0.3s ease, box-shadow 0.3s ease;
+.wrapper h2 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #555;
+    text-align: center;
 }
 
-.input-box select:focus,
-.input-box select:valid {
-border-color: #4070f4;
-box-shadow: 0 0 4px rgba(64, 112, 244, 0.3);
+/* Input fields */
+.input-box {
+    width: 100%;
 }
 
-/* Optional styling for dropdown options */
-.input-box select option {
-padding: 10px;
-color: #333;
+.input-box input {
+    width: 100%;
+    height: 46px;
+    padding: 0 14px;
+    font-size: 15px;
+    border: 1px solid #ccd0d5;
+    border-radius: 10px;
+    background: #fafafa;
+    outline: none;
+    transition: 0.2s;
+}
+
+.input-box input:focus {
+    border-color: #007bff;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.15);
+}
+
+/* Login button */
+.input-box.button input {
+    background: #007bff;
+    border: none;
+    color: #fff;
+    height: 46px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.input-box.button input:hover {
+    background: #0056d2;
+}
+
+/* Signup text */
+.wrapper p {
+    margin-top: 10px;
+    font-size: 14px;
+    text-align: center;
+    color: #666;
+}
+
+.wrapper a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.wrapper a:hover {
+    text-decoration: underline;
+}
+
+/* Error message */
+#message {
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+/* Fade animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* Modern Select Dropdown */
+.modern-select {
+    width: 100%;
+    height: 46px;
+    padding: 0 14px;
+    font-size: 15px;
+    border: 1px solid #ccd0d5;
+    border-radius: 10px;
+    background: #fafafa;
+    cursor: pointer;
+    appearance: none; /* removes default arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    transition: 0.25s;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="gray" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+}
+
+/* Hover + Focus effects */
+.modern-select:hover {
+    border-color: #007bff;
+}
+
+.modern-select:focus {
+    border-color: #007bff;
+    background-color: #fff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.15);
+    outline: none;
 }
 

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+
+<style>
+body {
+  margin: 0; background:#f8f9fa;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.wrapper {
+  display:flex; height:100vh; overflow:hidden;
+}
+
+/* Sidebar */
+#sidebar {
+  width:240px; background:#212529; color:white;
+  transition:0.3s; flex-shrink:0;
+}
+#sidebar h4 {
+  text-align:center; padding:15px 10px; margin:0;
+  border-bottom:1px solid #444;
+}
+
+#menu a {
+  color:#ddd; padding:10px 18px;
+  display:flex; align-items:center;
+  border-left:3px solid transparent;
+  text-decoration:none; font-size:0.95rem;
+}
+#menu a:hover, #menu a.active {
+  background:#495057; color:white;
+  border-left:3px solid #0d6efd;
+}
+
+#menu a i { margin-right:10px; font-size:1.1rem; }
+
+/* Collapsed */
+#sidebar.collapsed { width:70px; }
+#sidebar.collapsed h4 { opacity:0; }
+#sidebar.collapsed #menu a span { display:none; }
+
+/* Topbar */
+#topbar {
+  background:white; padding:10px 20px;
+  display:flex; justify-content:space-between; align-items:center;
+  border-bottom:1px solid #ddd;
+}
+
+#toggleBtn {
+  background:#0d6efd; color:white;
+  width:38px; height:38px; border-radius:50%;
+  border:none; display:flex; justify-content:center; align-items:center;
+}
+
+/* Mobile Drawer */
+@media(max-width:768px){
+  #sidebar {
+    position:fixed; left:0; top:0; bottom:0;
+    transform:translateX(-100%);
+    width:240px !important;
+    z-index:1050;
+  }
+  #sidebar.open { transform:translateX(0); }
+  #sidebar.collapsed { width:240px !important; }
+}
+
+.sidebar-overlay {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.4);
+  display:none; z-index:1040;
+}
+.sidebar-overlay.show { display:block; }
+
+/* Footer */
+#sidebarFooter {
+  border-top:1px solid #444; padding:10px; text-align:center;
+  color:#bbb; font-size:13px;
+}
+#sidebar.collapsed #sidebarFooter .text { display:none; }
+
+/* Loader */
+#loadingOverlay {
+  position:fixed; inset:0;
+  display:none; justify-content:center; align-items:center;
+  background:rgba(255,255,255,0.8);
+  z-index:9999;
+  flex-direction:column;
+  font-size:18px; color:#0d6efd; font-weight:600;
+}
+</style>
+
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <h4><i class="bi bi-speedometer2"></i> Dashboard</h4>
+    <div id="menu"></div>
+
+    <div id="sidebarFooter" class="mt-auto">
+      <div><i class="bi bi-telephone"></i> <span class="text">017XXXXXXXX</span></div>
+      <div><i class="bi bi-envelope"></i> <span class="text">support@email.com</span></div>
+      <div class="mt-2 text">&copy; 2025 CP 64-2022<br>Developed by @amn</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main" class="flex-grow-1">
+    <div id="topbar">
+      <button id="toggleBtn" onclick="toggleSidebar()">
+        <i class="bi bi-list"></i>
+      </button>
+
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-person-circle"></i> <span id="usernameDisplay"></span>
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+          <li class="dropdown-header text-center">
+            <strong id="profileName"></strong><br>
+            <small id="profileRole"></small>
+          </li>
+          <li><hr></li>
+          <li><a class="dropdown-item" href="#" onclick="showProfile()">
+            <i class="bi bi-person"></i> My Profile
+          </a></li>
+          <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
+            <i class="bi bi-box-arrow-right"></i> Logout
+          </a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="container-fluid p-4">
+      <div id="content"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+<!-- Loader -->
+<div id="loadingOverlay">
+  <div class="spinner-border text-primary"></div>
+  <div class="mt-2">Please wait...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Loader
+function showLoader(){ document.getElementById("loadingOverlay").style.display="flex"; }
+function hideLoader(){ document.getElementById("loadingOverlay").style.display="none"; }
+
+// GS Wrapper (No JSON.parse)
+function gs(funcName, ...args){
+  return new Promise((resolve,reject)=>{
+    showLoader();
+    google.script.run
+      .withSuccessHandler(res=>{ hideLoader(); resolve(res); })
+      .withFailureHandler(err=>{ hideLoader(); alert(err); reject(err); })
+      [funcName](...args);
+  });
+}
+
+// PAGE LOAD
+document.addEventListener("DOMContentLoaded", async()=>{
+
+  const user = JSON.parse(localStorage.getItem("userInfo"));
+  if(!user) return goToLogin();
+
+  window.currentUser = user;
+  document.getElementById("usernameDisplay").innerText = user.username;
+  document.getElementById("profileName").innerText = user.username;
+  document.getElementById("profileRole").innerText = user.role;
+
+  const menu = document.getElementById("menu");
+
+  if(user.role==="Admin"){
+    menu.innerHTML = `
+      <a href="#" class="active" onclick="activateMenu(this); showDashboard();"><i class="bi bi-people"></i><span> Donations</span></a>
+      <a href="#" onclick="activateMenu(this); showApproveUsers();"><i class="bi bi-person-check"></i><span> Approve</span></a>
+      <a href="#" onclick="activateMenu(this); showExpenses();"><i class="bi bi-wallet2"></i><span> Expenses</span></a>
+      <a href="#" onclick="activateMenu(this); showNotices();"><i class="bi bi-megaphone"></i><span> Notices</span></a>
+    `;
+    showDashboard();
+  } else {
+    menu.innerHTML = `
+      <a href="#" class="active" onclick="activateMenu(this); showUserDashboard();"><i class="bi bi-people"></i><span> Donations</span></a>
+      <a href="#" onclick="activateMenu(this); showExpenses();"><i class="bi bi-wallet2"></i><span> Expenses</span></a>
+      <a href="#" onclick="activateMenu(this); showNotices();"><i class="bi bi-megaphone"></i><span> Notices</span></a>
+    `;
+    showUserDashboard();
+  }
+
+  // Latest notice popup
+  const notices = await gs("getAllNotices");
+  if(notices.length>0){
+    const latest = notices[0];
+    const dt = new Date(latest.date).toLocaleDateString();
+    document.getElementById("latestNoticeBody").innerHTML = `
+      <h5 class="text-primary">${latest.title}</h5>
+      <p>${latest.message}</p>
+      <small class="text-muted">${dt}</small>
+    `;
+    if(!sessionStorage.getItem("noticeShown")){
+      new bootstrap.Modal(document.getElementById("latestNoticeModal")).show();
+      sessionStorage.setItem("noticeShown","true");
+    }
+  }
+
+  window.addEventListener("resize", handleResizeForSidebar);
+});
+
+// Sidebar Logic
+function toggleSidebar(){
+  const sb = document.getElementById("sidebar");
+  const ov = document.getElementById("sidebarOverlay");
+
+  if(window.innerWidth<=768){
+    const open = sb.classList.toggle("open");
+    ov.classList.toggle("show",open);
+  } else {
+    sb.classList.toggle("collapsed");
+  }
+}
+
+function closeMobileSidebar(){
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebarOverlay").classList.remove("show");
+}
+
+function handleResizeForSidebar(){
+  if(window.innerWidth>768){
+    closeMobileSidebar();
+  }
+}
+
+function activateMenu(el){
+  document.querySelectorAll("#menu a").forEach(a=>a.classList.remove("active"));
+  el.classList.add("active");
+  if(window.innerWidth<=768) closeMobileSidebar();
+}
+
+function goToLogin(){
+  gs("loadPage","login").then(html=>{
+    document.open(); document.write(html); document.close();
+  });
+}
+
+<!-- ============================
+      PROFILE
+=============================-->
+
+async function showProfile() {
+  const users = await gs("getAllUsers");
+  const user = window.currentUser;
+  const match = users.find(u => u.username === user.username) || {};
+
+  document.getElementById("content").innerHTML = `
+    <h3>My Profile</h3>
+    <div class="card" style="max-width:500px;">
+      <div class="card-body">
+        <p><strong>Name:</strong> ${match.name || "—"}</p>
+        <p><strong>Office:</strong> ${match.office || "—"}</p>
+        <p><strong>Username:</strong> ${user.username}</p>
+        <p><strong>Role:</strong> ${user.role}</p>
+        <p><strong>Auditor ID:</strong> ${match.auditor || "—"}</p>
+        <p><strong>Total Donation:</strong> ${match.donation || 0} Taka</strong></p>
+      </div>
+    </div>
+  `;
+}
+//admin dashboard 
+async function showDashboard() {
+  document.getElementById("content").innerHTML = `
+    <h3>All Donations</h3>
+    <input id="searchBox" class="form-control mb-2" placeholder="Search..." onkeyup="filterTable()">
+    <div id="tableArea"></div>
+  `;
+
+  const users = await gs("getAllUsers");
+  const list = users.filter(u => u.approved && u.role !== "Admin");
+
+  let html = `
+    <table id="donationTable" class="table table-bordered table-sm">
+      <thead>
+        <tr>
+          <th>SL</th><th>Name</th><th>Office</th><th>Username</th>
+          <th>Auditor ID</th><th>Donation</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  let i = 1;
+  list.forEach(u => {
+    html += `
+      <tr>
+        <td>${i++}</td>
+        <td>${u.name}</td>
+        <td>${u.office}</td>
+        <td>${u.username}</td>
+        <td>${u.auditor}</td>
+        <td>
+          <div class="input-group input-group-sm">
+            <input type="number" id="don_${u.username}" value="${u.donation}" class="form-control">
+            <button class="btn btn-success" onclick="updateDonation('${u.username}')">Save</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("tableArea").innerHTML = html;
+}
+
+async function updateDonation(username) {
+  const amount = document.getElementById("don_" + username).value;
+  const msg = await gs("setDonation", username, amount);
+  alert(msg);
+}
+
+
+     // USER DASHBOARD
+
+async function showUserDashboard() {
+  document.getElementById("content").innerHTML = `
+    <h3>Donation List</h3>
+    <input id="searchBox" class="form-control mb-2" placeholder="Search..." onkeyup="filterTable()">
+    <div id="tableArea"></div>
+  `;
+
+  const users = await gs("getAllUsers");
+  const list = users.filter(u => u.approved && u.role !== "Admin");
+
+  let html = `
+    <table id="donationTable" class="table table-bordered table-sm">
+      <thead>
+        <tr><th>SL</th><th>Name</th><th>Office</th><th>Donation</th></tr>
+      </thead>
+      <tbody>
+  `;
+
+  let i = 1;
+  list.forEach(u => {
+    html += `
+      <tr>
+        <td>${i++}</td>
+        <td>${u.name}</td>
+        <td>${u.office}</td>
+        <td>${u.donation} Taka</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("tableArea").innerHTML = html;
+}
+
+function filterTable() {
+  const q = document.getElementById("searchBox").value.toLowerCase();
+  document.querySelectorAll("#donationTable tbody tr").forEach(r => {
+    r.style.display = r.innerText.toLowerCase().includes(q) ? "" : "none";
+  });
+}
+
+<!-- ============================
+      APPROVE USERS
+=============================-->
+async function showApproveUsers() {
+  document.getElementById("content").innerHTML = `
+    <h3>Approve Pending Users</h3>
+    <ul id="pendingList" class="list-group mt-3"></ul>
+  `;
+
+  const users = await gs("getPendingUsers");
+  const list = document.getElementById("pendingList");
+
+  if (users.length === 0) {
+    list.innerHTML = `<li class='list-group-item'>No pending users.</li>`;
+    return;
+  }
+
+  users.forEach(u => {
+    list.innerHTML += `
+      <li class="list-group-item d-flex justify-content-between">
+        ${u.username} (${u.auditor})
+        <button class="btn btn-success btn-sm" onclick="approveUser('${u.username}')">Approve</button>
+      </li>
+    `;
+  });
+}
+
+async function approveUser(username) {
+  const msg = await gs("approveUser", username);
+  alert(msg);
+  showApproveUsers();
+}
+
+<!-- ============================
+          EXPENSES
+=============================-->
+async function showExpenses() {
+  const user = window.currentUser;
+
+  let form = "";
+  if (user.role === "Admin") {
+    form = `
+      <form class="row mb-3" onsubmit="event.preventDefault(); addExpense();">
+        <div class="col-md-3"><input id="purpose" class="form-control" placeholder="Purpose"></div>
+        <div class="col-md-2"><input id="amount" type="number" class="form-control" placeholder="Amount"></div>
+        <div class="col-md-4"><input id="note" class="form-control" placeholder="Note"></div>
+        <div class="col-md-3"><button class="btn btn-primary w-100">Add</button></div>
+      </form>
+    `;
+  }
+
+  document.getElementById("content").innerHTML = `
+    <h3>Expense List</h3>${form}
+    <div id="expenseTable"></div>
+  `;
+
+  const exp = await gs("getAllExpenses");
+  let total = 0;
+
+  let html = `
+    <table class="table table-bordered table-sm">
+      <thead><tr><th>Purpose</th><th>Amount</th><th>Date</th><th>Note</th></tr></thead>
+      <tbody>
+  `;
+
+  exp.forEach(e => {
+    total += Number(e.amount);
+    html += `
+      <tr>
+        <td>${e.purpose}</td>
+        <td>${e.amount}</td>
+        <td>${new Date(e.date).toLocaleDateString()}</td>
+        <td>${e.note}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+    <tr class="table-secondary fw-bold">
+      <td colspan="4" class="text-end">Total Expense: ${total} Taka</td>
+    </tr>
+    </tbody></table>
+  `;
+
+  document.getElementById("expenseTable").innerHTML = html;
+}
+
+async function addExpense() {
+  const purpose = document.getElementById("purpose").value;
+  const amount = document.getElementById("amount").value;
+  const note = document.getElementById("note").value;
+
+  if (!purpose || !amount) return alert("Fill all fields!");
+
+  const msg = await gs("addExpense", purpose, amount, note);
+  alert(msg);
+  showExpenses();
+}
+
+<!-- ============================
+          NOTICES
+=============================-->
+async function showNotices() {
+  const user = window.currentUser;
+
+  let form = "";
+  if (user.role === "Admin") {
+    form = `
+      <form class="row mb-3" onsubmit="event.preventDefault(); addNotice();">
+        <div class="col-md-3"><input id="noticeDate" type="date" class="form-control"></div>
+        <div class="col-md-3"><input id="noticeTitle" class="form-control" placeholder="Title"></div>
+        <div class="col-md-4"><input id="noticeMsg" class="form-control" placeholder="Message"></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">Post</button></div>
+      </form>
+    `;
+  }
+
+  document.getElementById("content").innerHTML = `
+    <h3>Notice Board</h3>${form}
+    <div id="noticeList"></div>
+  `;
+
+  const notices = await gs("getAllNotices");
+
+  let html = "";
+  notices.forEach(n => {
+    const preview = n.message.length > 80 ? n.message.substring(0,80)+"..." : n.message;
+    html += `
+      <div class="card mb-2" onclick='openNotice(${JSON.stringify(n)})'>
+        <div class="card-body" style="cursor:pointer;">
+          <h6 class="text-muted">${new Date(n.date).toLocaleDateString()}</h6>
+          <h5>${n.title}</h5>
+          <p>${preview}</p>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("noticeList").innerHTML = html || 
+    `<div class="alert alert-secondary">No notices found.</div>`;
+}
+
+function openNotice(n) {
+  document.getElementById("fullNoticeBody").innerHTML = `
+    <h5>${n.title}</h5>
+    <p style="white-space:pre-wrap;">${n.message}</p>
+    <small>${new Date(n.date).toLocaleDateString()}</small>
+  `;
+  new bootstrap.Modal(document.getElementById("fullNoticeModal")).show();
+}
+
+async function addNotice() {
+  const d = document.getElementById("noticeDate").value;
+  const t = document.getElementById("noticeTitle").value;
+  const m = document.getElementById("noticeMsg").value;
+
+  if (!d || !t || !m) return alert("Fill all fields!");
+
+  const msg = await gs("addNotice", d, t, m);
+  alert(msg);
+  showNotices();
+}
+
+<!-- ============================
+          LOGOUT
+=============================-->
+function logout() {
+  localStorage.clear();
+  goToLogin();
+}
+</script>
+
+
+<!-- Latest Notice Modal -->
+<div class="modal fade" id="latestNoticeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Latest Notice</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="latestNoticeBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Full Notice Modal -->
+<div class="modal fade" id="fullNoticeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">Notice Details</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="fullNoticeBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

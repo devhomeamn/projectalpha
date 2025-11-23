@@ -1,0 +1,335 @@
+/* ===========================================
+   VIEW RECORD PAGE (page-specific only)
+   Safe with layout.css, no global conflicts
+=========================================== */
+
+/* ------------------------------------------------
+   Reserve space for fixed sidebar + topbar
+   (only for this page)
+------------------------------------------------ */
+.dashboard-container .main-content {
+  margin-left: 250px;  /* sidebar width */
+  margin-top: 70px;    /* topbar height */
+  padding: 0;
+  width: calc(100% - 250px);
+  transition: 0.3s ease;
+}
+
+/* Content wrapper */
+.content {
+  padding: 20px;
+}
+
+/* Header */
+.content .page-header {
+  margin-bottom: 14px;
+}
+
+.content .page-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.content .page-header p {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* ===========================================
+   TOOLBAR
+=========================================== */
+.toolbar {
+  background: #fff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.toolbar input.search-box {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  min-width: 220px;
+  outline: none;
+  background: #fafafa;
+  transition: 0.2s;
+}
+
+.toolbar input.search-box:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+.toolbar select#sectionFilter {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #fff;
+}
+
+/* Export + Bulk buttons (local only) */
+#exportBtn {
+  background: #e5e7eb;
+  border: none;
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+#exportBtn:hover {
+  background: #d1d5db;
+}
+
+/* uses layout.css btn-primary, so no override here */
+
+
+/* ===========================================
+   PAGINATION INFO + PAGE SIZE
+=========================================== */
+#paginationInfo {
+  font-size: 14px;
+  color: #374151;
+  margin-top: 8px;
+}
+
+#pageSizeControl {
+  margin-top: 8px;
+  text-align: right;
+  font-size: 14px;
+  color: #374151;
+}
+
+#pageSizeControl select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+/* ===========================================
+   TABLE + MOBILE HORIZONTAL SCROLL
+=========================================== */
+.table-wrapper {
+  width: 100%;
+  margin-top: 12px;
+  overflow-x: auto;                   /* horizontal scroll on small screens */
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #c4c4c4;
+  border-radius: 999px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+#recordTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+}
+
+#recordTable thead {
+  background: #f3f4f6;
+}
+
+#recordTable th {
+  text-align: left;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+#recordTable td {
+  padding: 11px 14px;
+  color: #374151;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+#recordTable tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* Status badge */
+#recordTable .status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#recordTable .status.central {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+#recordTable .status.section {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* ===========================================
+   PAGINATION CONTROLS
+=========================================== */
+#paginationControls {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+#paginationControls button {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#paginationControls button:hover {
+  background: #1e40af;
+}
+
+#pageDisplay {
+  font-weight: 600;
+}
+
+/* ===========================================
+   MODALS (Details / Edit / Move / Bulk)
+=========================================== */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 800;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.modal .modal-content {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  padding: 18px;
+  position: relative;
+  animation: vrFadeUp 0.25s ease-out;
+}
+
+@keyframes vrFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal .close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #444;
+}
+
+/* modal form groups */
+.modal .form-group {
+  margin-bottom: 12px;
+}
+
+.modal .form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.modal .form-group input,
+.modal .form-group select,
+.modal .form-group textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
+
+.modal .form-group textarea {
+  min-height: 80px;
+}
+
+/* ===========================================
+   MOBILE RESPONSIVE + drawer sidebar support
+=========================================== */
+@media (max-width: 768px) {
+
+  /* sidebar drawer mode => content full width */
+  .dashboard-container .main-content {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 70px;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar > div {
+    width: 100%;
+  }
+
+  .toolbar input.search-box,
+  .toolbar select#sectionFilter,
+  .toolbar button {
+    width: 100%;
+  }
+
+  #recordTable th,
+  #recordTable td {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  .modal .modal-content {
+    max-width: 95vw;
+  }
+}

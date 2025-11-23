@@ -1,0 +1,159 @@
+/* ===========================================
+   ADD RECORD PAGE (page-specific only)
+   Safe with layout.css, no global conflicts
+=========================================== */
+
+/* ------------------------------------------------
+   Reserve space for fixed sidebar + topbar
+------------------------------------------------ */
+.dashboard-container .main-content {
+  margin-left: 250px;      /* sidebar width */
+  margin-top: 70px;        /* topbar height */
+  width: calc(100% - 250px);
+  padding: 0;
+  transition: 0.3s ease;
+}
+
+/* Page content wrapper */
+.content {
+  padding: 20px;
+}
+
+/* Page title */
+.content .page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 14px;
+}
+
+/* ===========================================
+   FORM CARD
+=========================================== */
+#recordForm.form-card {
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+  max-width: 720px;
+}
+
+/* Form groups */
+#recordForm .form-group {
+  margin-bottom: 14px;
+}
+
+#recordForm .form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+/* Required star */
+#recordForm .required {
+  color: #ef4444;
+  font-weight: 900;
+  margin-left: 3px;
+}
+
+/* Inputs / selects / textarea (scoped to recordForm only) */
+#recordForm input,
+#recordForm select,
+#recordForm textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fafafa;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+#recordForm textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+#recordForm input:focus,
+#recordForm select:focus,
+#recordForm textarea:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+/* Disabled/readonly subtle look */
+#recordForm input[readonly] {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* ===========================================
+   SUBMIT BUTTON (scoped)
+=========================================== */
+#recordForm .btn-primary {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#recordForm .btn-primary:hover {
+  background: #1e40af;
+  transform: translateY(-1px);
+}
+
+/* ===========================================
+   MOBILE RESPONSIVE
+=========================================== */
+@media (max-width: 768px) {
+
+  /* sidebar drawer mode => full width content */
+  .dashboard-container .main-content {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 70px;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .content .page-title {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  #recordForm.form-card {
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  }
+
+  #recordForm input,
+  #recordForm select,
+  #recordForm textarea {
+    font-size: 13.5px;
+    padding: 10px 11px;
+  }
+
+  #recordForm .btn-primary {
+    font-size: 14px;
+    padding: 11px 12px;
+  }
+}

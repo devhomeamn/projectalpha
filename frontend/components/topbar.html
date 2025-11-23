@@ -1,8 +1,13 @@
-<!-- Load Google Material Symbols (icon font) -->
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
 <header class="topbar">
   <div class="topbar-left">
+
+    <!-- Hamburger for Mobile -->
+    <span class="material-symbols-rounded hamburger" onclick="toggleSidebar()">
+      menu
+    </span>
+
     <div class="greeting">
       <h3>Hello, <span id="name"></span> 👋</h3>
       <p class="subtext" id="roleLabel"></p>
@@ -11,17 +16,14 @@
 
   <div class="topbar-right">
     <div class="user-profile">
-      <img
-        id="userAvatar"
-        class="avatar"
-        alt="User Avatar"
-        src="https://api.dicebear.com/8.x/avataaars/svg?seed=Guest"
-      />
+      <img id="userAvatar" class="avatar" alt="User Avatar" />
+
       <div class="user-details">
         <span class="user-name" id="username"></span>
         <span class="user-role" id="role"></span>
       </div>
-      <button class="logout-icon" title="Logout" onclick="logout()">
+
+      <button class="logout-icon" onclick="logout()">
         <span class="material-symbols-rounded">logout</span>
       </button>
     </div>
