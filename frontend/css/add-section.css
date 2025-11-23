@@ -1,0 +1,230 @@
+/* ===========================================
+   ADD SECTION PAGE (page-specific only)
+   Safe with layout.css, no global conflicts
+=========================================== */
+
+/* ------------------------------------------------
+   Reserve space for fixed sidebar + topbar
+------------------------------------------------ */
+.dashboard-container .main-content {
+  margin-left: 250px;      /* sidebar width */
+  margin-top: 70px;        /* topbar height */
+  width: calc(100% - 250px);
+  padding: 0;
+  transition: 0.3s ease;
+}
+
+/* Page wrapper */
+.content.section-page {
+  padding: 20px;
+}
+
+/* Page header */
+.section-page .page-header {
+  margin-bottom: 10px;
+}
+
+.section-page .page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.section-page .subtext {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Section titles (Add Subcategory / Rack / Overview) */
+.section-page .section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #374151;
+  margin-top: 4px;
+}
+
+/* Divider */
+.section-page .divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 18px 0;
+  border-radius: 999px;
+}
+
+/* ===========================================
+   FORM CARDS (scoped)
+=========================================== */
+.section-page .form-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+  max-width: 760px;
+}
+
+/* form group */
+.section-page .form-group {
+  margin-bottom: 14px;
+}
+
+.section-page .form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+/* required star */
+.section-page .required {
+  color: #ef4444;
+  font-weight: 900;
+  margin-left: 3px;
+}
+
+/* inputs/select/textarea (only inside section-page) */
+.section-page input,
+.section-page select,
+.section-page textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fafafa;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.section-page textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.section-page input:focus,
+.section-page select:focus,
+.section-page textarea:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+/* Buttons spacing (no override of layout btn colors) */
+#sectionForm .btn-primary,
+#subForm .btn-secondary,
+#rackForm .btn-tertiary,
+#centralRackForm .btn-primary {
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  transition: 0.2s ease;
+}
+
+/* ===========================================
+   LISTS (Existing racks / sections)
+=========================================== */
+.section-page .list-title {
+  margin-top: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Central rack list */
+.section-page .rack-list {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+}
+
+/* Section overview list */
+.section-page .section-list {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+
+/* Common card style for list items
+   (JS usually injects divs; we style children safely)
+*/
+.section-page .rack-list > div,
+.section-page .section-list > div {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-left: 5px solid #2563eb;
+  transition: 0.2s ease;
+  font-size: 14px;
+  color: #374151;
+}
+
+.section-page .rack-list > div:hover,
+.section-page .section-list > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+}
+
+/* If JS adds header/label inside list item */
+.section-page .rack-list h4,
+.section-page .section-list h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #111827;
+}
+
+/* ===========================================
+   RESPONSIVE
+=========================================== */
+@media (max-width: 992px) {
+  .section-page .rack-list,
+  .section-page .section-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+
+  /* drawer sidebar => full content */
+  .dashboard-container .main-content {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 70px;
+  }
+
+  .content.section-page {
+    padding: 12px;
+  }
+
+  .section-page .page-title {
+    font-size: 20px;
+  }
+
+  .section-page .form-card {
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  }
+
+  .section-page input,
+  .section-page select,
+  .section-page textarea {
+    font-size: 13.5px;
+    padding: 10px 11px;
+  }
+
+  #sectionForm .btn-primary,
+  #subForm .btn-secondary,
+  #rackForm .btn-tertiary,
+  #centralRackForm .btn-primary {
+    font-size: 14px;
+    padding: 11px 12px;
+  }
+}
