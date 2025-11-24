@@ -10,9 +10,20 @@
   </nav>
 
   <div class="sidebar-footer">
-    <button class="logout-btn" onclick="logout()">
+    <!-- Logout icon button -->
+    <button class="logout-btn" onclick="logout()" title="Logout">
       <span class="material-symbols-rounded">logout</span>
-      <span>Logout</span>
     </button>
+
+    <!-- footer text -->
+    <div class="footer-meta">
+      <p class="devby">Developed by <strong>SFC Air</strong></p>
+      <p class="copyright">© <span id="year"></span> SFRMS. All rights reserved.</p>
+    </div>
   </div>
 </aside>
+
+<script>
+  // auto current year
+  document.getElementById("year").textContent = new Date().getFullYear();
+</script>
