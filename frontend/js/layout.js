@@ -27,8 +27,8 @@ if (!token) return (window.location.href = "login.html");
         Sidebar Menu Items
   ------------------------------ */
   const menuItems = [
-    { name: "Dashboard", icon: "dashboard", roles: ["Admin", "Master" ], link: "dashboard.html" },
-    { name: "Dashboard", icon: "dashboard", roles: ["Admin", "Master", "General"], link: "dashboard-user.html" },
+    { name: "Dashboard", icon: "dashboard", roles: ["Admin", "Master","General"], link: "dashboard.html" },
+    //{ name: "Dashboard", icon: "dashboard", roles: ["Admin", "Master", "General"], link: "dashboard-user.html" },
     { name: "Add Record", icon: "library_add", roles: ["Admin", "Master", "General"], link: "add-record.html" },
     { name: "View Record", icon: "visibility", roles: ["Admin", "Master", "General"], link: "view-record.html" },
     { name: "Central Record", icon: "folder", roles: ["Admin", "Master", "General"], link: "central-record.html" },
@@ -75,17 +75,22 @@ if (!token) return (window.location.href = "login.html");
   /* ------------------------------
         Sidebar Toggle (Mobile)
   ------------------------------ */
+// ✅ works for desktop + mobile
 window.toggleSidebar = function () {
-    const sidebar = document.querySelector(".sidebar");
-    const overlay = document.getElementById("overlay");
+  const sidebar = document.querySelector(".sidebar");
+  const overlay = document.getElementById("overlay");
 
+  if (!sidebar) return;
+
+  // mobile behavior
+  if (window.innerWidth <= 768) {
     sidebar.classList.toggle("open");
+    if (overlay) overlay.classList.toggle("show");
+    return;
+  }
 
-    if (sidebar.classList.contains("open")) {
-        overlay.classList.add("show");
-    } else {
-        overlay.classList.remove("show");
-    }
+  // desktop behavior (drawer style)
+  document.body.classList.toggle("sidebar-collapsed");
 };
 
 document.getElementById("overlay").addEventListener("click", () => {

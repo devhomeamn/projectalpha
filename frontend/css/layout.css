@@ -1,12 +1,12 @@
 /* ===========================================
    LAYOUT.CSS — SIDEBAR + TOPBAR + GLOBAL FONT
-   Poppins font for whole project
+   Desktop & Mobile both drawer open/close
+   ✅ Sidebar NO SCROLL + Footer always bottom
+   ✅ Menu a bit higher + Footer slightly above bottom
 =========================================== */
 
-/* ✅ Google Font (Poppins) */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* ✅ GLOBAL FONT APPLY (whole project) */
 html, body,
 button, input, select, textarea {
   font-family: "Poppins", sans-serif;
@@ -19,34 +19,40 @@ button, input, select, textarea {
   color: #fff;
   display: flex;
   flex-direction: column;
-  padding: 16px 0;
+
+  /* ✅ menu/header upore uthano */
+  padding: 10px 0;               /* আগে 14px 0 ছিল */
+
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
-  transition: width 0.3s ease, transform 0.3s ease;
+  transition: transform 0.3s ease;
   z-index: 300;
+
+  /* ✅ NO SCROLL anywhere in sidebar */
+  overflow: hidden;
 }
 
 /* header */
 .sidebar .sidebar-header {
   text-align: center;
-  margin-bottom: 10px;
-  padding: 0 12px;
+  margin-bottom: 4px;            /* আগে 8px ছিল (menu upore uthbe) */
+  padding: 0 10px;
 }
 
 .sidebar .logo-link {
   color: #fff;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   text-decoration: none;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
 }
 
-/* ✅ menu scroll deleted footer always visible */
-
+/* menu area — no scroll */
 .sidebar .sidebar-menu {
-  padding: 6px 0;
+  flex: 0 0 auto;
+  padding: 2px 0 0;              /* আগে 4px 0 ছিল */
 }
 
 .sidebar .sidebar-menu ul {
@@ -56,24 +62,23 @@ button, input, select, textarea {
 }
 
 .sidebar .sidebar-menu li {
-  margin: 2px 0;
+  margin: 1px 0;
 }
 
 /* links */
 .sidebar .sidebar-menu a {
-  padding: 10px 18px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   color: #cfcfcf;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   border-left: 3px solid transparent;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-/* hover + active */
 .sidebar .sidebar-menu a:hover,
 .sidebar .sidebar-menu li.active > a,
 .sidebar .sidebar-menu a.active {
@@ -82,71 +87,42 @@ button, input, select, textarea {
   border-left-color: #4c9aff;
 }
 
-/* footer */
+/* ---------- FOOTER (small + stylish) ---------- */
 .sidebar .sidebar-footer {
-  padding: 12px;
+  margin-top: auto;                /* ✅ always bottom */
+
+  /* ✅ footer bottom theke ektu upore uthbe */
+  margin-bottom: 20px;             /* NEW: gap at bottom */
+
+  padding: 10px 12px 8px;
   border-top: 1px solid rgba(255,255,255,0.06);
-  background: #1e1f29;
+  background: linear-gradient(
+    to bottom,
+    rgba(30,31,41,0.9),
+    rgba(24,25,33,1)
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
 }
 
+/* logout button */
 .sidebar .logout-btn {
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: none;
   border-radius: 10px;
   background: #e74c3c;
   color: white;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: background 0.2s ease;
-}
-
-.sidebar .logout-btn:hover {
-  background: #c0392b;
-}
-
-
-
-/* footer meta text */
-.sidebar .footer-meta {
-  margin-top: 10px;
-  text-align: center;
-  font-size: 11.5px;
-  color: #c7c9d1;
-  line-height: 1.4;
-}
-
-.sidebar .footer-meta .devby {
-  font-weight: 500;
-  color: #e5e7eb;
-}
-
-.sidebar .footer-meta .copyright {
-  font-size: 11px;
-  opacity: 0.85;
-}
-
-/* icon-only logout button */
-.sidebar .logout-btn {
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 10px;
-  background: #e74c3c;
-  color: white;
-  cursor: pointer;
-  font-size: 18px; /* icon size */
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center; /* icon center */
-  gap: 0;
-  transition: background 0.2s ease, transform 0.12s ease;
+  gap: 7px;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .sidebar .logout-btn:hover {
@@ -154,12 +130,33 @@ button, input, select, textarea {
   transform: translateY(-1px);
 }
 
-.sidebar .logout-btn .material-symbols-rounded {
-  font-size: 20px;
-  line-height: 1;
+/* footer texts (use these in HTML if needed) */
+.sidebar .sidebar-footer .footer-meta {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 0.2px;
+  line-height: 1.2;
 }
 
-/* ---------- TOPBAR (Modern + Compact) ---------- */
+.sidebar .sidebar-footer .footer-copy {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.25px;
+  line-height: 1.2;
+}
+
+.sidebar .sidebar-footer .footer-divider {
+  height: 1px;
+  width: 70%;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+
+
+/* ---------- TOPBAR ---------- */
 .topbar {
   position: fixed;
   top: 0;
@@ -184,31 +181,27 @@ button, input, select, textarea {
   gap: 10px;
 }
 
-/* Hamburger */
+/* ✅ Hamburger visible on desktop too */
 .topbar .hamburger {
   font-size: 24px;
-  display: none;
+  display: inline-flex;
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
   color: #111827;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: 0.2s;
 }
-
 .topbar .hamburger:hover {
   background: #f3f4f6;
-  transform: scale(1.03);
 }
 
-/* Greeting */
+/* greeting */
 .topbar .greeting h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: #111827;
-  line-height: 1.2;
 }
-
 .topbar .subtext {
   margin: 2px 0 0;
   font-size: 12.5px;
@@ -216,7 +209,7 @@ button, input, select, textarea {
   color: #6b7280;
 }
 
-/* User profile */
+/* user profile */
 .topbar .user-profile {
   background: #f8fafc;
   padding: 5px 10px;
@@ -232,8 +225,6 @@ button, input, select, textarea {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .topbar .user-details {
@@ -246,16 +237,13 @@ button, input, select, textarea {
 .topbar .user-name {
   font-size: 13.5px;
   font-weight: 600;
-  color: #111827;
 }
-
 .topbar .user-role {
   font-size: 11.5px;
   font-weight: 500;
   color: #6b7280;
 }
 
-/* Logout icon */
 .topbar .logout-icon {
   border: none;
   background: transparent;
@@ -263,29 +251,50 @@ button, input, select, textarea {
   color: #374151;
   padding: 6px;
   border-radius: 8px;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: 0.2s;
 }
-
 .topbar .logout-icon:hover {
   background: #eef2f7;
   color: #111827;
 }
 
-/* ---------- MOBILE RESPONSIVE ---------- */
-@media (max-width: 768px) {
 
-  /* sidebar drawer */
+/* ---------- MAIN CONTENT BASE ---------- */
+.dashboard-container .main-content {
+  margin-left: 250px;               /* ✅ FIX: আগে 230px ভুল ছিল */
+  margin-top: 64px;
+  width: calc(100% - 250px);
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+
+/* ✅ DESKTOP drawer close state */
+body.sidebar-collapsed .sidebar {
+  transform: translateX(-100%);
+}
+
+body.sidebar-collapsed .topbar {
+  left: 0;
+  width: 100%;
+}
+
+body.sidebar-collapsed .dashboard-container .main-content {
+  margin-left: 0;
+  width: 100%;
+}
+
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 768px) {
   .sidebar {
     width: 230px;
     transform: translateX(-100%);
     box-shadow: 4px 0 12px rgba(0,0,0,0.3);
   }
-
   .sidebar.open {
     transform: translateX(0);
   }
 
-  /* topbar full width */
   .topbar {
     left: 0;
     width: 100%;
@@ -293,22 +302,29 @@ button, input, select, textarea {
     padding: 0 12px;
   }
 
-  .topbar .hamburger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  .dashboard-container .main-content {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 60px;
   }
 
-  .topbar .greeting h3 { font-size: 14.5px; }
-  .topbar .subtext       { font-size: 11.5px; }
+  /* mobile menu font aaro tiny */
+  .sidebar .sidebar-menu a {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
 
-  .topbar .user-profile  { padding: 4px 8px; gap: 8px; }
-  .topbar .avatar        { width: 30px; height: 30px; }
-  .topbar .user-name     { font-size: 12.5px; }
-  .topbar .user-role     { font-size: 10.5px; }
+  /* footer still compact on mobile */
+  .sidebar .sidebar-footer .footer-meta {
+    font-size: 10.5px;
+  }
+  .sidebar .sidebar-footer .footer-copy {
+    font-size: 10px;
+  }
 }
 
-/* ---------- Overlay (optional) ---------- */
+
+/* overlay */
 .overlay {
   position: fixed;
   inset: 0;

@@ -7,10 +7,10 @@
    Reserve space for fixed sidebar + topbar
 ------------------------------------------------ */
 .dashboard-container .main-content {
-  margin-left: 250px;  /* sidebar width */
+  margin-left: 230px;  /* sidebar width */
   margin-top: 70px;    /* topbar height */
   padding: 0;
-  width: calc(100% - 250px);
+  width: calc(100% - 230px);
   transition: 0.3s ease;
 }
 

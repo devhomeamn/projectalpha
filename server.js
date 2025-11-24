@@ -20,6 +20,9 @@ app.use((req, res, next) => {
 const authRoutes = require('./routes/authRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
 const recordRoutes = require('./routes/recordRoutes');
+const dashboardRoutes = require("./routes/dashboardRoutes");
+
+
 
 
  // ✅ must come BEFORE static serve
@@ -28,6 +31,9 @@ const recordRoutes = require('./routes/recordRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/records', recordRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+
+
 
 
 // ✅ Static serve (সবচেয়ে শেষে)

@@ -3,13 +3,15 @@ console.log("view-record.js loaded");
 let API_BASE = "";
 let allRecords = [];
 let singleMoveTargetId = null;
+
 let currentPage = 1;
 let totalPages = 1;
 let totalRecords = 0;
+
 let selectedSection = "";
 let pageSize = 10;
-let currentUser = localStorage.getItem("username") || "Unknown User";
 
+let currentUser = localStorage.getItem("username") || "Unknown User";
 
 /* ================== TOAST ================== */
 function showToast(message, type = "success") {
@@ -27,22 +29,22 @@ function showToast(message, type = "success") {
 (() => {
   const style = document.createElement("style");
   style.textContent = `
-  .toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    background: #10b981;
-    color: white;
-    border-radius: 8px;
-    font-weight: 500;
-    opacity: 0;
-    transform: translateY(-20px);
-    transition: all 0.3s ease;
-    z-index: 9999;
-  }
-  .toast.error { background: #ef4444; }
-  .toast.show { opacity: 1; transform: translateY(0); }
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background: #10b981;
+      color: white;
+      border-radius: 8px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+      z-index: 9999;
+    }
+    .toast.error { background: #ef4444; }
+    .toast.show { opacity: 1; transform: translateY(0); }
   `;
   document.head.appendChild(style);
 })();
@@ -59,7 +61,7 @@ async function loadConfig() {
   }
 
   await Promise.all([loadSections(), loadCentralRacks()]);
-  await fetchRecords();
+  await fetchRecords(1);
 }
 
 /* ================== CENTRAL RACKS ================== */
@@ -67,6 +69,7 @@ async function loadCentralRacks() {
   try {
     const res = await fetch(`${API_BASE}/sections/central/racks`);
     const racks = await res.json();
+
     const singleSelect = document.getElementById("singleMoveRack");
     const bulkSelect = document.getElementById("bulkRackId");
     [singleSelect, bulkSelect].forEach((sel) => sel && (sel.innerHTML = ""));
@@ -92,14 +95,17 @@ async function loadSections() {
   try {
     const res = await fetch(`${API_BASE}/sections`);
     const data = await res.json();
+
     const select = document.getElementById("sectionFilter");
     if (!select) return;
+
     select.innerHTML = `<option value="">All Sections</option>`;
     data.forEach((s) => select.appendChild(new Option(s.name, s.id)));
+
     select.onchange = (e) => {
       selectedSection = e.target.value;
       currentPage = 1;
-      fetchRecords();
+      fetchRecords(1);
     };
   } catch (err) {
     console.error("loadSections error:", err);
@@ -109,16 +115,22 @@ async function loadSections() {
 /* ================== FETCH RECORDS ================== */
 async function fetchRecords(page = 1) {
   try {
-    const q = document.getElementById("searchInput")?.value || "";
+    const q = document.getElementById("searchInput")?.value?.trim() || "";
     const sectionParam = selectedSection ? `&section=${selectedSection}` : "";
-    const res = await fetch(`${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}`);
+
+    const res = await fetch(
+      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}`
+    );
     const data = await res.json();
+
     allRecords = data.data || [];
     currentPage = data.page || 1;
     totalPages = data.totalPages || 1;
     totalRecords = data.total || allRecords.length;
+
     renderTable(allRecords);
     updatePaginationInfo();
+    updatePaginationButtons();
   } catch (err) {
     console.error("fetchRecords error:", err);
   }
@@ -128,6 +140,7 @@ async function fetchRecords(page = 1) {
 function renderTable(records) {
   const tbody = document.querySelector("#recordTable tbody");
   tbody.innerHTML = "";
+
   if (!records.length) {
     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No records found</td></tr>`;
     bindCheckAll();
@@ -135,10 +148,13 @@ function renderTable(records) {
   }
 
   const startIndex = (currentPage - 1) * pageSize;
-  const canDelete = ["admin", "master"].includes(localStorage.getItem("role")?.toLowerCase() || "");
+  const canDelete = ["admin", "master"].includes(
+    (localStorage.getItem("role") || "").toLowerCase()
+  );
 
   records.forEach((rec, idx) => {
     const tr = document.createElement("tr");
+
     const sectionName = rec.Section?.name || "-";
     const subName = rec.Subcategory?.name || "-";
     const rackName = rec.Rack?.name || "-";
@@ -150,7 +166,9 @@ function renderTable(records) {
     tr.innerHTML = `
       <td>${tableSerial}</td>
       <td><input type="checkbox" class="record-select" data-id="${rec.id}"></td>
-      <td>${rec.file_name}</td>
+      <td class="file-cell" style="cursor:pointer; font-weight:600; color:#111827;">
+        ${rec.file_name}
+      </td>
       <td>${rec.bd_no || "-"}</td>
       <td>${sectionName}</td>
       <td>${subName}</td>
@@ -165,6 +183,9 @@ function renderTable(records) {
         ${canDelete ? `<i class="icon-delete" data-id="${rec.id}" title="Delete">🗑️</i>` : ""}
       </td>
     `;
+
+    // ✅ Row click = Show details modal
+    tr.addEventListener("click", () => showDetails(rec));
 
     // Edit click
     tr.querySelector(".icon-edit")?.addEventListener("click", (e) => {
@@ -188,8 +209,10 @@ function renderTable(records) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role: localStorage.getItem("role") }),
         });
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
+
         showToast(data.message);
         fetchRecords(currentPage);
       } catch (err) {
@@ -201,6 +224,26 @@ function renderTable(records) {
   });
 
   bindCheckAll();
+}
+
+/* ================== PAGINATION UI ================== */
+function updatePaginationInfo() {
+  const el = document.getElementById("paginationInfo");
+  if (!el) return;
+  const start = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, totalRecords);
+  el.textContent = `Showing ${start}-${end} of ${totalRecords} records`;
+}
+
+function updatePaginationButtons() {
+  const prevBtn = document.getElementById("prevPage");
+  const nextBtn = document.getElementById("nextPage");
+  const pageDisplay = document.getElementById("pageDisplay");
+
+  if (pageDisplay) pageDisplay.textContent = `Page ${currentPage} / ${totalPages}`;
+
+  if (prevBtn) prevBtn.disabled = currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
 }
 
 /* ================== EDIT MODAL ================== */
@@ -216,41 +259,45 @@ function closeEditModal() {
   document.getElementById("editRecordModal").style.display = "none";
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+/* submit edit */
+function bindEditForm() {
   const editForm = document.getElementById("editRecordForm");
-  if (editForm) {
-    editForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const id = document.getElementById("editRecordId").value;
-      const file_name = document.getElementById("editFileName").value;
-      const bd_no = document.getElementById("editBdNo").value;
-      const description = document.getElementById("editDescription").value;
+  if (!editForm) return;
 
-      try {
-        const res = await fetch(`${API_BASE}/records/update/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ file_name, bd_no, description, updated_by: currentUser }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        showToast("✅ Record updated successfully!");
-        closeEditModal();
-        fetchRecords(currentPage);
-      } catch (err) {
-        showToast("❌ " + err.message, "error");
-      }
-    });
-  }
-});
+  editForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("editRecordId").value;
+    const file_name = document.getElementById("editFileName").value.trim();
+    const bd_no = document.getElementById("editBdNo").value.trim();
+    const description = document.getElementById("editDescription").value.trim();
 
-
+    try {
+      const res = await fetch(`${API_BASE}/records/update/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_name, bd_no, description, updated_by: currentUser }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast("✅ Record updated successfully!");
+      closeEditModal();
+      fetchRecords(currentPage);
+    } catch (err) {
+      showToast("❌ " + err.message, "error");
+    }
+  });
+}
 
 /* ================== SINGLE MOVE ================== */
 function openSingleMove(rec) {
   singleMoveTargetId = rec.id;
   document.getElementById("singleMoveModal").style.display = "flex";
-  document.getElementById("currentLocation").textContent = `${rec.Section?.name || "-"} → Rack ${rec.Rack?.name || "-"}`;
+
+  const prevSection = rec.Section?.name || rec.previous_section_id || "-";
+  const prevRack = rec.Rack?.name || rec.previous_rack_id || "-";
+  document.getElementById("currentLocation").textContent =
+    `${prevSection} → Rack ${prevRack}`;
+
   computeSingleAutoSerial();
 }
 
@@ -258,54 +305,73 @@ async function computeSingleAutoSerial() {
   const rackId = document.getElementById("singleMoveRack")?.value;
   const serialInput = document.getElementById("singleMoveSerial");
   if (!rackId) return (serialInput.value = "");
+
   try {
     const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
     const records = await res.json();
-    const used = records.map((r) => parseInt(r.serial_no)).filter(Boolean).sort((a, b) => a - b);
+    const used = records
+      .map((r) => parseInt(r.serial_no))
+      .filter(Boolean)
+      .sort((a, b) => a - b);
+
     let next = 1;
-    for (const n of used) if (n === next) next++; else break;
+    for (const n of used) {
+      if (n === next) next++;
+      else break;
+    }
     serialInput.value = next;
   } catch {
     serialInput.value = "1";
   }
 }
 
-document.getElementById("singleMoveRack")?.addEventListener("change", computeSingleAutoSerial);
-
-document.getElementById("singleMoveConfirm")?.addEventListener("click", async () => {
-  const rackId = document.getElementById("singleMoveRack").value;
-  const serial = document.getElementById("singleMoveSerial").value || "auto";
-  try {
-    const res = await fetch(`${API_BASE}/records/move/${singleMoveTargetId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newRackId: rackId, startSerialNo: serial, moved_by: currentUser }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    showToast("✅ Moved successfully!");
-    document.getElementById("singleMoveModal").style.display = "none";
-    fetchRecords(currentPage);
-  } catch (err) {
-    showToast("❌ " + err.message, "error");
-  }
-});
-
 function closeSingleMove() {
   singleMoveTargetId = null;
   document.getElementById("singleMoveModal").style.display = "none";
 }
 
-/* ================== BULK MOVE ================== */
-document.getElementById("openBulkMove")?.addEventListener("click", openBulkMove);
-document.getElementById("bulkCancel")?.addEventListener("click", closeBulkMove);
-document.getElementById("bulkClose")?.addEventListener("click", closeBulkMove);
+/* confirm single move */
+async function bindSingleMove() {
+  const rackSelect = document.getElementById("singleMoveRack");
+  const confirmBtn = document.getElementById("singleMoveConfirm");
 
+  rackSelect?.addEventListener("change", computeSingleAutoSerial);
+
+  confirmBtn?.addEventListener("click", async () => {
+    const rackId = rackSelect.value;
+    const serial = document.getElementById("singleMoveSerial").value || "auto";
+    try {
+      const res = await fetch(`${API_BASE}/records/move/${singleMoveTargetId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newRackId: rackId,
+          startSerialNo: serial,
+          moved_by: currentUser,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showToast("✅ Moved successfully!");
+      closeSingleMove();
+      fetchRecords(currentPage);
+    } catch (err) {
+      showToast("❌ " + err.message, "error");
+    }
+  });
+}
+
+/* ================== BULK MOVE ================== */
 function openBulkMove() {
-  const selected = [...document.querySelectorAll(".record-select:checked")].map((cb) => parseInt(cb.dataset.id));
+  const selected = [...document.querySelectorAll(".record-select:checked")]
+    .map((cb) => parseInt(cb.dataset.id));
+
   if (selected.length === 0) return alert("⚠️ Please select at least one record!");
-  document.getElementById("bulkMoveModal").dataset.ids = JSON.stringify(selected);
-  document.getElementById("bulkMoveModal").style.display = "flex";
+
+  const modal = document.getElementById("bulkMoveModal");
+  modal.dataset.ids = JSON.stringify(selected);
+  modal.style.display = "flex";
   computeBulkAutoSerial();
 }
 
@@ -313,80 +379,230 @@ async function computeBulkAutoSerial() {
   const rackId = document.getElementById("bulkRackId")?.value;
   const serialInput = document.getElementById("bulkStartSerial");
   if (!rackId) return (serialInput.value = "");
+
   try {
     const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
     const records = await res.json();
-    const used = records.map((r) => parseInt(r.serial_no)).filter(Boolean).sort((a, b) => a - b);
+    const used = records
+      .map((r) => parseInt(r.serial_no))
+      .filter(Boolean)
+      .sort((a, b) => a - b);
+
     let next = 1;
-    for (const n of used) if (n === next) next++; else break;
+    for (const n of used) {
+      if (n === next) next++;
+      else break;
+    }
     serialInput.value = next;
   } catch {
     serialInput.value = "1";
   }
 }
 
-document.getElementById("bulkRackId")?.addEventListener("change", computeBulkAutoSerial);
-
-document.getElementById("bulkConfirm")?.addEventListener("click", async () => {
-  const modal = document.getElementById("bulkMoveModal");
-  const ids = JSON.parse(modal.dataset.ids || "[]");
-  const rackId = document.getElementById("bulkRackId").value;
-  const startSerial = document.getElementById("bulkStartSerial").value || "auto";
-  try {
-    const res = await fetch(`${API_BASE}/records/bulk-move`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recordIds: ids, newRackId: rackId, startSerialNo: startSerial, moved_by: currentUser }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    showToast(data.message);
-    closeBulkMove();
-    fetchRecords(currentPage);
-  } catch (err) {
-    showToast("❌ " + err.message, "error");
-  }
-});
-
 function closeBulkMove() {
   document.getElementById("bulkMoveModal").style.display = "none";
 }
 
-/* ================== OTHERS ================== */
+function bindBulkMove() {
+  document.getElementById("openBulkMove")?.addEventListener("click", openBulkMove);
+  document.getElementById("bulkCancel")?.addEventListener("click", closeBulkMove);
+  document.getElementById("bulkClose")?.addEventListener("click", closeBulkMove);
+  document.getElementById("bulkRackId")?.addEventListener("change", computeBulkAutoSerial);
+
+  document.getElementById("bulkConfirm")?.addEventListener("click", async () => {
+    const modal = document.getElementById("bulkMoveModal");
+    const ids = JSON.parse(modal.dataset.ids || "[]");
+    const rackId = document.getElementById("bulkRackId").value;
+    const startSerial = document.getElementById("bulkStartSerial").value || "auto";
+
+    try {
+      const res = await fetch(`${API_BASE}/records/bulk-move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recordIds: ids,
+          newRackId: rackId,
+          startSerialNo: startSerial,
+          moved_by: currentUser,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showToast(data.message || "✅ Bulk moved!");
+      closeBulkMove();
+      fetchRecords(currentPage);
+    } catch (err) {
+      showToast("❌ " + err.message, "error");
+    }
+  });
+}
+
+/* ================== CHECK ALL ================== */
 function bindCheckAll() {
   const master = document.getElementById("checkAll");
   const boxes = document.querySelectorAll(".record-select");
   if (!master) return;
+
   master.checked = false;
   master.indeterminate = false;
+
   master.onchange = () => boxes.forEach((cb) => (cb.checked = master.checked));
 }
 
+/* ================== DETAILS MODAL ================== */
 function showDetails(rec) {
   const modal = document.getElementById("recordModal");
   const body = document.getElementById("modalBody");
+
   const section = rec.Section?.name || "-";
-  const rack = rec.Rack?.name || "-";
+  const subcat  = rec.Subcategory?.name || "-";
+  const rack    = rec.Rack?.name || "-";
+
+  // ✅ backend enhanced field
+  const prev = rec.previous_location || {};
+  const prevSection = prev.section_name || "-";
+  const prevSubcat  = prev.subcategory_name || "-";
+  const prevRack    = prev.rack_name || "-";
+
   const serial = rec.serial_no ?? "-";
   const status = rec.status === "central" ? "In Central" : "In Section";
-  let html = `
+
+  body.innerHTML = `
     <p><strong>File Name:</strong> ${rec.file_name}</p>
     <p><strong>BD No:</strong> ${rec.bd_no || "-"}</p>
-    <p><strong>Section:</strong> ${section}</p>
-    <p><strong>Rack:</strong> ${rack}</p>
-    <p><strong>Serial:</strong> ${serial}</p>
+
+    <hr style="margin:10px 0;">
+
+    <p><strong>Current Section:</strong> ${section}</p>
+    <p><strong>Current Subcategory:</strong> ${subcat}</p>
+    <p><strong>Current Rack:</strong> ${rack}</p>
+    <p><strong>Current Serial:</strong> ${serial}</p>
+
+    <hr style="margin:10px 0;">
+
+    <p><strong>Previous Section:</strong> ${prevSection}</p>
+    <p><strong>Previous Subcategory:</strong> ${prevSubcat}</p>
+    <p><strong>Previous Rack:</strong> ${prevRack}</p>
+
+    <hr style="margin:10px 0;">
+
     <p><strong>Added By:</strong> ${rec.added_by || "-"}</p>
-    <p><strong>Status:</strong> ${status}</p>`;
-  body.innerHTML = html;
+    <p><strong>Moved By:</strong> ${rec.moved_by || "-"}</p>
+    <p><strong>Status:</strong> ${status}</p>
+  `;
+
   modal.style.display = "flex";
 }
-
 
 function closeModal() {
   document.getElementById("recordModal").style.display = "none";
 }
+// Click outside modal to close
+   window.addEventListener("click", (e) => {
+    const modal = document.getElementById("recordModal");
+    if (e.target === modal) closeModal();
+  });
+
+// ✅ ESC press to close
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+/* ================== SEARCH (FIX) ================== */
+function bindSearch() {
+  const input = document.getElementById("searchInput");
+  if (!input) return;
+
+  let t = null;
+  input.addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      currentPage = 1;
+      fetchRecords(1);
+    }, 300); // debounce
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      currentPage = 1;
+      fetchRecords(1);
+    }
+  });
+}
+
+/* ================== PAGE SIZE (FIX) ================== */
+function bindPageSize() {
+  const sel = document.getElementById("pageSize");
+  if (!sel) return;
+
+  pageSize = parseInt(sel.value) || 10;
+
+  sel.addEventListener("change", () => {
+    pageSize = parseInt(sel.value) || 10;
+    currentPage = 1;
+    fetchRecords(1);
+  });
+}
+
+/* ================== PAGINATION BUTTONS ================== */
+function bindPaginationButtons() {
+  document.getElementById("prevPage")?.addEventListener("click", () => {
+    if (currentPage > 1) fetchRecords(currentPage - 1);
+  });
+  document.getElementById("nextPage")?.addEventListener("click", () => {
+    if (currentPage < totalPages) fetchRecords(currentPage + 1);
+  });
+}
+
+/* ================== EXPORT CSV (NEW) ================== */
+function exportToCSV() {
+  if (!allRecords.length) return showToast("No records to export", "error");
+
+  const headers = [
+    "File Name","BD No","Section","Subcategory","Rack",
+    "Serial No","Added By","Moved By","Status"
+  ];
+
+  const rows = allRecords.map(r => ([
+    r.file_name || "",
+    r.bd_no || "",
+    r.Section?.name || "",
+    r.Subcategory?.name || "",
+    r.Rack?.name || "",
+    r.serial_no ?? "",
+    r.added_by || "",
+    r.moved_by || "",
+    r.status || "active",
+  ]));
+
+  let csv = headers.join(",") + "\n";
+  csv += rows.map(row =>
+    row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")
+  ).join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `records_page_${currentPage}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* make export accessible from button onclick */
+window.exportToCSV = exportToCSV;
 
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
+  bindSearch();
+  bindPageSize();
+  bindPaginationButtons();
+  bindEditForm();
+  bindSingleMove();
+  bindBulkMove();
   loadConfig();
 });

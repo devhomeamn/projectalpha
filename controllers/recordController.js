@@ -226,7 +226,9 @@ exports.moveToCentral = async (req, res) => {
   }
 };
 
-// ================== GET CENTRAL RECORDS ==================
+
+
+// ================== GET CENTRAL RECORDS (with previous location names) ==================
 exports.getCentralRecords = async (req, res) => {
   try {
     const q = req.query.q || "";
@@ -251,12 +253,44 @@ exports.getCentralRecords = async (req, res) => {
       order: [["updatedAt", "DESC"]],
     });
 
-    res.json(records);
+    // ✅ Enhance with previous location names (same as getRecords)
+    const enhanced = await Promise.all(
+      records.map(async (r) => {
+        let prevSection = null,
+          prevSub = null,
+          prevRack = null;
+
+        if (r.previous_section_id) {
+          const s = await Section.findByPk(r.previous_section_id);
+          prevSection = s ? s.name : null;
+        }
+        if (r.previous_subcategory_id) {
+          const sb = await Subcategory.findByPk(r.previous_subcategory_id);
+          prevSub = sb ? sb.name : null;
+        }
+        if (r.previous_rack_id) {
+          const rk = await Rack.findByPk(r.previous_rack_id);
+          prevRack = rk ? rk.name : null;
+        }
+
+        return {
+          ...r.toJSON(),
+          previous_location: {
+            section_name: prevSection,
+            subcategory_name: prevSub,
+            rack_name: prevRack,
+          },
+        };
+      })
+    );
+
+    res.json(enhanced);
   } catch (err) {
     console.error("❌ getCentralRecords error:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // ================== BULK MOVE TO CENTRAL ==================
 exports.bulkMoveRecords = async (req, res) => {

@@ -5,79 +5,75 @@
   <title>Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
- <link rel="stylesheet" href="css/layout.css">
-<link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/dashboard.css">
 
   <script src="js/auth-guard.js"></script>
 </head>
 
 <body>
 
-  <!-- ⬇️ Overlay for mobile sidebar click-to-close -->
+  <!-- overlay for mobile sidebar -->
   <div id="overlay" class="overlay"></div>
 
   <div class="dashboard-container">
-
-    <!-- Sidebar (shared component) -->
     <div id="sidebar"></div>
 
-    <!-- Main Content -->
     <main class="main-content">
-
-      <!-- Topbar (shared component) -->
       <div id="topbar"></div>
 
-      <!-- Page-specific content -->
+      <!-- top stats -->
       <section class="stats">
-
         <div class="stat-card green">
-          <h3>20</h3>
+          <h3 id="totalSections">0</h3>
           <p>Total Sections</p>
         </div>
 
         <div class="stat-card purple">
-          <h3>26</h3>
-          <p>Number of Records</p>
+          <h3 id="totalRecords">0</h3>
+          <p>Total Records</p>
         </div>
 
         <div class="stat-card blue">
-          <h3>120+</h3>
-          <p>Countries Served</p>
+          <h3 id="centralToggleLabel">Central Excluded</h3>
+          <p>Filter Mode</p>
+        </div>
+      </section>
+
+      <!-- Section overview -->
+      <section class="section-overview">
+        <div class="overview-header">
+          <h2>Sections Overview</h2>
+
+          <label class="switch">
+            <input type="checkbox" id="includeCentralToggle">
+            <span class="slider"></span>
+          </label>
+          <span class="toggle-text">Include Central</span>
         </div>
 
-        <div class="stat-card orange">
-          <h3>$230K</h3>
-          <p>Savings Membership</p>
+        <div id="sectionsContainer" class="sections-container">
+          <!-- JS will render -->
         </div>
-
-        <div class="stat-card yellow">
-          <h3>99%</h3>
-          <p>Customer Satisfaction</p>
-        </div>
-
-        <div class="stat-card red">
-          <h3>50+</h3>
-          <p>Team Members</p>
-        </div>
-
       </section>
 
     </main>
   </div>
 
-  <!-- Layout Loader -->
   <script type="module">
     import { initLayout } from "./js/layout.js";
     initLayout("dashboard.html");
   </script>
 
-  <!-- Sidebar Close on Outside Click -->
+  <script src="js/dashboard.js"></script>
+
+  <!-- sidebar close on outside click -->
   <script>
     document.getElementById("overlay").addEventListener("click", () => {
       const sidebar = document.querySelector(".sidebar");
       const overlay = document.getElementById("overlay");
-      sidebar.classList.remove("open");
-      overlay.classList.remove("show");
+      sidebar?.classList.remove("open");
+      overlay?.classList.remove("show");
     });
   </script>
 
