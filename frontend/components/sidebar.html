@@ -1,28 +1,39 @@
 <aside class="sidebar">
+  <!-- Logo -->
   <div class="sidebar-header">
     <h2 class="logo-text">
       <a href="dashboard.html" class="logo-link">SFRMS</a>
     </h2>
   </div>
 
+  <!-- ✅ Mini Profile (NEW) -->
+  <!-- <div class="sidebar-profile">
+     এখানে avatar বসবে 
+    <img id="sidebarAvatar"
+         class="sidebar-avatar"
+         src="https://robohash.org/sfrms-user.png?size=80x80"
+         alt="User" />
+
+    <div class="sidebar-user">
+      <div id="sidebarName" class="sidebar-name">User Name</div>
+      <div id="sidebarRole" class="sidebar-role">Role</div>
+    </div>
+  </div>
+-->
+  <!-- Menu -->
   <nav class="sidebar-menu">
     <ul id="menuList"></ul>
   </nav>
 
+  <!-- Footer -->
   <div class="sidebar-footer">
-  <button class="logout-btn" onclick="logout()">
-    <span class="material-symbols-rounded">logout</span>
-    <span>Logout</span>
-  </button>
+    <button class="logout-btn" onclick="logout()" title="Logout">
+      <span class="material-symbols-rounded">logout</span>
+      <span>Logout</span>
+    </button>
 
-  <div class="footer-divider"></div>
-  <div class="footer-meta">Developed by Amn</div>
-  <div class="footer-copy">© 2025 SFRMS. All rights reserved.</div>
-</div>
-
+    <div class="footer-divider"></div>
+    <div class="footer-meta">Developed by SFRMS Team</div>
+    <div class="footer-copy">© 2025 SFRMS. All rights reserved.</div>
+  </div>
 </aside>
-
-<script>
-  // auto current year
-  document.getElementById("year").textContent = new Date().getFullYear();
-</script>
