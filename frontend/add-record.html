@@ -1,91 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Add Record</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/layout.css">
-<link rel="stylesheet" href="css/add-record.css">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/add-record.css" />
   <script src="js/auth-guard.js"></script>
 </head>
 
 <body>
-
-  <!-- Mobile Overlay for Sidebar -->
   <div id="overlay" class="overlay"></div>
 
   <div class="dashboard-container">
-
-    <!-- Sidebar -->
     <div id="sidebar"></div>
 
-    <!-- Main Content -->
     <main class="main-content">
-
-      <!-- Topbar -->
       <div id="topbar"></div>
 
       <section class="content">
-        <h2 class="page-title">Add New Record</h2>
 
+        <!-- Header -->
+        <div class="page-head">
+          <a class="back-link" href="dashboard.html">← Back</a>
+          <h2 class="page-title">Add New Record</h2>
+        </div>
+
+        <!-- Form Card -->
         <form id="recordForm" class="form-card">
 
-          <!-- File Name -->
-          <div class="form-group">
-            <label for="file_name">File Name <span class="required">*</span></label>
-            <input type="text" id="file_name" placeholder="Enter File Name" required>
+          <div class="form-grid">
+            <!-- File Name -->
+            <div class="form-group span-2">
+              <label for="file_name">File Name <span class="required">*</span></label>
+              <input type="text" id="file_name" placeholder="Enter File Name" required />
+            </div>
+
+            <!-- BD No -->
+            <div class="form-group">
+              <label for="bd_no">BD No.<span class="required">*</span></label>
+              <input type="text" id="bd_no" placeholder="Enter BD No." />
+            </div>
+
+            <!-- Section -->
+            <div class="form-group">
+              <label for="section_id">Select Section <span class="required">*</span></label>
+              <select id="section_id" required>
+                <option value="">-- Select Section --</option>
+              </select>
+            </div>
+
+            <!-- Sub Category -->
+            <div class="form-group">
+              <label for="subcategory_id">Select Subcategory</label>
+              <select id="subcategory_id">
+                <option value="">-- Select Subcategory --</option>
+              </select>
+            </div>
+
+            <!-- Rack -->
+            <div class="form-group">
+              <label for="rack_id">Select Rack <span class="required">*</span></label>
+              <select id="rack_id" required>
+                <option value="">-- Select Rack --</option>
+              </select>
+            </div>
+
+            <!-- Serial No -->
+            <div class="form-group span-2">
+              <label for="serial_no">Serial No.</label>
+              <input type="text" id="serial_no" readonly placeholder="Auto-generated" />
+            </div>
+
+            <!-- Description -->
+            <div class="form-group span-2">
+              <label for="description">Description</label>
+              <textarea id="description" placeholder="Add Description (optional)"></textarea>
+            </div>
           </div>
 
-          <!-- BD No -->
-          <div class="form-group">
-            <label for="bd_no">BD No.</label>
-            <input type="text" id="bd_no" placeholder="Enter BD No.">
-          </div>
-
-          <!-- Section -->
-          <div class="form-group">
-            <label for="section_id">Select Section <span class="required">*</span></label>
-            <select id="section_id" required>
-              <option value="">-- Select Section --</option>
-            </select>
-          </div>
-
-          <!-- Sub Category -->
-          <div class="form-group">
-            <label for="subcategory_id">Select Subcategory</label>
-            <select id="subcategory_id">
-              <option value="">-- Select Subcategory --</option>
-            </select>
-          </div>
-
-          <!-- Rack -->
-          <div class="form-group">
-            <label for="rack_id">Select Rack <span class="required">*</span></label>
-            <select id="rack_id" required>
-              <option value="">-- Select Rack --</option>
-            </select>
-          </div>
-
-          <!-- Serial No -->
-          <div class="form-group">
-            <label for="serial_no">Serial No.</label>
-            <input type="text" id="serial_no" readonly placeholder="Auto-generated">
-          </div>
-
-          <!-- Description -->
-          <div class="form-group">
-            <label for="description">Description</label>
-            <textarea id="description" placeholder="Add Description (optional)"></textarea>
-          </div>
-
-          <button type="submit" class="btn-primary">
-            ➕ Add Record
-          </button>
-
+          <button type="submit" class="btn-primary">Add Record</button>
         </form>
-      </section>
 
+      </section>
     </main>
   </div>
 
@@ -93,8 +90,6 @@
     import { initLayout } from "./js/layout.js";
     initLayout("add-record.html");
   </script>
-
   <script src="js/add-record.js"></script>
-
 </body>
 </html>

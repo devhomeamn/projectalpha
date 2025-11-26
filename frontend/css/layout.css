@@ -1,230 +1,319 @@
 /* ===========================================
-   LAYOUT.CSS — SIDEBAR + TOPBAR + GLOBAL FONT
-   Inspired by Compass Estate (dark sleek ui)
-   ✅ No sidebar scroll
-   ✅ Footer always bottom
-   ✅ Desktop + Mobile drawer open/close
-   ✅ Main-content reserves sidebar/topbar space
+   LAYOUT.CSS — Compass Inspired
+   Sidebar (no scroll) + Blue Topbar + Global Poppins
+   Desktop & Mobile drawer open/close
 =========================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* Global font (project wide) */
-html, body, button, input, select, textarea {
+html, body,
+button, input, select, textarea {
   font-family: "Poppins", sans-serif;
 }
 
-/* -------------------------------------------
-   SIDEBAR
-/* ---------- SIDEBAR ---------- */
-.sidebar {
-  width: 250px;
-  background: #171821; /* একটু deep dark */
-  color: #fff;
+/* ---------- SIDEBAR (light like Compass) ---------- */
+.sidebar{
+  width: 230px;
+  background: #f7f7f7;
+  color: #111827;
   display: flex;
   flex-direction: column;
-  padding: 14px 0;
+  padding: 12px 0;
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   height: 100vh;
-  transition: transform 0.3s ease;
   z-index: 300;
-
-  /* ✅ sidebar এ scroll NEVER */
-  overflow: hidden;
+  transition: transform 0.3s ease;
+  overflow: hidden; /* ✅ no scroll */
+  border-right: 1px solid #eef0f4;
 }
 
 /* header */
-.sidebar .sidebar-header {
-  text-align: center;
-  padding: 0 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+.sidebar .sidebar-header{
+  padding: 8px 14px 12px;
+  border-bottom: 1px solid #f0f2f6;
 }
-.sidebar .logo-link {
-  color: #fff;
-  font-size: 19px;
+.sidebar .logo-wrap{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar .logo-dot{
+  width: 28px; height: 28px;
+  background: #4c9aff;
+  border-radius: 50%;
+  box-shadow: 0 6px 14px rgba(76,154,255,0.35);
+}
+.sidebar .logo-link{
+  font-size: 18px;
   font-weight: 700;
+  color: #111827;
   text-decoration: none;
   letter-spacing: 0.3px;
 }
 
-/* ✅ MINI PROFILE (Compass vibe) */
+/* profile */
 .sidebar .sidebar-profile{
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
-  margin: 10px 12px 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
+  margin: 12px 12px 8px;
+  padding: 10px 12px;
+  background: #f7f9fc;
+  border: 1px solid #eef2f7;
   border-radius: 12px;
 }
-
 .sidebar .sidebar-avatar{
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;  /* compass-ish square */
-  background: #0f1117;
-  border: 1px solid rgba(255,255,255,0.1);
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
   object-fit: cover;
-}
-
-.sidebar .sidebar-user{
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+  background: #fff;
 }
 .sidebar .sidebar-name{
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: #111827;
+  max-width: 140px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
 }
 .sidebar .sidebar-role{
+  margin-top: 2px;
   font-size: 12px;
   font-weight: 500;
-  color: #aeb3c2;
+  color: #6b7280;
 }
 
-/* menu area — no scroll */
-.sidebar .sidebar-menu {
+/* menu */
+.sidebar .sidebar-menu{
   flex: 0 0 auto;
-  padding: 6px 0 0;
-  margin-top: 6px;
+  padding-top: 4px;
 }
-
-.sidebar .sidebar-menu ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.sidebar .sidebar-menu ul{
+  list-style: none; margin:0; padding:0;
 }
-
-/* li */
-.sidebar .sidebar-menu li {
+.sidebar .sidebar-menu li{
   margin: 2px 0;
 }
 
-/* ✅ menu link Compass style */
-.sidebar .sidebar-menu a {
-  padding: 9px 14px;
-  margin: 0 10px;
-  border-radius: 10px;
+/* link */
+.sidebar .sidebar-menu a{
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #c7cad6;
-  text-decoration: none;
+
+  margin: 0 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+
   font-size: 13.5px;
   font-weight: 500;
-  transition: 0.2s ease;
+  color: #374151;
+  text-decoration: none;
+  transition: 0.18s ease;
   position: relative;
 }
-
-/* left mini bar */
-.sidebar .sidebar-menu a::before{
-  content:"";
-  width: 4px;
-  height: 60%;
-  background: transparent;
-  border-radius: 999px;
-  position: absolute;
-  left: -8px;
-  top: 50%;
-  transform: translateY(-50%);
-  transition: 0.2s;
+.sidebar .sidebar-menu a:hover{
+  background: #eef5ff;
+  color: #2563eb;
 }
-
-/* hover + active */
-.sidebar .sidebar-menu a:hover,
 .sidebar .sidebar-menu li.active > a,
-.sidebar .sidebar-menu a.active {
-  background: rgba(255,255,255,0.06);
-  color: #fff;
+.sidebar .sidebar-menu a.active{
+  background: #e8f1ff;
+  color: #2563eb;
+  font-weight: 600;
 }
 
-.sidebar .sidebar-menu li.active > a::before,
-.sidebar .sidebar-menu a.active::before{
-  background: #4c9aff;
-}
-
-/* ✅ icon in menu */
+/* icon inside menu (layout.js এ span.menu-icon add করলে কাজ করবে) */
 .sidebar .menu-icon{
   font-size: 18px;
   color: inherit;
-  opacity: 0.95;
 }
 
-/* ✅ badge (optional) */
-.sidebar .menu-badge{
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(76,154,255,0.15);
-  color: #8bbcff;
-  border: 1px solid rgba(76,154,255,0.35);
-}
-
-/* ---------- FOOTER (small stylish) ---------- */
-.sidebar .sidebar-footer {
+/* footer bottom */
+.sidebar .sidebar-footer{
   margin-top: auto;
   padding: 10px 12px 8px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  background: linear-gradient(to bottom, rgba(23,24,33,0.9), rgba(16,17,24,1));
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   text-align: center;
+  background: #f7f7f7;
 }
-
-.sidebar .logout-btn {
-  width: 70%;
-  padding: 9px 10px;
-  margin: 0 auto;
-  border: none;
-  border-radius: 10px;
-  background: #e74c3c;
-  color: white;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  transition: 0.2s ease;
-}
-.sidebar .logout-btn:hover {
-  background: #c0392b;
-  transform: translateY(-1px);
-}
-
-.sidebar .sidebar-footer .footer-meta {
-  font-size: 10.8px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.7);
-  letter-spacing: 0.2px;
-}
-.sidebar .sidebar-footer .footer-copy {
-  font-size: 10.2px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.55);
-  letter-spacing: 0.25px;
-}
-.sidebar .sidebar-footer .footer-divider {
-  height: 1px;
-  width: 70%;
-  margin: 0 auto;
-  background: rgba(255,255,255,0.08);
+.sidebar .footer-divider{
+  height: 1px; width: 70%;
+  margin: 0 auto 8px;
+  background: #eef0f4;
   border-radius: 999px;
 }
+.sidebar .footer-meta{
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.sidebar .footer-copy{
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #9ca3af;
+}
 
-/* mobile a ektu compact */
+/* ---------- TOPBAR (blue) ---------- */
+.topbar{
+  position: fixed;
+  top: 0;
+  left: 230px;
+  width: calc(100% - 230px);
+  height: 64px;
+  background: #5aa8f3; /* compass-ish blue */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
+  z-index: 200;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  transition: left 0.3s ease, width 0.3s ease;
+}
+
+.topbar .topbar-left{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* hamburger visible desktop+mobile */
+.topbar .hamburger{
+  font-size: 26px;
+  color: #fff;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+.topbar .hamburger:hover{
+  background: rgba(255,255,255,0.18);
+}
+
+/* search pill */
+.topbar .topbar-search{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 10px;
+  border-radius: 999px;
+  min-width: 260px;
+}
+.topbar .topbar-search .search-icon{
+  font-size: 18px;
+  color: #fff;
+  opacity: 0.9;
+}
+.topbar .topbar-search input{
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  font-size: 13.5px;
+}
+.topbar .topbar-search input::placeholder{
+  color: rgba(255,255,255,0.9);
+}
+
+/* right side icons */
+.topbar .topbar-right{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar .topbar-icon{
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+.topbar .topbar-icon:hover{
+  background: rgba(255,255,255,0.18);
+}
+
+/* user chip */
+.topbar .user-chip{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+.topbar .avatar{
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.9);
+  object-fit: cover;
+  background: #fff;
+}
+.topbar .chip-info{
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.topbar .chip-name{
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+}
+.topbar .chip-role{
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+}
+
+/* logout button topbar */
+.topbar .topbar-logout{
+  border: none;
+  cursor: pointer;
+  background: #ff6a3d;
+  color: #fff;
+  padding: 7px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(255,106,61,0.35);
+  transition: transform .15s ease, filter .15s ease;
+}
+.topbar .topbar-logout:hover{
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+/* ---------- MAIN CONTENT BASE ---------- */
+.dashboard-container .main-content{
+  margin-left: 230px;
+  margin-top: 64px;
+  width: calc(100% - 230px);
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* ---------- DESKTOP drawer close state ---------- */
+body.sidebar-collapsed .sidebar{
+  transform: translateX(-100%);
+}
+body.sidebar-collapsed .topbar{
+  left: 0;
+  width: 100%;
+}
+body.sidebar-collapsed .dashboard-container .main-content{
+  margin-left: 0;
+  width: 100%;
+}
+
+/* ---------- MOBILE ---------- */
 @media (max-width: 768px){
   .sidebar{
     width: 230px;
@@ -233,196 +322,34 @@ html, body, button, input, select, textarea {
   }
   .sidebar.open{ transform: translateX(0); }
 
-  .sidebar .sidebar-menu a{
-    font-size: 13px;
-    padding: 8px 12px;
-  }
-  .sidebar .sidebar-avatar{
-    width: 40px; height: 40px;
-  }
-}
-
-/* -------------------------------------------
-   TOPBAR (modern compact)
-------------------------------------------- */
-.topbar {
-  position: fixed;
-  top: 0;
-  left: 250px;                 /* aligns with sidebar */
-  width: calc(100% - 250px);
-  height: 64px;
-
-  background: rgba(255,255,255,0.96);
-  backdrop-filter: blur(8px);
-
-  border-bottom: 1px solid #eef0f4;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.04);
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 18px;
-
-  z-index: 200;
-  transition: left 0.3s ease, width 0.3s ease;
-}
-
-.topbar .topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Hamburger visible desktop + mobile */
-.topbar .hamburger {
-  font-size: 23px;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  color: #111827;
-  transition: 0.2s ease;
-  display: inline-flex;
-}
-.topbar .hamburger:hover {
-  background: #f3f4f6;
-}
-
-/* Greeting */
-.topbar .greeting h3 {
-  margin: 0;
-  font-size: 15.5px;
-  font-weight: 600;
-  color: #111827;
-  line-height: 1.2;
-}
-.topbar .subtext {
-  margin: 2px 0 0;
-  font-size: 12px;
-  font-weight: 500;
-  color: #6b7280;
-}
-
-/* User profile pill */
-.topbar .user-profile {
-  background: #f8fafc;
-  padding: 5px 10px;
-  border-radius: 999px;
-
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  border: 1px solid #eef2f7;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-}
-
-.topbar .avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-
-.topbar .user-details {
-  display: flex;
-  flex-direction: column;
-  text-align: right;
-  line-height: 1.1;
-}
-
-.topbar .user-name {
-  font-size: 13.2px;
-  font-weight: 600;
-  color: #111827;
-}
-.topbar .user-role {
-  font-size: 11.2px;
-  font-weight: 500;
-  color: #6b7280;
-}
-
-/* Logout icon */
-.topbar .logout-icon {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #374151;
-
-  padding: 6px;
-  border-radius: 8px;
-  transition: 0.2s ease;
-}
-.topbar .logout-icon:hover {
-  background: #eef2f7;
-  color: #111827;
-}
-
-/* -------------------------------------------
-   MAIN CONTENT SPACING
-------------------------------------------- */
-.dashboard-container .main-content {
-  margin-left: 250px;          /* sidebar width */
-  margin-top: 64px;            /* topbar height */
-  width: calc(100% - 250px);
-  transition: margin-left 0.3s ease, width 0.3s ease;
-}
-
-/* -------------------------------------------
-   DESKTOP drawer close state
-------------------------------------------- */
-body.sidebar-collapsed .sidebar {
-  transform: translateX(-100%);
-}
-body.sidebar-collapsed .topbar {
-  left: 0;
-  width: 100%;
-}
-body.sidebar-collapsed .dashboard-container .main-content {
-  margin-left: 0;
-  width: 100%;
-}
-
-/* -------------------------------------------
-   MOBILE drawer behavior
-------------------------------------------- */
-@media (max-width: 768px) {
-
-
-  .topbar {
+  .topbar{
     left: 0;
     width: 100%;
     height: 60px;
-    padding: 0 12px;
+    padding: 0 10px;
   }
-
-  .dashboard-container .main-content {
+  .topbar .topbar-search{
+    min-width: 160px;
+    padding: 5px 8px;
+  }
+  .dashboard-container .main-content{
     margin-left: 0;
     width: 100%;
     margin-top: 60px;
   }
-
-  /* slightly smaller menu on mobile */
-  .sidebar .sidebar-menu a {
-    font-size: 13px;
-    padding: 8px 14px;
-  }
 }
 
-/* -------------------------------------------
-   Overlay (mobile click-to-close)
-------------------------------------------- */
-.overlay {
+/* overlay */
+.overlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
-  z-index: 250;
+  background: rgba(0,0,0,0.4);
+  z-index: 230;
   display: none;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-.overlay.show {
+.overlay.show{
   display: block;
   opacity: 1;
 }

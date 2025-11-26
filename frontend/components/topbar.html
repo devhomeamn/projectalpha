@@ -2,32 +2,43 @@
 
 <header class="topbar">
   <div class="topbar-left">
+    <!-- Hamburger (desktop + mobile) -->
+    <span class="material-symbols-rounded hamburger" onclick="toggleSidebar()">menu</span>
 
-    <!-- Hamburger for Mobile -->
-    <span class="material-symbols-rounded hamburger" onclick="toggleSidebar()">
-      menu
-    </span>
-
-    <div class="greeting">
-      <h3>Hello, <span id="name"></span> 👋</h3>
-      <p class="subtext" id="roleLabel"></p>
+    <!-- Search -->
+    <div class="topbar-search">
+      <span class="material-symbols-rounded search-icon">search</span>
+      <input id="topbarSearchInput" type="text" placeholder="Search..." />
     </div>
   </div>
 
   <div class="topbar-right">
-    <div class="user-profile">
-  <img id="userAvatar" class="avatar"
-  src="https://api.dicebear.com/9.x/fun-emoji/svg?seed=${Math.random()}" />
 
+    <!-- Actions -->
+    <button class="topbar-icon" title="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+    </button>
 
-      <div class="user-details">
-        <span class="user-name" id="username"></span>
-        <span class="user-role" id="role"></span>
+    <button class="topbar-icon" title="Fullscreen">
+      <span class="material-symbols-rounded">fullscreen</span>
+    </button>
+
+    <button class="topbar-icon" title="Settings">
+      <span class="material-symbols-rounded">settings</span>
+    </button>
+
+    <!-- User chip -->
+    <div class="user-chip">
+      <img id="userAvatar" class="avatar" alt="User Avatar" />
+      <div class="chip-info">
+        <div class="chip-name" id="username"></div>
+        <div class="chip-role" id="role"></div>
       </div>
-
-      <button class="logout-icon" onclick="logout()">
-        <span class="material-symbols-rounded">logout</span>
-      </button>
     </div>
+
+    <!-- ✅ Logout on topbar -->
+    <button class="topbar-logout" onclick="logout()" title="Logout">
+      <span class="material-symbols-rounded">power_settings_new</span>
+    </button>
   </div>
 </header>

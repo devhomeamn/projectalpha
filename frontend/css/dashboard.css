@@ -3,32 +3,58 @@
    works with layout.css
 =========================================== */
 
+/* ✅ Dashboard page: stop BODY vertical scroll */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;  /* body scroll off */
+}
 
+/* container full viewport */
+.dashboard-container {
+  height: 100vh;
+  overflow: hidden;  /* ensure no outer scroll */
+  display: flex;
+}
 
 /* ===========================================
    DASHBOARD PAGE (page-specific)
    Reserve space for fixed sidebar + topbar
 =========================================== */
 
-/* ✅ desktop/tablet এ sidebar+topbar এর জায়গা রাখবে */
+/* ✅ desktop/tablet এ sidebar+topbar এর জায়গা রাখবে
+   ✅ main-content viewport এর মধ্যে lock থাকবে
+   ✅ content বেশি হলে শুধু main-content scroll করবে */
 .dashboard-container .main-content {
   margin-left: 230px;     /* sidebar width */
   margin-top: 64px;       /* topbar height (layout.css এ 64px) */
   width: calc(100% - 230px);
+
+  /* ✅ lock to viewport height (topbar বাদ দিয়ে) */
+  height: calc(100vh - 64px);
+  overflow-y: auto;        /* inner scroll only */
+  overflow-x: hidden;
+
   padding: 16px;
   transition: 0.3s ease;
+  box-sizing: border-box;
 }
 
-/* ✅ mobile drawer mode এ full width */
+/* ✅ mobile drawer mode এ full width + inner scroll */
 @media (max-width: 768px) {
   .dashboard-container .main-content {
     margin-left: 0;
     width: 100%;
     margin-top: 60px;     /* mobile topbar height */
+
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    overflow-x: hidden;
+
     padding: 12px;
+    box-sizing: border-box;
   }
 }
-
 
 .stats {
   display: grid;
