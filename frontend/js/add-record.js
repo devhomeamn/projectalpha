@@ -1,6 +1,7 @@
 console.log("add-record.js loaded");
 
 let API_BASE = "";
+let bdOk = true;
 
 // ================== CONFIG LOAD ==================
 async function loadConfig() {
@@ -28,6 +29,10 @@ function initPage() {
 
   loadSections();
   document.getElementById("recordForm").addEventListener("submit", onAddRecord);
+  
+  document.getElementById("bd_no").addEventListener("input", checkBdNoLive);
+document.getElementById("subcategory_id").addEventListener("change", checkBdNoLive);
+
 }
 
 // ================== LOAD SECTIONS & RACKS ==================
@@ -130,6 +135,54 @@ async function loadSections() {
   }
 }
 
+
+function ensureBdMsg() {
+  let el = document.getElementById("bd_msg");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "bd_msg";
+    el.style.marginTop = "6px";
+    el.style.fontSize = "13px";
+    document.getElementById("bd_no").insertAdjacentElement("afterend", el);
+  }
+  return el;
+}
+
+async function checkBdNoLive() {
+  const bd_no = document.getElementById("bd_no").value.trim();
+  const subcategory_id = document.getElementById("subcategory_id").value;
+  const msg = ensureBdMsg();
+
+  if (!bd_no || !subcategory_id) {
+    bdOk = true;
+    msg.textContent = "";
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(bd_no)}&subcategory_id=${subcategory_id}`
+    );
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || "Check failed");
+
+    if (data.available) {
+      bdOk = true;
+      msg.textContent = "✅ BD No available";
+      msg.style.color = "green";
+    } else {
+      bdOk = false;
+      msg.textContent = "❌ এই Subcategory-তে এই BD No আগে থেকেই আছে";
+      msg.style.color = "red";
+    }
+  } catch (e) {
+    bdOk = false;
+    msg.textContent = "❌ BD No check করা যায়নি";
+    msg.style.color = "red";
+  }
+}
+
 // ================== ADD RECORD ==================
 async function onAddRecord(e) {
   e.preventDefault();
@@ -147,6 +200,16 @@ async function onAddRecord(e) {
     alert("Please fill in all required fields!");
     return;
   }
+  if (!bd_no || !subcategory_id) {
+  alert("BD No এবং Subcategory অবশ্যই দিতে হবে!");
+  return;
+}
+
+if (!bdOk) {
+  alert("এই BD No এই Subcategory-তে আগে থেকেই আছে। অন্য BD No দিন।");
+  return;
+}
+
 
   if (!serial_no) {
     alert("Please select a Rack to generate Serial No.");

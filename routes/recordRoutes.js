@@ -8,6 +8,7 @@ const {
   bulkMoveRecords,
   updateRecord,
   deleteRecord,
+  checkBdUnique,
 } = require("../controllers/recordController");
 
 const Record = require("../models/recordModel");
@@ -19,6 +20,9 @@ router.put("/update/:id", updateRecord);
 
 // 🗑️ Delete
 router.delete("/delete/:id", deleteRecord);
+
+// ✅ Live BD check
+router.get("/check-bd", checkBdUnique);
 
 // ➕ Add
 router.post("/add", addRecord);

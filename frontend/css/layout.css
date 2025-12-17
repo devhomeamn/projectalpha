@@ -14,7 +14,7 @@ button, input, select, textarea {
 /* ---------- SIDEBAR (light like Compass) ---------- */
 .sidebar{
   width: 230px;
-  background: #f7f7f7;
+  background: #FFFFE0;
   color: #111827;
   display: flex;
   flex-direction: column;
@@ -137,12 +137,12 @@ button, input, select, textarea {
   margin-top: auto;
   padding: 10px 12px 8px;
   text-align: center;
-  background: #f7f7f7;
+  background: #FFFFE0;
 }
 .sidebar .footer-divider{
   height: 1px; width: 70%;
   margin: 0 auto 8px;
-  background: #eef0f4;
+  background: #394968;
   border-radius: 999px;
 }
 .sidebar .footer-meta{
@@ -167,7 +167,7 @@ button, input, select, textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px;
+  padding: 14px 0 px;
   z-index: 200;
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
   transition: left 0.3s ease, width 0.3s ease;

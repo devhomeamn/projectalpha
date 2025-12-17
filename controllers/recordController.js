@@ -4,10 +4,13 @@ const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
 const Rack = require("../models/rackModel");
 
+// helper: normalize BD
+const normalizeBd = (v) => (typeof v === "string" ? v.trim() : v);
+
 // ================== ADD NEW RECORD ==================
 exports.addRecord = async (req, res) => {
   try {
-    const {
+    let {
       file_name,
       bd_no,
       section_id,
@@ -18,14 +21,29 @@ exports.addRecord = async (req, res) => {
       serial_no,
     } = req.body;
 
+    bd_no = normalizeBd(bd_no);
+
     if (!file_name || !section_id || !rack_id) {
       return res
         .status(400)
         .json({ error: "File name, Section, and Rack are required" });
     }
 
+    // optional but recommended (since you want unique check in same subcategory)
+    if (!subcategory_id) {
+      return res.status(400).json({ error: "Subcategory is required" });
+    }
+    if (!bd_no) {
+      return res.status(400).json({ error: "BD No is required" });
+    }
+
+    // cast ids to int (safe)
+    section_id = parseInt(section_id, 10);
+    subcategory_id = parseInt(subcategory_id, 10);
+    rack_id = parseInt(rack_id, 10);
+
     // 🧮 Auto serial
-    let finalSerial = serial_no;
+    let finalSerial = serial_no ? parseInt(serial_no, 10) : null;
     if (!finalSerial) {
       const lastRecord = await Record.findOne({
         where: { rack_id },
@@ -34,14 +52,24 @@ exports.addRecord = async (req, res) => {
       finalSerial = (lastRecord?.serial_no || 0) + 1;
     }
 
-    // 🛑 Duplicate check
+    // ✅ BD No unique check (same subcategory)
+    const bdExists = await Record.findOne({
+      where: { subcategory_id, bd_no },
+    });
+    if (bdExists) {
+      return res.status(400).json({
+        error: `BD No. ${bd_no} already exists in this subcategory`,
+      });
+    }
+
+    // 🛑 Duplicate check (serial in same rack)
     const exists = await Record.findOne({
       where: { rack_id, serial_no: finalSerial },
     });
     if (exists) {
-      return res
-        .status(400)
-        .json({ error: `Serial No. ${finalSerial} already exists in this rack` });
+      return res.status(400).json({
+        error: `Serial No. ${finalSerial} already exists in this rack`,
+      });
     }
 
     const record = await Record.create({
@@ -79,8 +107,8 @@ exports.getRecords = async (req, res) => {
           { bd_no: { [Op.like]: `%${q}%` } },
           { description: { [Op.like]: `%${q}%` } },
           { moved_by: { [Op.like]: `%${q}%` } },
-          { serial_no: { [Op.like]: `%${q}%` } },     // ✅ search by serial number
-          { "$Rack.name$": { [Op.like]: `%${q}%` } }, // ✅ search by rack name/number
+          { serial_no: { [Op.like]: `%${q}%` } },
+          { "$Rack.name$": { [Op.like]: `%${q}%` } },
         ],
       }),
       ...(sectionFilter && { section_id: sectionFilter }),
@@ -98,7 +126,6 @@ exports.getRecords = async (req, res) => {
       offset,
     });
 
-    // Enhance with previous location names
     const enhanced = await Promise.all(
       records.map(async (r) => {
         let prevSection = null,
@@ -142,7 +169,6 @@ exports.getRecords = async (req, res) => {
   }
 };
 
-
 // ================== MOVE SINGLE RECORD TO CENTRAL ==================
 exports.moveToCentral = async (req, res) => {
   try {
@@ -164,10 +190,8 @@ exports.moveToCentral = async (req, res) => {
       return res.status(400).json({ error: "Target rack (newRackId) is required" });
 
     const targetRack = await Rack.findByPk(newRackId);
-    if (!targetRack)
-      return res.status(400).json({ error: "Target rack not found" });
+    if (!targetRack) return res.status(400).json({ error: "Target rack not found" });
 
-    // 🟢 Preserve OLD location before move
     const oldSectionId = record.section_id;
     const oldRackId = record.rack_id;
     const oldSubId = record.subcategory_id;
@@ -180,34 +204,23 @@ exports.moveToCentral = async (req, res) => {
     record.previous_subcategory_id = oldSubId;
     record.previous_rack_id = oldRackId;
 
-    // 🧮 Determine serial
     let serial;
     if (!startSerialNo || startSerialNo === "auto") {
-      const maxSerial = await Record.max("serial_no", {
-        where: { rack_id: newRackId },
-      });
+      const maxSerial = await Record.max("serial_no", { where: { rack_id: newRackId } });
       serial = (Number.isFinite(maxSerial) ? maxSerial : 0) + 1;
     } else {
       serial = parseInt(startSerialNo, 10);
-      const exists = await Record.findOne({
-        where: { rack_id: newRackId, serial_no: serial },
-      });
+      const exists = await Record.findOne({ where: { rack_id: newRackId, serial_no: serial } });
       if (exists)
-        return res
-          .status(409)
-          .json({ error: `Serial ${serial} already exists in target rack` });
+        return res.status(409).json({ error: `Serial ${serial} already exists in target rack` });
     }
 
-    // 🟢 Move record to Central Room (keep subcategory!)
     const centralSection = await Section.findOne({ where: { name: "Central Room" } });
     record.section_id = centralSection ? centralSection.id : record.section_id;
     record.rack_id = newRackId;
     record.serial_no = serial;
     record.status = "central";
     record.moved_by = req.user?.name || moved_by || "Unknown User";
-
-    // 🟢 KEEP subcategory_id
-    // record.subcategory_id = record.subcategory_id;
 
     await record.save();
 
@@ -226,9 +239,7 @@ exports.moveToCentral = async (req, res) => {
   }
 };
 
-
-
-// ================== GET CENTRAL RECORDS (with previous location names) ==================
+// ================== GET CENTRAL RECORDS ==================
 exports.getCentralRecords = async (req, res) => {
   try {
     const q = req.query.q || "";
@@ -253,7 +264,6 @@ exports.getCentralRecords = async (req, res) => {
       order: [["updatedAt", "DESC"]],
     });
 
-    // ✅ Enhance with previous location names (same as getRecords)
     const enhanced = await Promise.all(
       records.map(async (r) => {
         let prevSection = null,
@@ -291,7 +301,6 @@ exports.getCentralRecords = async (req, res) => {
   }
 };
 
-
 // ================== BULK MOVE TO CENTRAL ==================
 exports.bulkMoveRecords = async (req, res) => {
   console.log("📦 bulkMoveRecords called:", req.body);
@@ -301,14 +310,11 @@ exports.bulkMoveRecords = async (req, res) => {
 
     if (!Array.isArray(recordIds) || recordIds.length === 0)
       return res.status(400).json({ error: "No records selected." });
-    if (!newRackId)
-      return res.status(400).json({ error: "Target rack is required." });
+    if (!newRackId) return res.status(400).json({ error: "Target rack is required." });
 
     newRackId = parseInt(newRackId, 10);
     let serial =
-      !startSerialNo || startSerialNo === "auto"
-        ? null
-        : parseInt(startSerialNo, 10);
+      !startSerialNo || startSerialNo === "auto" ? null : parseInt(startSerialNo, 10);
 
     const targetRack = await Rack.findByPk(newRackId, { transaction: t });
     if (!targetRack) {
@@ -344,9 +350,6 @@ exports.bulkMoveRecords = async (req, res) => {
       rec.status = "central";
       rec.moved_by = moved_by || "Unknown User";
 
-      // ✅ Preserve subcategory_id instead of clearing it
-      // rec.subcategory_id = rec.subcategory_id;
-
       await rec.save({ transaction: t });
       movedCount++;
     }
@@ -359,11 +362,13 @@ exports.bulkMoveRecords = async (req, res) => {
     res.status(500).json({ error: err.message || "Failed to move records." });
   }
 };
+
 // ================== UPDATE RECORD ==================
 exports.updateRecord = async (req, res) => {
   try {
-    const id = req.params.id;
-    const {
+    const id = parseInt(req.params.id, 10);
+
+    let {
       file_name,
       bd_no,
       section_id,
@@ -373,9 +378,34 @@ exports.updateRecord = async (req, res) => {
       updated_by,
     } = req.body;
 
+    // normalize
+    if (typeof bd_no === "string") bd_no = bd_no.trim();
+
     const record = await Record.findByPk(id);
     if (!record) return res.status(404).json({ error: "Record not found" });
 
+    // ✅ effective values (request না দিলে existing value ধরে নাও)
+    const newBd = (bd_no ?? record.bd_no);
+    const newSub = parseInt((subcategory_id ?? record.subcategory_id), 10);
+
+    // ✅ BD uniqueness check (same subcategory)
+    if (newBd && newSub) {
+      const exists = await Record.findOne({
+        where: {
+          bd_no: newBd,
+          subcategory_id: newSub,
+          id: { [Op.ne]: id },
+        },
+      });
+
+      if (exists) {
+        return res.status(400).json({
+          error: `BD No. ${newBd} already exists in this subcategory`,
+        });
+      }
+    }
+
+    // apply updates
     record.file_name = file_name ?? record.file_name;
     record.bd_no = bd_no ?? record.bd_no;
     record.section_id = section_id ?? record.section_id;
@@ -396,9 +426,9 @@ exports.updateRecord = async (req, res) => {
 exports.deleteRecord = async (req, res) => {
   try {
     const id = req.params.id;
-    const userRole = req.user?.role || req.body.role; // frontend will send role too
+    const userRole = (req.user?.role || req.body.role || "").toLowerCase(); // ✅ safe
 
-    if (!["admin", "master"].includes(userRole.toLowerCase())) {
+    if (!["admin", "master"].includes(userRole)) {
       return res.status(403).json({ error: "Only admin or master can delete records" });
     }
 
@@ -409,6 +439,29 @@ exports.deleteRecord = async (req, res) => {
     res.json({ message: "🗑️ Record deleted successfully" });
   } catch (err) {
     console.error("❌ deleteRecord error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================== CHECK BD UNIQUE (LIVE) ==================
+exports.checkBdUnique = async (req, res) => {
+  try {
+    const bd_no = normalizeBd(req.query.bd_no);
+    const subcategory_id = parseInt(req.query.subcategory_id, 10);
+
+    if (!bd_no || !subcategory_id) {
+      return res
+        .status(400)
+        .json({ error: "bd_no and subcategory_id are required" });
+    }
+
+    const exists = await Record.findOne({
+      where: { bd_no, subcategory_id },
+    });
+
+    return res.json({ available: !exists });
+  } catch (err) {
+    console.error("❌ checkBdUnique error:", err);
     res.status(500).json({ error: err.message });
   }
 };
