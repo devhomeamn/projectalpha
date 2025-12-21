@@ -1,20 +1,29 @@
 /* ===========================================
-   LAYOUT.CSS — Compass Inspired
-   Sidebar (no scroll) + Blue Topbar + Global Poppins
-   Desktop & Mobile drawer open/close
+   LAYOUT.CSS — Light UI (ERP-like)
+   - Sidebar: scrollable menu, fixed footer
+   - Topbar: actions + profile dropdown
 =========================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
 
-html, body,
-button, input, select, textarea {
-  font-family: "Poppins", sans-serif;
+body{
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+  background: #f6f7fb;
+  color: #111827;
 }
 
-/* ---------- SIDEBAR (light like Compass) ---------- */
+/* ---------- DASHBOARD CONTAINER ---------- */
+.dashboard-container{
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ---------- SIDEBAR ---------- */
 .sidebar{
   width: 230px;
-  background: #FFFFE0;
+  background: #dddddd;
   color: #111827;
   display: flex;
   flex-direction: column;
@@ -24,26 +33,35 @@ button, input, select, textarea {
   height: 100vh;
   z-index: 300;
   transition: transform 0.3s ease;
-  overflow: hidden; /* ✅ no scroll */
+  overflow: hidden; /* ✅ keep; we scroll inside sidebar-scroll */
   border-right: 1px solid #eef0f4;
+}
+.airplane-logo{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4c9aff, #2563eb);
 }
 
 /* header */
 .sidebar .sidebar-header{
   padding: 8px 14px 12px;
-  border-bottom: 1px solid #f0f2f6;
+  border-bottom: 1px solid #eef0f4;
 }
+
 .sidebar .logo-wrap{
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
 .sidebar .logo-dot{
   width: 28px; height: 28px;
   background: #4c9aff;
   border-radius: 50%;
   box-shadow: 0 6px 14px rgba(76,154,255,0.35);
 }
+
 .sidebar .logo-link{
   font-size: 18px;
   font-weight: 700;
@@ -57,34 +75,47 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 12px 12px 8px;
-  padding: 10px 12px;
-  background: #f7f9fc;
-  border: 1px solid #eef2f7;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef0f4;
 }
+
 .sidebar .sidebar-avatar{
-  width: 44px; height: 44px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  width: 42px; height: 42px;
+  border-radius: 12px;
   object-fit: cover;
+  border: 1px solid #e5e7eb;
   background: #fff;
 }
+
 .sidebar .sidebar-name{
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  max-width: 140px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.1;
 }
+
 .sidebar .sidebar-role{
   margin-top: 2px;
   font-size: 12px;
-  font-weight: 500;
   color: #6b7280;
+  font-weight: 600;
 }
+
+/* ✅ NEW: Scroll wrapper (menu area only) */
+.sidebar .sidebar-scroll{
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 10px 10px;
+}
+
+/* nice scrollbar */
+.sidebar .sidebar-scroll::-webkit-scrollbar{ width: 8px; }
+.sidebar .sidebar-scroll::-webkit-scrollbar-thumb{
+  background: #c7d2fe;
+  border-radius: 999px;
+  border: 2px solid #dddddd;
+}
+.sidebar .sidebar-scroll::-webkit-scrollbar-track{ background: transparent; }
 
 /* menu */
 .sidebar .sidebar-menu{
@@ -104,55 +135,60 @@ button, input, select, textarea {
   align-items: center;
   gap: 10px;
 
-  margin: 0 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-
+  padding: 10px 12px;
+  border-radius: 12px;
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
   text-decoration: none;
   transition: 0.18s ease;
   position: relative;
 }
+
 .sidebar .sidebar-menu a:hover{
   background: #eef5ff;
   color: #2563eb;
 }
+
 .sidebar .sidebar-menu li.active > a,
 .sidebar .sidebar-menu a.active{
   background: #e8f1ff;
   color: #2563eb;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* icon inside menu (layout.js এ span.menu-icon add করলে কাজ করবে) */
+/* icon inside menu */
 .sidebar .menu-icon{
   font-size: 18px;
   color: inherit;
+  opacity: 0.95;
 }
 
-/* footer bottom */
+/* ✅ footer fixed bottom */
 .sidebar .sidebar-footer{
   margin-top: auto;
   padding: 10px 12px 8px;
   text-align: center;
-  background: #FFFFE0;
+  background: #DDDDDD;
+  border-top: 1px solid #DDDDDD;
 }
+
 .sidebar .footer-divider{
-  height: 1px; width: 70%;
+  height: 1px; width: 100%;
   margin: 0 auto 8px;
-  background: #394968;
+  background: #000000;
   border-radius: 999px;
 }
+
 .sidebar .footer-meta{
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: #6b7280;
 }
+
 .sidebar .footer-copy{
   font-size: 10.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: #9ca3af;
 }
 
@@ -162,15 +198,14 @@ button, input, select, textarea {
   top: 0;
   left: 230px;
   width: calc(100% - 230px);
-  height: 64px;
-  background: #5aa8f3; /* compass-ish blue */
+  height: 60px;
+  background: #2c80ff;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 14px 0 px;
+  justify-content: space-between;
+  padding: 0 14px;
   z-index: 200;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-  transition: left 0.3s ease, width 0.3s ease;
+  box-shadow: 0 6px 18px rgba(44,128,255,0.25);
 }
 
 .topbar .topbar-left{
@@ -179,35 +214,32 @@ button, input, select, textarea {
   gap: 10px;
 }
 
-/* hamburger visible desktop+mobile */
 .topbar .hamburger{
-  font-size: 26px;
+  font-size: 28px;
   color: #fff;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  transition: background 0.2s ease;
+  padding: 8px;
+  border-radius: 12px;
+  transition: 0.15s ease;
 }
-.topbar .hamburger:hover{
-  background: rgba(255,255,255,0.18);
-}
+.topbar .hamburger:hover{ background: rgba(255,255,255,0.16); }
 
-/* search pill */
 .topbar .topbar-search{
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.3);
-  padding: 6px 10px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
   border-radius: 999px;
-  min-width: 260px;
+  padding: 8px 12px;
+  min-width: 320px;
 }
+
 .topbar .topbar-search .search-icon{
   font-size: 18px;
-  color: #fff;
-  opacity: 0.9;
+  color: rgba(255,255,255,0.95);
 }
+
 .topbar .topbar-search input{
   width: 100%;
   border: none;
@@ -217,27 +249,28 @@ button, input, select, textarea {
   font-size: 13.5px;
 }
 .topbar .topbar-search input::placeholder{
-  color: rgba(255,255,255,0.9);
+  color: rgba(255,255,255,0.85);
 }
 
-/* right side icons */
 .topbar .topbar-right{
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+/* topbar icons */
 .topbar .topbar-icon{
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.18);
   color: #fff;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  transition: background 0.2s ease;
+  padding: 8px;
+  border-radius: 12px;
+  transition: 0.15s ease;
 }
 .topbar .topbar-icon:hover{
-  background: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.24);
+  transform: translateY(-1px);
 }
 
 /* user chip */
@@ -250,6 +283,7 @@ button, input, select, textarea {
   background: rgba(255,255,255,0.18);
   border: 1px solid rgba(255,255,255,0.25);
 }
+
 .topbar .avatar{
   width: 32px; height: 32px;
   border-radius: 50%;
@@ -257,19 +291,22 @@ button, input, select, textarea {
   object-fit: cover;
   background: #fff;
 }
+
 .topbar .chip-info{
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  line-height: 1.05;
 }
+
 .topbar .chip-name{
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 800;
   color: #fff;
 }
+
 .topbar .chip-role{
   font-size: 11.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: rgba(255,255,255,0.9);
 }
 
@@ -284,26 +321,23 @@ button, input, select, textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 8px rgba(255,106,61,0.35);
-  transition: transform .15s ease, filter .15s ease;
+  transition: 0.15s ease;
 }
 .topbar .topbar-logout:hover{
+  filter: brightness(1.05);
   transform: translateY(-1px);
-  filter: brightness(0.95);
 }
 
-/* ---------- MAIN CONTENT BASE ---------- */
+/* ---------- MAIN CONTENT ---------- */
 .dashboard-container .main-content{
   margin-left: 230px;
-  margin-top: 64px;
+  padding-top: 54px;
   width: calc(100% - 230px);
-  transition: margin-left 0.3s ease, width 0.3s ease;
+  min-height: 100vh;
 }
 
-/* ---------- DESKTOP drawer close state ---------- */
-body.sidebar-collapsed .sidebar{
-  transform: translateX(-100%);
-}
+/* ---------- DESKTOP collapsed state ---------- */
+body.sidebar-collapsed .sidebar{ transform: translateX(-110%); }
 body.sidebar-collapsed .topbar{
   left: 0;
   width: 100%;
@@ -314,28 +348,22 @@ body.sidebar-collapsed .dashboard-container .main-content{
 }
 
 /* ---------- MOBILE ---------- */
-@media (max-width: 768px){
+@media (max-width: 900px){
   .sidebar{
-    width: 230px;
-    transform: translateX(-100%);
-    box-shadow: 4px 0 12px rgba(0,0,0,0.3);
+    transform: translateX(-110%);
   }
   .sidebar.open{ transform: translateX(0); }
 
   .topbar{
     left: 0;
     width: 100%;
-    height: 60px;
-    padding: 0 10px;
   }
-  .topbar .topbar-search{
-    min-width: 160px;
-    padding: 5px 8px;
-  }
+
+  .topbar .topbar-search{ min-width: 180px; }
+
   .dashboard-container .main-content{
     margin-left: 0;
     width: 100%;
-    margin-top: 60px;
   }
 }
 
@@ -343,13 +371,113 @@ body.sidebar-collapsed .dashboard-container .main-content{
 .overlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.55);
   z-index: 230;
   display: none;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.28s ease;
 }
 .overlay.show{
   display: block;
   opacity: 1;
+}
+
+/* ===========================================
+   ✅ Profile Dropdown (Topbar)
+   HTML needs:
+   <div class="user-dropdown">
+     <button class="user-chip user-chip-btn" id="userDropdownBtn">...</button>
+     <div class="user-menu" id="userDropdownMenu">...</div>
+   </div>
+=========================================== */
+.user-dropdown{ position: relative; }
+
+.user-chip-btn{
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.user-chip-btn .dd-caret{
+  font-size: 20px;
+  margin-left: 6px;
+  color: #fff;
+  opacity: 0.95;
+}
+
+.user-menu{
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 260px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.16);
+  overflow: hidden;
+  display: none;
+  z-index: 999;
+}
+
+.user-dropdown.open .user-menu{
+  display: block;
+  animation: ddIn 0.16s ease;
+}
+
+@keyframes ddIn{
+  from{ transform: translateY(-6px); opacity: 0; }
+  to{ transform: translateY(0); opacity: 1; }
+}
+
+.user-menu-head{
+  padding: 12px 12px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid #eef2f7;
+}
+.user-menu-head .um-name{
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+.user-menu-head .um-mail{
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.user-menu-item{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #111827;
+  text-decoration: none;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.user-menu-item:hover{ background: #f3f4f6; }
+
+.user-menu-item .material-symbols-rounded{
+  font-size: 18px;
+  color: #374151;
+}
+
+.user-menu-sep{
+  height: 1px;
+  background: #eef2f7;
+}
+
+.user-menu-item.danger{ color: #b91c1c; }
+.user-menu-item.danger .material-symbols-rounded{ color: #b91c1c; }
+.user-menu-item.danger:hover{ background: #fff5f5; }
+
+@media (max-width: 768px){
+  .user-menu{ width: 220px; }
+  .user-chip-btn .dd-caret{ display: none; }
 }

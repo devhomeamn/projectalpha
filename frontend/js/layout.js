@@ -109,6 +109,31 @@ export async function initLayout(activePage) {
     });
   }
 
+  // ===== Topbar profile dropdown =====
+(function () {
+  const ddWrap = document.querySelector(".user-dropdown");
+  const ddBtn = document.getElementById("userDropdownBtn");
+
+  if (!ddWrap || !ddBtn) return;
+
+  function closeDd() {
+    ddWrap.classList.remove("open");
+    ddBtn.setAttribute("aria-expanded", "false");
+  }
+
+  ddBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = ddWrap.classList.toggle("open");
+    ddBtn.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  document.addEventListener("click", closeDd);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDd();
+  });
+})();
+
+
   /* ------------------------------
          Logout
   ------------------------------ */

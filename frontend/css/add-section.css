@@ -44,7 +44,7 @@
   margin-top: 4px;
 }
 
-/* Divider */
+/* Divider (kept but we will hide in new grid) */
 .section-page .divider {
   height: 1px;
   background: #e5e7eb;
@@ -150,9 +150,7 @@
   gap: 12px;
 }
 
-/* Common card style for list items
-   (JS usually injects divs; we style children safely)
-*/
+/* Common card style for list items */
 .section-page .rack-list > div,
 .section-page .section-list > div {
   background: #fff;
@@ -181,12 +179,125 @@
 }
 
 /* ===========================================
+   ✅ NEW: Two-column compact layout
+   Left small forms, right lists (sticky)
+=========================================== */
+
+/* tighter headers inside left column */
+.section-page .compact-head{
+  margin: 10px 0 6px;
+}
+.section-page .compact-head .section-title{
+  margin: 0;
+  font-size: 16px;
+}
+
+/* main grid */
+.section-page .section-grid{
+  display: grid;
+  grid-template-columns: 420px 1fr; /* left narrow, right wide */
+  gap: 14px;
+  align-items: start;
+}
+
+/* left */
+.section-page .left-col .form-card{
+  max-width: none;          /* override 760px for grid */
+  padding: 14px;            /* smaller */
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  margin-bottom: 12px;
+}
+
+/* remove big dividers in new layout */
+.section-page .left-col .divider{
+  display: none;
+}
+
+.section-page .left-col .form-group{
+  margin-bottom: 10px;
+}
+
+.section-page .left-col input,
+.section-page .left-col select,
+.section-page .left-col textarea{
+  padding: 9px 10px;
+  font-size: 13.5px;
+  border-radius: 10px;
+}
+
+.section-page .left-col textarea{
+  min-height: 72px;
+}
+
+/* buttons compact */
+#sectionForm .btn-primary,
+#subForm .btn-secondary,
+#rackForm .btn-tertiary,
+#centralRackForm .btn-primary{
+  padding: 10px 12px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+/* right column sticky + scroll */
+.section-page .right-col{
+  position: sticky;
+  top: 84px; /* topbar space */
+  max-height: calc(100vh - 98px);
+  overflow: auto;
+  padding-right: 6px;
+}
+
+/* list cards */
+.section-page .list-card{
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+}
+
+/* make lists denser on right */
+.section-page .right-col .rack-list{
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.section-page .right-col .section-list{
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.section-page .right-col .rack-list > div,
+.section-page .right-col .section-list > div{
+  padding: 10px 12px;
+  font-size: 13.5px;
+}
+
+/* ===========================================
    RESPONSIVE
 =========================================== */
+@media (max-width: 1100px){
+  .section-page .section-grid{
+    grid-template-columns: 380px 1fr;
+  }
+}
+
 @media (max-width: 992px) {
   .section-page .rack-list,
   .section-page .section-list {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px){
+  .section-page .section-grid{
+    grid-template-columns: 1fr;
+  }
+  .section-page .right-col{
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 

@@ -30,55 +30,83 @@
         <form id="recordForm" class="form-card">
 
           <div class="form-grid">
+
             <!-- File Name -->
-            <div class="form-group span-2">
+            <div class="form-group span-3">
               <label for="file_name">File Name <span class="required">*</span></label>
-              <input type="text" id="file_name" placeholder="Enter File Name" required />
+              <div class="control">
+                <input type="text" id="file_name" placeholder="Enter File Name" required />
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+
             </div>
 
             <!-- BD No -->
             <div class="form-group">
-              <label for="bd_no">BD No.<span class="required">*</span></label>
-             <input type="text" id="bd_no" placeholder="Enter BD No." required />
-
+              <label for="bd_no">BD No. <span class="required">*</span></label>
+              <div class="control">
+                <input type="text" id="bd_no" placeholder="Enter BD No." required />
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+              
             </div>
 
             <!-- Section -->
             <div class="form-group">
               <label for="section_id">Select Section <span class="required">*</span></label>
-              <select id="section_id" required>
-                <option value="">-- Select Section --</option>
-              </select>
+              <div class="control">
+                <select id="section_id" required>
+                  <option value="">-- Select Section --</option>
+                </select>
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+            
             </div>
 
             <!-- Sub Category -->
             <div class="form-group">
               <label for="subcategory_id">Select Subcategory <span class="required">*</span></label>
-
-              <select id="subcategory_id">
-                <option value="">-- Select Subcategory --</option>
-              </select>
+              <div class="control">
+                <select id="subcategory_id">
+                  <option value="">-- Select Subcategory --</option>
+                </select>
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+              
             </div>
 
             <!-- Rack -->
             <div class="form-group">
               <label for="rack_id">Select Rack <span class="required">*</span></label>
-              <select id="rack_id" required>
-                <option value="">-- Select Rack --</option>
-              </select>
+              <div class="control">
+                <select id="rack_id" required>
+                  <option value="">-- Select Rack --</option>
+                </select>
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+           
             </div>
 
             <!-- Serial No -->
             <div class="form-group span-2">
               <label for="serial_no">Serial No.</label>
-              <input type="text" id="serial_no" readonly placeholder="Auto-generated" />
+              <div class="control">
+                <input type="text" id="serial_no" readonly placeholder="Auto-generated" />
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+              <p class="helper">Read only</p>
             </div>
 
             <!-- Description -->
-            <div class="form-group span-2">
+            <div class="form-group span-3">
               <label for="description">Description</label>
-              <textarea id="description" placeholder="Add Description (optional)"></textarea>
+              <div class="control">
+                <textarea id="description" placeholder="Add Description (optional)"></textarea>
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+           
             </div>
+
           </div>
 
           <button type="submit" class="btn-primary">Add Record</button>

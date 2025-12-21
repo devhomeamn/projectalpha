@@ -8,35 +8,64 @@
     <!-- Search -->
     <div class="topbar-search">
       <span class="material-symbols-rounded search-icon">search</span>
-      <input id="topbarSearchInput" type="text" placeholder="Search..." />
+      <input id="topbarSearchInput" type="text" placeholder="Search files, cases..." />
     </div>
   </div>
 
   <div class="topbar-right">
-
     <!-- Actions -->
-    <button class="topbar-icon" title="Notifications">
+    <button class="topbar-icon" title="Notifications" type="button">
       <span class="material-symbols-rounded">notifications</span>
     </button>
 
-    <button class="topbar-icon" title="Fullscreen">
-      <span class="material-symbols-rounded">fullscreen</span>
-    </button>
+  
+    <!-- ✅ Profile Dropdown -->
+    <div class="user-dropdown" id="userDropdownWrap">
+      <button
+        class="user-chip user-chip-btn"
+        id="userDropdownBtn"
+        type="button"
+        aria-expanded="false"
+      >
+        <img
+          id="userAvatar"
+          class="avatar"
+          alt="User Avatar"
+          src="https://robohash.org/sfrms-user.png?size=80x80"
+        />
 
-    <button class="topbar-icon" title="Settings">
-      <span class="material-symbols-rounded">settings</span>
-    </button>
+        <div class="chip-info">
+          <div class="chip-name" id="username">Admin User</div>
+          <div class="chip-role" id="role">Admin</div>
+        </div>
 
-    <!-- User chip -->
-    <div class="user-chip">
-            <div class="chip-info">
-        <div class="chip-name" id="username"></div>
-              </div>
+        <span class="material-symbols-rounded dd-caret">expand_more</span>
+      </button>
+
+      <!-- Dropdown Menu -->
+      <div class="user-menu" id="userDropdownMenu">
+        <div class="user-menu-head">
+          <div class="um-name" id="umName">Admin User</div>
+          <div class="um-mail" id="umEmail">admin@school.edu</div>
+        </div>
+
+        <a class="user-menu-item" href="profile.html">
+          <span class="material-symbols-rounded">person</span>
+          Profile
+        </a>
+
+        <a class="user-menu-item" href="settings.html">
+          <span class="material-symbols-rounded">settings</span>
+          Settings
+        </a>
+
+        <div class="user-menu-sep"></div>
+
+        <button class="user-menu-item danger" type="button" onclick="logout()">
+          <span class="material-symbols-rounded">logout</span>
+          Log out
+        </button>
+      </div>
     </div>
-    <!-- ✅ Logout on topbar -->
-<button class="topbar-logout" onclick="logout()" title="Logout">
-  <span class="material-symbols-rounded">logout</span>
-</button>
-
   </div>
 </header>

@@ -1,9 +1,30 @@
 /* ===========================================
-   ADD RECORD (minimal clean form)
-   scoped, safe with layout.css
+   ADD RECORD - input states UI (like screenshot)
+   Safe: scoped to #recordForm
 =========================================== */
 
-/* layout reserved space */
+:root{
+  --fg: #101828;
+  --muted: #667085;
+  --border: #D0D5DD;
+  --bg: #FFFFFF;
+  --bg-soft: #F9FAFB;
+  --focus: #2563EB;
+
+  --success: #16A34A;
+  --success-bg: #ECFDF3;
+
+  --danger: #DC2626;
+  --danger-bg: #FEF3F2;
+}
+
+/* Standard font (system) */
+.content, #recordForm{
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  color: var(--fg);
+}
+
+/* keep layout spacing compatible with your layout.css */
 .dashboard-container .main-content{
   margin-left: 230px;
   margin-top: 64px;
@@ -14,152 +35,235 @@
 
 .content{
   padding: 16px 18px 28px;
-  max-width: 980px;
+  max-width: 1040px;
 }
 
 /* header */
 .page-head{
-  display: flex;
-  flex-direction: column;
+  display:flex;
+  flex-direction:column;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
-
 .back-link{
-  font-size: 14px;
-  color: #374151;
-  text-decoration: none;
+  font-size: 12px;
+  color: #344054;
+  text-decoration:none;
   font-weight: 600;
 }
 .back-link:hover{ text-decoration: underline; }
-
 .page-title{
   font-size: 20px;
-  font-weight: 700;
-  color: #111827;
+  font-weight: 750;
   margin: 0;
 }
 
 /* card */
 #recordForm.form-card{
-  background: #fff;
-  border: 1px solid #eef0f4;
-  border-radius: 12px;
-  padding: 14px;
-  max-width: 820px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background: var(--bg);
+  border: 1px solid #EAECF0;
+  border-radius: 14px;
+  padding: 16px;
+  max-width: 920px;
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
 }
 
-/* grid */
+/* grid: 2 cols default, 3 on large screens */
 .form-grid{
-  display: grid;
+  display:grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 12px;
+  gap: 14px 16px;
+}
+@media (min-width: 1024px){
+  .form-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
 }
 
+/* spans */
+.span-2{ grid-column: span 2; }
+.span-3{ grid-column: span 2; }
+@media (min-width: 1024px){
+  .span-3{ grid-column: span 3; }
+}
+
+/* group */
 .form-group{
-  display: flex;
-  flex-direction: column;
+  display:flex;
+  flex-direction:column;
   gap: 6px;
+  min-width: 0;
 }
-
 .form-group label{
-  font-size: 13px;
-  font-weight: 700;
-  color: #374151;
+  font-size: 11px;
+  font-weight: 600;
+  color: #344054;
+  line-height: 1.2;
+}
+.required{ color: var(--danger); margin-left: 4px; }
+
+/* control wrapper for icon */
+#recordForm .control{
+  position: relative;
 }
 
-.required{
-  color: #ef4444;
-  margin-left: 3px;
-}
-
-/* inputs full width */
+/* fields */
 #recordForm input,
 #recordForm select,
 #recordForm textarea{
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 11px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  background: #fafafa;
-  font-size: 14px;
+  width:100%;
+  box-sizing:border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 13px;
+  padding: 7px 34px 7px 10px; /* right padding for state icon */
   outline: none;
-  transition: 0.18s ease;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  color: var(--fg);
 }
 
 #recordForm textarea{
-  min-height: 60px;   /* desktop small */
-  height: 60px;
-  resize: vertical;   /* চাইলে user টেনে বড় করতে পারবে */
+  min-height: 84px;
+  resize: vertical;
+  padding-top: 10px;
 }
 
-
+/* focus/active */
 #recordForm input:focus,
 #recordForm select:focus,
 #recordForm textarea:focus{
-  border-color: #2563eb;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
 }
 
-#recordForm input[readonly]{
-  background:#f3f4f6;
-  color:#6b7280;
-  cursor:not-allowed;
+/* disabled */
+#recordForm input:disabled,
+#recordForm select:disabled,
+#recordForm textarea:disabled{
+  background: #F2F4F7;
+  color: #98A2B3;
+  cursor: not-allowed;
 }
 
-/* span full row */
-.span-2{ grid-column: span 2; }
+/* read-only */
+#recordForm input[readonly],
+#recordForm textarea[readonly]{
+  background: var(--bg-soft);
+  color: #667085;
+}
+
+/* helper text */
+#recordForm .helper{
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* state icon base (hidden by default) */
+#recordForm .state-icon{
+  position:absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: none;
+  align-items:center;
+  justify-content:center;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* SUCCESS state: add class 'is-success' on .form-group */
+#recordForm .form-group.is-success input,
+#recordForm .form-group.is-success select,
+#recordForm .form-group.is-success textarea{
+  border-color: var(--success);
+  background: #FFFFFF;
+}
+#recordForm .form-group.is-success .state-icon{
+  display:flex;
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(22,163,74,0.35);
+}
+#recordForm .form-group.is-success .state-icon::before{
+  content: "✓";
+}
+
+/* ERROR state: add class 'is-error' on .form-group */
+#recordForm .form-group.is-error input,
+#recordForm .form-group.is-error select,
+#recordForm .form-group.is-error textarea{
+  border-color: var(--danger);
+  background: #FFFFFF;
+}
+#recordForm .form-group.is-error input:focus,
+#recordForm .form-group.is-error select:focus,
+#recordForm .form-group.is-error textarea:focus{
+  box-shadow: 0 0 0 4px rgba(220,38,38,0.12);
+}
+#recordForm .form-group.is-error .state-icon{
+  display:flex;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(220,38,38,0.35);
+}
+#recordForm .form-group.is-error .state-icon::before{
+  content: "!";
+}
+
+/* if you want to show a red helper line, add class 'error-text' to the helper <p> */
+#recordForm .helper.error-text{ color: var(--danger); }
 
 /* button */
 #recordForm .btn-primary{
-  margin-top: 12px;
+  margin-top: 14px;
   width: 100%;
-  padding: 11px 14px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #05d1a5;
   color: #fff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: 0.18s ease;
+  transition: transform .15s ease, filter .15s ease;
 }
 #recordForm .btn-primary:hover{
-  background:#029665;
   transform: translateY(-1px);
+  filter: brightness(0.96);
 }
 
-/* responsive */
+/* mobile */
 @media (max-width: 768px){
   .dashboard-container .main-content{
     margin-left: 0;
     width: 100%;
     margin-top: 60px;
   }
-
-  .content{ padding: 12px; }
-
-  #recordForm.form-card{
+  .content{
     padding: 12px;
-    border-radius: 10px;
     max-width: 100%;
   }
-
+  #recordForm.form-card{
+    padding: 14px;
+    border-radius: 12px;
+    max-width: 100%;
+  }
   .form-grid{
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
-
-  .span-2{ grid-column: span 1; }
-
-  #recordForm input,
-  #recordForm select,
- 
-  #recordForm textarea{
-    min-height: 54px; /* mobile slightly smaller */
-    height: 54px;
-  }
+  .span-2, .span-3{ grid-column: span 1; }
 }
+
+
+/* ===== Compact standard sizing overrides ===== */
+html{ font-size: 13px; }
+.content, #recordForm{ font-size: 13px; }
+#recordForm input, #recordForm select, #recordForm textarea{ line-height: 1.3; }
+#recordForm input, #recordForm select{ height: 34px; }
+#recordForm textarea{ min-height: 90px; padding-top: 8px; padding-bottom: 8px; }
+#recordForm .btn-primary, .btn-primary{ height: 34px; }
