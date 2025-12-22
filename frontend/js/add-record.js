@@ -1,29 +1,53 @@
 console.log("add-record.js loaded");
 
+// ================== GLOBALS ==================
 let API_BASE = "";
 let bdOk = true;
-
-// ✅ prevent double submit on slow network
-let isSubmittingRecord = false;
+let isSubmitting = false;
+let lastBdCheckToken = 0;
 
 // ================== CONFIG LOAD ==================
+function normalizeApiBase(apiBaseFromServer) {
+  // Server may send:
+  // - "http://localhost:4000"  (no /api)
+  // - "http://localhost:4000/api" (already /api)
+  // - "" / undefined
+  let base = (apiBaseFromServer || window.location.origin || "").trim();
+
+  // remove trailing slash
+  if (base.endsWith("/")) base = base.slice(0, -1);
+
+  // If base already ends with /api, use it, otherwise append /api
+  if (base.toLowerCase().endsWith("/api")) return base;
+
+  return `${base}/api`;
+}
+
 async function loadConfig() {
   try {
     const res = await fetch("/api/config");
+    // In some cases, backend might return non-JSON on error.
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) throw new Error("Config is not JSON");
+
     const data = await res.json();
-    API_BASE = data.apiBase ? `${data.apiBase}/api` : `${window.location.origin}/api`;
+
+    // IMPORTANT FIX:
+    // previously you did: API_BASE = data.apiBase ? `${data.apiBase}/api` : `${origin}/api`;
+    // If data.apiBase already had "/api", it became "/api/api" and broke BD check.
+    API_BASE = normalizeApiBase(data.apiBase);
+
     console.log("API Base loaded:", API_BASE);
     initPage();
   } catch (err) {
     console.error("Could not load backend config:", err);
-    API_BASE = `${window.location.origin}/api`;
+    API_BASE = normalizeApiBase(null);
     initPage();
   }
 }
-
 loadConfig();
 
-// ================== HELPERS ==================
+// ================== SMALL UI HELPERS ==================
 function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -32,38 +56,45 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function ensureMsg(afterElId, msgId) {
+function ensureMsg(afterElementId, msgId) {
   let el = document.getElementById(msgId);
   if (!el) {
     el = document.createElement("div");
     el.id = msgId;
     el.style.marginTop = "6px";
     el.style.fontSize = "13px";
-    const target = document.getElementById(afterElId);
+    const target = document.getElementById(afterElementId);
     if (target) target.insertAdjacentElement("afterend", el);
   }
   return el;
 }
 
-function setMsg(el, text, ok) {
+function setMsg(el, text, ok = true, mode = "normal") {
   if (!el) return;
   el.textContent = text || "";
-  el.style.color = ok ? "green" : "red";
+  if (!text) return;
+
+  // mode: normal | warn
+  if (mode === "warn") el.style.color = "#b36b00";
+  else el.style.color = ok ? "green" : "red";
 }
 
 // ================== PAGE INIT ==================
 function initPage() {
   const userInfo = document.getElementById("userInfo");
   if (userInfo) {
-    userInfo.textContent = `Logged in as: ${localStorage.getItem("username") || "Unknown User"}`;
+    userInfo.textContent = `Logged in as: ${
+      localStorage.getItem("username") || "Unknown User"
+    }`;
   }
 
-  // ✅ Closing date: prevent future date at input level
+  // Closing date max = today
   const closingInput = document.getElementById("closing_date");
   if (closingInput) {
-    closingInput.max = todayISO(); // ✅ আজকের পরে select করা যাবে না
-    closingInput.addEventListener("change", checkClosingDateLive);
+    closingInput.max = todayISO();
     closingInput.addEventListener("input", checkClosingDateLive);
+    // initial message clear
+    checkClosingDateLive();
   }
 
   loadSections();
@@ -71,19 +102,16 @@ function initPage() {
   const form = document.getElementById("recordForm");
   if (form) form.addEventListener("submit", onAddRecord);
 
-  // BD live check + subcategory required
-  const bdEl = document.getElementById("bd_no");
-  const subEl = document.getElementById("subcategory_id");
+  const bd = document.getElementById("bd_no");
+  const sub = document.getElementById("subcategory_id");
+  if (bd) bd.addEventListener("input", () => checkBdNoLive());
+  if (sub) sub.addEventListener("change", () => {
+    checkSubcategoryRequiredLive();
+    checkBdNoLive();
+  });
 
-  if (bdEl) bdEl.addEventListener("input", checkBdNoLive);
-
-  if (subEl) {
-    subEl.addEventListener("change", () => {
-      checkSubcategoryRequiredLive();
-      checkBdNoLive();
-    });
-    subEl.addEventListener("blur", checkSubcategoryRequiredLive);
-  }
+  // also show subcategory required message initially
+  checkSubcategoryRequiredLive();
 }
 
 // ================== LOAD SECTIONS & RACKS ==================
@@ -97,6 +125,8 @@ async function loadSections() {
     const rackSelect = document.getElementById("rack_id");
     const serialInput = document.getElementById("serial_no");
 
+    if (!sectionSelect || !subSelect || !rackSelect || !serialInput) return;
+
     // Clear options
     sectionSelect.innerHTML = '<option value="">-- Select Section --</option>';
     subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
@@ -105,14 +135,14 @@ async function loadSections() {
 
     // ✅ Populate sections except “Central Room”
     data.forEach((sec) => {
-      if (sec.name?.trim().toLowerCase() === "central room") return;
+      if ((sec.name || "").trim().toLowerCase() === "central room") return;
       const opt = document.createElement("option");
       opt.value = sec.id;
       opt.textContent = sec.name;
       sectionSelect.appendChild(opt);
     });
 
-    // SECTION CHANGE
+    // ================== SECTION CHANGE ==================
     sectionSelect.addEventListener("change", async () => {
       const sectionId = sectionSelect.value;
 
@@ -120,7 +150,7 @@ async function loadSections() {
       rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
       serialInput.value = "";
 
-      // refresh messages
+      // refresh validation messages
       checkSubcategoryRequiredLive();
       checkBdNoLive();
 
@@ -138,11 +168,10 @@ async function loadSections() {
         });
       }
 
-      // Load racks
+      // Load Racks dynamically
       try {
         const resRack = await fetch(`${API_BASE}/sections/racks/${sectionId}`);
         const racks = await resRack.json();
-
         rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
         racks.forEach((r) => {
           const opt = document.createElement("option");
@@ -155,7 +184,7 @@ async function loadSections() {
       }
     });
 
-    // RACK CHANGE → AUTO SERIAL
+    // ================== RACK CHANGE → AUTO SERIAL ==================
     rackSelect.addEventListener("change", async () => {
       const rackId = rackSelect.value;
       if (!rackId) {
@@ -167,7 +196,7 @@ async function loadSections() {
         const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
         const records = await res.json();
 
-        const used = records
+        const used = (records || [])
           .map((r) => r.serial_no)
           .filter((n) => n != null)
           .map(Number)
@@ -208,181 +237,255 @@ function checkSubcategoryRequiredLive() {
   return true;
 }
 
-// ================== BD UNIQUE (LIVE) ==================
-function ensureBdMsg() {
-  return ensureMsg("bd_no", "bd_msg");
-}
-
-async function checkBdNoLive() {
-  const bd_no = document.getElementById("bd_no")?.value.trim() || "";
-  const subcategory_id = document.getElementById("subcategory_id")?.value || "";
-  const msg = ensureBdMsg();
-
-  // update subcategory required too
-  checkSubcategoryRequiredLive();
-
-  if (!bd_no || !subcategory_id) {
-    bdOk = true;
-    setMsg(msg, "", true);
-    return;
-  }
-
-  try {
-    const res = await fetch(
-      `${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(bd_no)}&subcategory_id=${subcategory_id}`
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Check failed");
-
-    if (data.available) {
-      bdOk = true;
-      setMsg(msg, "✅ BD No available", true);
-    } else {
-      bdOk = false;
-      setMsg(msg, "❌ এই Subcategory-তে এই BD No আগে থেকেই আছে", false);
-    }
-  } catch (e) {
-    bdOk = false;
-    setMsg(msg, "❌ BD No check করা যায়নি", false);
-  }
-}
-
-// ================== CLOSING DATE (LIVE) ==================
+// ================== CLOSING DATE VALIDATION (LIVE) ==================
 function ensureClosingMsg() {
   return ensureMsg("closing_date", "closing_msg");
 }
 
 function checkClosingDateLive() {
-  const input = document.getElementById("closing_date");
+  const closingInput = document.getElementById("closing_date");
   const msg = ensureClosingMsg();
-  if (!input) return true;
+  if (!closingInput) return true;
 
-  const v = (input.value || "").trim();
-  const t = todayISO();
-
+  const v = (closingInput.value || "").trim();
   if (!v) {
-    setMsg(msg, "❌ Closing Date অবশ্যই দিতে হবে", false);
+    setMsg(msg, "", true);
+    return true;
+  }
+
+  const max = todayISO();
+  if (v > max) {
+    setMsg(msg, "❌ আজকের পরের date দেওয়া যাবে না", false);
     return false;
   }
 
-  // ✅ future date not allowed
-  if (v > t) {
-    setMsg(msg, "❌ Closing Date আজকের পরে দেওয়া যাবে না", false);
-    return false;
-  }
-
-  setMsg(msg, "✅ Closing Date ঠিক আছে", true);
+  setMsg(msg, "✅ Closing date ঠিক আছে", true);
   return true;
+}
+
+// ================== BD UNIQUE (LIVE) ==================
+function ensureBdMsg() {
+  return ensureMsg("bd_no", "bd_msg");
+}
+
+/**
+ * BD check: backend /records/check-bd returns: { available: true/false }
+ * Fix: If fetch fails, do NOT show scary red error for first-time users.
+ * We'll show a warning and allow submit; server will enforce uniqueness anyway.
+ */
+async function checkBdNoLive(force = false) {
+  const bd_no = document.getElementById("bd_no")?.value.trim() || "";
+  const subcategory_id = document.getElementById("subcategory_id")?.value || "";
+  const msg = ensureBdMsg();
+
+  // subcategory required msg update
+  checkSubcategoryRequiredLive();
+
+  if (!bd_no || !subcategory_id) {
+    bdOk = true;
+    setMsg(msg, "", true);
+    return true;
+  }
+
+  // Token to ignore outdated responses (typing fast)
+  const token = ++lastBdCheckToken;
+
+  try {
+    const url = `${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(
+      bd_no
+    )}&subcategory_id=${encodeURIComponent(subcategory_id)}`;
+
+    const res = await fetch(url);
+
+    // Sometimes 404 returns HTML -> res.json() will throw
+    const ct = res.headers.get("content-type") || "";
+    let data = {};
+    if (ct.includes("application/json")) data = await res.json();
+    else data = { error: `Non-JSON response (status ${res.status})` };
+
+    // If another newer request already happened, ignore this result
+    if (token !== lastBdCheckToken) return bdOk;
+
+    if (!res.ok) throw new Error(data.error || "Check failed");
+
+    if (data.available) {
+      bdOk = true;
+      setMsg(msg, "✅ BD No available", true);
+      return true;
+    } else {
+      bdOk = false;
+      setMsg(msg, "❌ এই Subcategory-তে এই BD No আগে থেকেই আছে", false);
+      return false;
+    }
+  } catch (e) {
+    // IMPORTANT UX FIX:
+    // don't block user on network/config glitch; server will still validate on submit.
+    bdOk = true;
+    setMsg(
+      msg,
+      "⚠️ BD No এখন verify করা যাচ্ছে না (server/connection)। Submit করলে server আবার যাচাই করবে।",
+      true,
+      "warn"
+    );
+    return true;
+  }
+}
+
+// ================== SUBMIT DEDUPE (SLOW NET DOUBLE CLICK FIX) ==================
+function getDedupeKey(payload) {
+  // very simple stable key
+  return [
+    payload.file_name || "",
+    payload.bd_no || "",
+    payload.section_id || "",
+    payload.subcategory_id || "",
+    payload.rack_id || "",
+    payload.serial_no || "",
+    payload.closing_date || "",
+  ].join("|");
+}
+
+function recentlySubmitted(key, windowMs = 10000) {
+  try {
+    const raw = sessionStorage.getItem("addRecord_lastSubmit");
+    if (!raw) return false;
+    const obj = JSON.parse(raw);
+    if (!obj || obj.key !== key) return false;
+    if (Date.now() - obj.ts < windowMs) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function markSubmitted(key) {
+  try {
+    sessionStorage.setItem(
+      "addRecord_lastSubmit",
+      JSON.stringify({ key, ts: Date.now() })
+    );
+  } catch {}
 }
 
 // ================== ADD RECORD ==================
 async function onAddRecord(e) {
   e.preventDefault();
+  if (isSubmitting) return;
 
-  // ✅ prevent double submit (slow net / double click)
-  if (isSubmittingRecord) return;
-  isSubmittingRecord = true;
+  const file_name = document.getElementById("file_name")?.value.trim() || "";
+  const bd_no = document.getElementById("bd_no")?.value.trim() || "";
+  const section_id = document.getElementById("section_id")?.value || "";
+  const subcategory_id = document.getElementById("subcategory_id")?.value || "";
+  const rack_id = document.getElementById("rack_id")?.value || "";
+  const serial_no = document.getElementById("serial_no")?.value.trim() || "";
+  const description = document.getElementById("description")?.value.trim() || "";
+  const closing_date = document.getElementById("closing_date")?.value || null;
 
+  const added_by = localStorage.getItem("username") || "Unknown User";
+
+  // Basic required checks
+  if (!file_name || !section_id || !rack_id) {
+    alert("Please fill in all required fields!");
+    return;
+  }
+
+  // Subcategory + BD required (as per your controller requirement)
+  if (!bd_no || !subcategory_id) {
+    alert("BD No এবং Subcategory অবশ্যই দিতে হবে!");
+    return;
+  }
+
+  // Closing date rule
+  if (!checkClosingDateLive()) {
+    alert("আজকের পরের closing date দেওয়া যাবে না।");
+    return;
+  }
+
+  // Ensure serial exists
+  if (!serial_no) {
+    alert("Please select a Rack to generate Serial No.");
+    return;
+  }
+
+  // Force a final BD check before submit (best effort)
+  await checkBdNoLive(true);
+  if (!bdOk) {
+    alert("এই BD No এই Subcategory-তে আগে থেকেই আছে। অন্য BD No দিন।");
+    return;
+  }
+
+  const payload = {
+    file_name,
+    bd_no,
+    section_id,
+    subcategory_id,
+    rack_id,
+    serial_no,
+    description,
+    closing_date,
+    added_by,
+  };
+
+  // Client-side dedupe (10s)
+  const key = getDedupeKey(payload);
+  if (recentlySubmitted(key, 10000)) {
+    alert("⚠️ একই ডাটা একটু আগেই submit হয়েছে। আবার submit করবেন না।");
+    return;
+  }
+
+  // Disable submit UI
   const form = document.getElementById("recordForm");
-  const submitBtn = form?.querySelector('button[type="submit"]');
+  const submitBtn =
+    form?.querySelector('button[type="submit"]') ||
+    document.querySelector('button[type="submit"]');
 
+  isSubmitting = true;
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.dataset.oldText = submitBtn.textContent;
+    submitBtn.dataset._oldText = submitBtn.textContent;
     submitBtn.textContent = "Saving...";
-    submitBtn.style.opacity = "0.7";
-    submitBtn.style.cursor = "not-allowed";
   }
 
   try {
-    const file_name = document.getElementById("file_name").value.trim();
-    const bd_no = document.getElementById("bd_no").value.trim();
-    const section_id = document.getElementById("section_id").value;
-    const subcategory_id = document.getElementById("subcategory_id").value;
-    const rack_id = document.getElementById("rack_id").value;
-    const serial_no = document.getElementById("serial_no").value.trim();
-    const description = document.getElementById("description").value.trim();
-    const closing_date = document.getElementById("closing_date").value || null;
-
-    const added_by = localStorage.getItem("username") || "Unknown User";
-
-    // Required base
-    if (!file_name || !section_id || !rack_id) {
-      alert("Please fill in all required fields!");
-      return;
-    }
-
-    // ✅ Subcategory required + message
-    if (!checkSubcategoryRequiredLive()) {
-      alert("Subcategory সিলেক্ট করুন!");
-      return;
-    }
-
-    // ✅ Closing date required + not future
-    if (!checkClosingDateLive()) {
-      alert("Closing Date ঠিক করে দিন (আজকের পরে দেওয়া যাবে না)!");
-      return;
-    }
-
-    // BD + Subcategory required
-    if (!bd_no || !subcategory_id) {
-      alert("BD No এবং Subcategory অবশ্যই দিতে হবে!");
-      return;
-    }
-
-    // BD unique ok?
-    if (!bdOk) {
-      alert("এই BD No এই Subcategory-তে আগে থেকেই আছে। অন্য BD No দিন।");
-      return;
-    }
-
-    if (!serial_no) {
-      alert("Please select a Rack to generate Serial No.");
-      return;
-    }
+    // mark first to prevent double click while request in-flight
+    markSubmitted(key);
 
     const res = await fetch(`${API_BASE}/records/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        file_name,
-        bd_no,
-        section_id,
-        subcategory_id,
-        rack_id,
-        serial_no,
-        description,
-        closing_date,
-        added_by,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const ct = res.headers.get("content-type") || "";
+    let data = {};
+    if (ct.includes("application/json")) data = await res.json();
+    else data = { error: `Non-JSON response (status ${res.status})` };
+
     if (!res.ok) throw new Error(data.error || "Failed to add record");
 
     alert("✅ Record Added Successfully!");
-    form.reset();
-
-    // reset serial
-    const serialEl = document.getElementById("serial_no");
-    if (serialEl) serialEl.value = "";
+    e.target.reset();
+    document.getElementById("serial_no").value = "";
 
     // reset messages
     setMsg(ensureBdMsg(), "", true);
-    setMsg(ensureSubMsg(), "", true);
+    setMsg(ensureSubMsg(), "❌ Subcategory অবশ্যই সিলেক্ট করতে হবে", false);
     setMsg(ensureClosingMsg(), "", true);
     bdOk = true;
   } catch (err) {
     console.error("addRecord error:", err);
     alert("❌ " + err.message);
+
+    // If failed, allow resubmission (remove recent submit mark)
+    try {
+      sessionStorage.removeItem("addRecord_lastSubmit");
+    } catch {}
   } finally {
-    // ✅ ALWAYS unlock
-    isSubmittingRecord = false;
+    isSubmitting = false;
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = submitBtn.dataset.oldText || "Add Record";
-      submitBtn.style.opacity = "1";
-      submitBtn.style.cursor = "pointer";
+      submitBtn.textContent = submitBtn.dataset._oldText || "Add Record";
+      delete submitBtn.dataset._oldText;
     }
   }
 }
