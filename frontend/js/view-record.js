@@ -184,8 +184,13 @@ function renderTable(records) {
       </td>
     `;
 
-    // ✅ Row click = Show details modal
-    tr.addEventListener("click", () => showDetails(rec));
+    // ✅ name Row click = Show details modal
+    const fileCell = tr.querySelector(".file-cell");
+fileCell.addEventListener("click", (e) => {
+  e.stopPropagation();
+  showDetails(rec);
+});
+
 
     // Edit click
     tr.querySelector(".icon-edit")?.addEventListener("click", (e) => {
@@ -460,7 +465,6 @@ function showDetails(rec) {
   const subcat  = rec.Subcategory?.name || "-";
   const rack    = rec.Rack?.name || "-";
 
-  // ✅ backend enhanced field
   const prev = rec.previous_location || {};
   const prevSection = prev.section_name || "-";
   const prevSubcat  = prev.subcategory_name || "-";
@@ -470,27 +474,31 @@ function showDetails(rec) {
   const status = rec.status === "central" ? "In Central" : "In Section";
 
   body.innerHTML = `
-    <p><strong>File Name:</strong> ${rec.file_name}</p>
-    <p><strong>BD No:</strong> ${rec.bd_no || "-"}</p>
+    <div class="block">
+      <p><strong>📁 File Name:</strong> ${rec.file_name}</p>
+      <p><strong>🆔 BD No:</strong> ${rec.bd_no || "-"}</p>
+    </div>
 
-    <hr style="margin:10px 0;">
+    <div class="block">
+      <p><strong>📍 Current Location</strong></p>
+      <p>• <strong>Section:</strong> ${section}</p>
+      <p>• <strong>Subcategory:</strong> ${subcat}</p>
+      <p>• <strong>Rack:</strong> ${rack}</p>
+      <p>• <strong>Serial No:</strong> <strong>${serial}</strong></p>
+    </div>
 
-    <p><strong>Current Section:</strong> ${section}</p>
-    <p><strong>Current Subcategory:</strong> ${subcat}</p>
-    <p><strong>Current Rack:</strong> ${rack}</p>
-    <p><strong>Current Serial:</strong> ${serial}</p>
+    <div class="block">
+      <p><strong>⏪ Previous Location</strong></p>
+      <p>• <strong>Section:</strong> ${prevSection}</p>
+      <p>• <strong>Subcategory:</strong> ${prevSubcat}</p>
+      <p>• <strong>Rack:</strong> ${prevRack}</p>
+    </div>
 
-    <hr style="margin:10px 0;">
-
-    <p><strong>Previous Section:</strong> ${prevSection}</p>
-    <p><strong>Previous Subcategory:</strong> ${prevSubcat}</p>
-    <p><strong>Previous Rack:</strong> ${prevRack}</p>
-
-    <hr style="margin:10px 0;">
-
-    <p><strong>Added By:</strong> ${rec.added_by || "-"}</p>
-    <p><strong>Moved By:</strong> ${rec.moved_by || "-"}</p>
-    <p><strong>Status:</strong> ${status}</p>
+    <div class="block">
+      <p><strong>👤 Added By:</strong> ${rec.added_by || "-"}</p>
+      <p><strong>🚚 Moved By:</strong> ${rec.moved_by || "-"}</p>
+      <p><strong>📌 Status:</strong> ${status}</p>
+    </div>
   `;
 
   modal.style.display = "flex";

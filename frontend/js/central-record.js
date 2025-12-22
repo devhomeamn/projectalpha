@@ -36,38 +36,52 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Render table
-  function renderTable(records) {
-    const tbody = document.getElementById("recordsBody");
-    tbody.innerHTML = "";
 
-    if (!records || records.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">No records found</td></tr>`;
-      return;
-    }
+function renderTable(records) {
+  const tbody = document.getElementById("recordsBody");
+  tbody.innerHTML = "";
 
-    records.forEach((rec) => {
-      const tr = document.createElement("tr");
-
-      const sectionName = rec.Section?.name || "-";
-      const rackName = rec.Rack?.name || "-";
-      const serialNo = rec.serial_no != null ? rec.serial_no : "-";
-
-      tr.innerHTML = `
-        <td>${rec.id}</td>
-        <td>${rec.file_name}</td>
-        <td>${rec.bd_no || "-"}</td>
-        <td>${sectionName}</td>
-        <td>${rackName}</td>
-        <td><strong>${serialNo}</strong></td>
-        <td>${rec.description || "-"}</td>
-        <td>${rec.added_by || "-"}</td>
-        <td><span class="status central">Moved to Central</span></td>
-      `;
-
-      tr.addEventListener("click", () => showRecordModal(rec));
-      tbody.appendChild(tr);
-    });
+  if (!records || records.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">No records found</td></tr>`;
+    return;
   }
+
+  records.forEach((rec) => {
+    const tr = document.createElement("tr");
+
+    const sectionName = rec.Section?.name || "-";
+    const rackName = rec.Rack?.name || "-";
+    const serialNo = rec.serial_no != null ? rec.serial_no : "-";
+
+    tr.innerHTML = `
+      <td>${rec.id}</td>
+
+      <td class="file-cell" style="cursor:pointer; font-weight:600; color:#111827;">
+        ${rec.file_name}
+      </td>
+
+      <td>${rec.bd_no || "-"}</td>
+      <td>${sectionName}</td>
+      <td>${rackName}</td>
+      <td><strong>${serialNo}</strong></td>
+      <td>${rec.description || "-"}</td>
+      <td>${rec.added_by || "-"}</td>
+      <td><span class="status central">Moved to Central</span></td>
+    `;
+
+    // ❌ Row click disabled (no modal on row click)
+    // tr.addEventListener("click", () => showRecordModal(rec));
+
+    // ✅ Only File Name click opens modal
+    const fileCell = tr.querySelector(".file-cell");
+    fileCell?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showRecordModal(rec);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
 
   // Search input listener (debounced)
   const searchInput = document.getElementById("searchInput");
@@ -159,51 +173,60 @@ function csvEscape(value) {
 }
 
   // Modal: Show Details
-  function showRecordModal(record) {
-    const modal = document.getElementById("recordModal");
-    const body = document.getElementById("modalBody");
+// Modal: Show Details (POLISHED UI)
+function showRecordModal(record) {
+  const modal = document.getElementById("recordModal");
+  const body = document.getElementById("modalBody");
 
-    const sectionName = record.Section?.name || "-";
-    const subName = record.Subcategory?.name || "-";
-    const rackName = record.Rack?.name || "-";
-    const serialNo = record.serial_no != null ? record.serial_no : "-";
+  const sectionName = record.Section?.name || "-";
+  const subName     = record.Subcategory?.name || "-";
+  const rackName    = record.Rack?.name || "-";
+  const serialNo    = record.serial_no != null ? record.serial_no : "-";
 
-    const prevSection = record.previous_location?.section_name || "-";
-    const prevSub = record.previous_location?.subcategory_name || "-";
-    const prevRack = record.previous_location?.rack_name || "-";
+  const prevSection = record.previous_location?.section_name || "-";
+  const prevSub     = record.previous_location?.subcategory_name || "-";
+  const prevRack    = record.previous_location?.rack_name || "-";
 
-    body.innerHTML = `
-      <p><strong>File Name:</strong> ${record.file_name}</p>
-      <p><strong>BD No:</strong> ${record.bd_no || "-"}</p>
+  body.innerHTML = `
+    <!-- BASIC INFO -->
+    <div class="block">
+      <p><strong>📁 File Name:</strong> ${record.file_name}</p>
+      <p><strong>🆔 BD No:</strong> ${record.bd_no || "-"}</p>
+    </div>
 
-      <hr style="margin:10px 0; border:none; border-top:1px dashed #ddd;" />
+    <!-- CURRENT LOCATION -->
+    <div class="block">
+      <p><strong>📍 Current Location</strong></p>
+      <p>• <strong>Section:</strong> ${sectionName}</p>
+      <p>• <strong>Subcategory:</strong> ${subName}</p>
+      <p>• <strong>Rack:</strong> ${rackName}</p>
+      <p>• <strong>Serial No:</strong> <strong>${serialNo}</strong></p>
+    </div>
 
-      <p><strong>Current Location:</strong></p>
-      <p>📌 <strong>Section:</strong> ${sectionName}</p>
-      <p>🗂️ <strong>Subcategory:</strong> ${subName}</p>
-      <p>🗄️ <strong>Rack:</strong> ${rackName}</p>
-      <p><strong>Serial No:</strong> <strong>${serialNo}</strong></p>
+    <!-- PREVIOUS LOCATION -->
+    <div class="block">
+      <p><strong>⏪ Previous Location (Before Central)</strong></p>
+      <p>• <strong>Section:</strong> ${prevSection}</p>
+      <p>• <strong>Subcategory:</strong> ${prevSub}</p>
+      <p>• <strong>Rack:</strong> ${prevRack}</p>
+    </div>
 
-      <hr style="margin:10px 0; border:none; border-top:1px dashed #ddd;" />
-
-      <p><strong>Previous Location (Before Central):</strong></p>
-      <p>⬅️ <strong>Section:</strong> ${prevSection}</p>
-      <p>⬅️ <strong>Subcategory:</strong> ${prevSub}</p>
-      <p>⬅️ <strong>Rack:</strong> ${prevRack}</p>
-
-      <hr style="margin:10px 0; border:none; border-top:1px dashed #ddd;" />
-
-      <p><strong>Description:</strong> ${record.description || "-"}</p>
-      <p><strong>Added By:</strong> ${record.added_by || "-"}</p>
-      <p><strong>Moved By:</strong> ${record.moved_by || "-"}</p>
-      <p><strong>Status:</strong> Moved to Central</p>
-      <p><strong>Moved At:</strong> ${
-        record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "-"
+    <!-- META INFO -->
+    <div class="block">
+      <p><strong>📝 Description:</strong> ${record.description || "-"}</p>
+      <p><strong>👤 Added By:</strong> ${record.added_by || "-"}</p>
+      <p><strong>🚚 Moved By:</strong> ${record.moved_by || "-"}</p>
+      <p><strong>📌 Status:</strong> Moved to Central</p>
+      <p><strong>🕒 Moved At:</strong> ${
+        record.updatedAt
+          ? new Date(record.updatedAt).toLocaleString()
+          : "-"
       }</p>
-    `;
+    </div>
+  `;
 
-    modal.style.display = "flex";
-  }
+  modal.style.display = "flex";
+}
 
   // ✅ Close Modal (now global + safe)
   function closeModal() {

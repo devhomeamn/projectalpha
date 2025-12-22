@@ -160,68 +160,110 @@
     min-width: 100%;
   }
 }
-
-/* ===========================================
-   MODAL (DETAILS)
-=========================================== */
-#recordModal.modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
+/* ===========================
+   MODAL (DETAILS) - POLISHED
+=========================== */
+#recordModal.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background: rgba(17, 24, 39, 0.55); /* nicer dark overlay */
   z-index: 800;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
+  justify-content:center;
+  align-items:center;
+  padding: 18px;
+  backdrop-filter: blur(3px);
 }
 
-#recordModal .modal-content {
+/* modal card */
+#recordModal .modal-content{
   width: 100%;
-  max-width: 520px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  max-width: 520px;            /* keep nice size */
+  background:#fff;
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.25);
   overflow: hidden;
-  animation: crFadeUp 0.25s ease-out;
+  animation: crFadeUp 0.2s ease-out;
 }
 
-@keyframes crFadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-#recordModal .modal-header {
-  background: #f9fafb;
+/* header */
+#recordModal .modal-header{
+  background: linear-gradient(180deg, #f9fafb, #ffffff);
   padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e5e7eb;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom: 1px solid #eef2f7;
 }
 
-#recordModal .modal-header h3 {
+#recordModal .modal-header h3{
+  font-size: 16px;
+  font-weight: 800;
+  margin:0;
+  color:#111827;
+}
+
+/* close button nicer */
+#recordModal .close-btn{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor:pointer;
+  color:#111827;
   font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-
-#recordModal .close-btn {
-  background: none;
-  border: none;
-  font-size: 22px;
-  cursor: pointer;
-  color: #444;
   line-height: 1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition: 0.15s ease;
+}
+#recordModal .close-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.10);
 }
 
-#recordModal .modal-body {
+/* ✅ IMPORTANT: modal body fixed height + scroll */
+#recordModal .modal-body{
   padding: 14px 16px;
   font-size: 14px;
-  color: #374151;
+  color:#374151;
+  max-height: min(70vh, 520px);   /* prevents huge modal */
+  overflow: auto;                /* scroll inside body */
 }
 
-#recordModal .modal-body p {
-  margin-bottom: 8px;
+/* nicer typography */
+#recordModal .modal-body p{
+  margin: 0 0 10px 0;
+  line-height: 1.45;
+}
+
+/* separators nicer */
+#recordModal .modal-body hr{
+  margin: 12px 0;
+  border: none;
+  border-top: 1px dashed #e5e7eb;
+}
+
+/* ✅ small “section cards” look for grouped content */
+#recordModal .modal-body .block{
+  background: #f9fafb;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 10px 0;
+}
+
+/* mobile */
+@media (max-width: 768px){
+  #recordModal .modal-content{
+    max-width: 95vw;
+    border-radius: 14px;
+  }
+  #recordModal .modal-body{
+    max-height: 75vh;
+  }
 }
 
 /* ===========================================

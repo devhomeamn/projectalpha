@@ -292,6 +292,79 @@
   min-height: 80px;
 }
 
+/* =========================================================
+   ✅ DETAILS MODAL ONLY (recordModal) - COMPACT + BEAUTIFUL
+   (Overrides only the details modal, not edit/move/bulk)
+========================================================= */
+#recordModal.modal{
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+/* remove padding for details modal so header/body looks neat */
+#recordModal .modal-content{
+  max-width: 520px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+/* we will use a header bar even if your HTML has h3 + close button */
+#recordModal .modal-content > h3{
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  background: linear-gradient(180deg, #f9fafb, #ffffff);
+  border-bottom: 1px solid #eef2f7;
+}
+
+/* keep close button in header area */
+#recordModal .close-btn{
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition: 0.15s ease;
+  color:#111827;
+}
+#recordModal .close-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+}
+
+/* scroll inside modal body (prevents huge modal) */
+#recordModal .modal-body{
+  padding: 14px 16px;
+  font-size: 14px;
+  color:#374151;
+  max-height: min(70vh, 520px);
+  overflow: auto;
+}
+
+#recordModal .modal-body p{
+  margin: 0 0 10px 0;
+  line-height: 1.45;
+}
+
+/* cards inside modal */
+#recordModal .modal-body .block{
+  background: #f9fafb;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 10px 0;
+}
+
 /* ===========================================
    MOBILE RESPONSIVE (force override)
 =========================================== */
