@@ -508,3 +508,12 @@ body.sidebar-collapsed .dashboard-container .main-content{
   /* slight padding so avatar click easy */
   .topbar .user-chip{ padding: 4px 6px; }
 }
+/* ===========================
+   MOBILE: HIDE TOPBAR SEARCH
+=========================== */
+@media (max-width: 768px){
+  .topbar .topbar-search{
+    display: none !important;
+  }
+}
+
