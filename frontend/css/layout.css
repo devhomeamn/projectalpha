@@ -351,21 +351,29 @@ body.sidebar-collapsed .dashboard-container .main-content{
 @media (max-width: 900px){
   .sidebar{
     transform: translateX(-110%);
+    top: 60px;
+    height: calc(100vh - 60px);
   }
-  .sidebar.open{ transform: translateX(0); }
+  .sidebar.open{
+    transform: translateX(0);
+  }
+
+  .sidebar .sidebar-scroll{
+    max-height: calc(100vh - 60px - 150px);
+    overflow-y: auto;
+  }
 
   .topbar{
     left: 0;
     width: 100%;
   }
 
-  .topbar .topbar-search{ min-width: 180px; }
-
   .dashboard-container .main-content{
     margin-left: 0;
     width: 100%;
   }
 }
+
 
 /* overlay */
 .overlay{

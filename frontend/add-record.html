@@ -88,7 +88,7 @@
             </div>
 
             <!-- Serial No -->
-            <div class="form-group span-2">
+            <div class="form-group span">
               <label for="serial_no">Serial No.</label>
               <div class="control">
                 <input type="text" id="serial_no" readonly placeholder="Auto-generated" />
@@ -96,6 +96,16 @@
               </div>
               <p class="helper">Read only</p>
             </div>
+            <!-- Closing Date -->
+          <!-- Closing Date -->
+          <div class="form-group span-2" id="closing_group">
+            <label for="closing_date">Closing Date <span class="required">*</span></label>
+            <div class="control">
+              <input type="date" id="closing_date" required />
+              <span class="state-icon" aria-hidden="true"></span>
+            </div>
+          </div>
+
 
             <!-- Description -->
             <div class="form-group span-3">
@@ -107,9 +117,10 @@
            
             </div>
 
-          </div>
-
+          
+          
           <button type="submit" class="btn-primary">Add Record</button>
+      
         </form>
 
       </section>

@@ -17,6 +17,7 @@ exports.addRecord = async (req, res) => {
       subcategory_id,
       rack_id,
       description,
+      closing_date,
       added_by,
       serial_no,
     } = req.body;
@@ -72,6 +73,22 @@ exports.addRecord = async (req, res) => {
       });
     }
 
+    // ✅ Prevent exact duplicate (same subcategory + bd_no + file_name)
+const dup = await Record.findOne({
+  where: {
+    subcategory_id,
+    bd_no,
+    file_name,
+  },
+});
+
+if (dup) {
+  return res.status(409).json({
+    error: "Duplicate record: একই Subcategory + BD No + File Name আগেই আছে",
+  });
+}
+
+
     const record = await Record.create({
       file_name,
       bd_no,
@@ -79,6 +96,7 @@ exports.addRecord = async (req, res) => {
       subcategory_id,
       rack_id,
       description,
+      closing_date,
       added_by,
       serial_no: finalSerial,
       status: "active",

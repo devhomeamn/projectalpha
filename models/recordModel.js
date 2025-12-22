@@ -32,6 +32,10 @@ const Record = sequelize.define("Record", {
   description: {
     type: DataTypes.TEXT,
   },
+  closing_date: {
+  type: DataTypes.DATEONLY,
+  allowNull: true,
+},
   added_by: {
     type: DataTypes.STRING,
     allowNull: true,

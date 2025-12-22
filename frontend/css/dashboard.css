@@ -36,6 +36,7 @@ html, body {
   overflow-x: hidden;
 
   padding: 16px;
+  padding-bottom: 90px; 
   transition: 0.3s ease;
   box-sizing: border-box;
 }
@@ -52,6 +53,7 @@ html, body {
     overflow-x: hidden;
 
     padding: 12px;
+     padding-bottom: 90px;
     box-sizing: border-box;
   }
 }
@@ -132,7 +134,7 @@ html, body {
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background: #e5e7eb;
+  background: #3f3e3e;
   border-radius: 999px;
   transition: 0.2s;
 }
