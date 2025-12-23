@@ -1,27 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Login | SFC Air FRMS</title>
 
-    <!-- Keep your original CSS -->
+    <!-- Your CSS -->
     <link rel="stylesheet" href="css/auth.css">
 
-    <!-- Bootstrap (optional but improves responsiveness) -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-      rel="stylesheet">
+    <!-- Bootstrap (optional) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-light d-flex justify-content-center align-items-center vh-100">
+<body class="bg-light d-flex justify-content-center align-items-center min-vh-100">
 
-    <div class="wrapper shadow p-4 rounded bg-white">
-        <h1 class="text-center mb-2">SFC Air FRMS</h1>
+    <!-- Toast Host -->
+    <div class="toast-host" id="toastHost"></div>
+
+    <div class="wrapper shadow rounded bg-white">
+        <!-- ✅ লোগো বাম পাশে হেডিং-এর সাথে (horizontal) -->
+        <div class="brand-header">
+            <div class="logo-container position-relative">
+                <img src="images/sitelogo.png" alt="SFC Air Logo" class="logo-img"
+                     onerror="this.onerror=null; this.src=''; this.parentElement.querySelector('.logo-fallback').style.display='flex';">
+                <div class="logo-fallback">
+                    <span>SFC</span>
+                </div>
+            </div>
+
+            <div class="brand-text">
+                <h1>SFC Air FRMS</h1>
+                <p>File & Record Management System</p>
+            </div>
+        </div>
+
         <h2 class="text-center mb-4">Login</h2>
 
         <form id="loginForm">
-
             <div class="input-box mb-3">
                 <input type="text" id="username" placeholder="Username" required>
             </div>
@@ -35,9 +51,7 @@
             </div>
         </form>
 
-        <div id="message" class="text-center text-danger fw-semibold"></div>
-
-        <p class="text-center mt-3">
+        <p class="text-center mt-3 mb-0">
             Don't have an account?
             <a href="register.html" class="fw-semibold">Signup</a>
         </p>
@@ -45,4 +59,5 @@
 
     <script src="js/auth.js"></script>
 </body>
+
 </html>

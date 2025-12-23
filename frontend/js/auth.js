@@ -3,11 +3,11 @@ let API_BASE = '';
 
 async function loadConfig() {
   try {
-    const res = await fetch('/api/config'); // backend route that sends API_BASE
+    const res = await fetch('/api/config');
     const data = await res.json();
-    API_BASE = data.apiBase || window.location.origin; // fallback
+    API_BASE = data.apiBase || window.location.origin;
     console.log('✅ API Base loaded:', API_BASE);
-    initForms(); // initialize event listeners after config is loaded
+    initForms();
   } catch (err) {
     console.error('⚠️ Could not load backend config:', err);
     API_BASE = window.location.origin;
@@ -15,13 +15,81 @@ async function loadConfig() {
   }
 }
 
-loadConfig();
-
 // --------------------
-// All form handlers inside a function
+// Toast Notification Function
+// --------------------
+// --------------------
+// Smart & Modular Toast with SVG Icons
+// --------------------
+function showToast(message, type = 'info', duration = 5000) {
+  const toastHost = document.getElementById('toastHost');
+  if (!toastHost) return;
+
+  const toast = document.createElement('div');
+  toast.classList.add('toast', type);
+
+  // SVG Icons (মডিউলার — চাইলে পরে চেঞ্জ করা যাবে)
+  const icons = {
+    success: `
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+    `,
+    error: `
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+    `,
+    info: `
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+    `
+  };
+
+  const icon = icons[type] || icons.info;
+
+  const titleMap = {
+    success: 'Success',
+    error: 'Error',
+    info: 'Info'
+  };
+
+  const title = titleMap[type] || 'Info';
+
+  toast.innerHTML = `
+    <div class="toast-icon">
+      ${icon}
+    </div>
+    <div class="toast-content">
+      <p class="t-title">${title}</p>
+      <p class="t-msg">${message}</p>
+    </div>
+  `;
+
+  toastHost.prepend(toast);
+
+  // অ্যানিমেশন
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  // অটো রিমুভ
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+  }, duration);
+}
+// --------------------
+// Form handlers
 // --------------------
 function initForms() {
-  // 🔹 Login Form Handler
+  // Login Form
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -30,41 +98,40 @@ function initForms() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
 
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
 
-      const data = await res.json();
-      const message = document.getElementById('message');
+        const data = await res.json();
 
-      if (res.ok) {
-  message.style.color = 'green';
-  message.innerText = '✅ Login Successful!';
+        if (res.ok) {
+          showToast('Login Successful!', 'success');
 
-  localStorage.setItem('token', data.token);
-  localStorage.setItem('role', data.user.role);
-  localStorage.setItem('username', data.user.username);
-  localStorage.setItem('name', data.user.name);
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', data.user.role);
+          localStorage.setItem('username', data.user.username);
+          localStorage.setItem('name', data.user.name);
 
-  const role = (data.user.role || "").toLowerCase();
+          const role = (data.user.role || "").toLowerCase();
 
-  setTimeout(() => {
-    if (role === "admin" || role === "master") {
-      window.location.href = "dashboard.html";
-    } else {
-      window.location.href = "dashboard-user.html";
-    }
-  }, 1000);
-} else {
-  message.innerText = data.error || '❌ Login Failed';
-}
-
+          setTimeout(() => {
+            window.location.href = (role === "admin" || role === "master")
+              ? "dashboard.html"
+              : "dashboard-user.html";
+          }, 1000);
+        } else {
+          showToast(data.error || 'Login Failed', 'error');
+        }
+      } catch (err) {
+        showToast('Network error. Please try again.', 'error');
+      }
     });
   }
 
-  // 🔹 Register Form Handler
+  // Register Form
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
@@ -76,22 +143,28 @@ function initForms() {
       const password = document.getElementById('password').value;
       const role = document.getElementById('role').value;
 
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, serviceid, username, password, role }),
-      });
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, serviceid, username, password, role }),
+        });
 
-      const data = await res.json();
-      const message = document.getElementById('message');
+        const data = await res.json();
 
-      if (res.ok) {
-        message.style.color = 'green';
-        message.innerText = 'Registration Successful, wait for approval!';
-        setTimeout(() => (window.location.href = 'login.html'), 15000);
-      } else {
-        message.innerText = data.error || '❌ Registration Failed';
+        if (res.ok) {
+          showToast('Registration Successful! Wait for admin approval.', 'success', 15000);
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 15000);
+        } else {
+          showToast(data.error || 'Registration Failed', 'error');
+        }
+      } catch (err) {
+        showToast('Network error. Please try again.', 'error');
       }
     });
   }
 }
+
+loadConfig();
