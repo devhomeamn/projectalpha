@@ -159,7 +159,7 @@ html, body {
 /* ---- Sections list ---- */
 .sections-container {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 12px;
 }
 

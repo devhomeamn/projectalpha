@@ -97,7 +97,7 @@
               <p class="helper">Read only</p>
             </div>
             <!-- Closing Date -->
-          <!-- Closing Date -->
+          
           <div class="form-group span-2" id="closing_group">
             <label for="closing_date">Closing Date <span class="required">*</span></label>
             <div class="control">
@@ -124,6 +124,29 @@
         </form>
 
       </section>
+
+
+      <!-- ✅ Print Modal -->
+<div id="printModal" class="print-modal hidden" aria-hidden="true">
+  <div class="print-card" role="dialog" aria-modal="true">
+    <div class="print-head">
+      <div>
+        <h3 class="print-title">Record Details</h3>
+        <p class="print-sub">Print this record information</p>
+      </div>
+
+      <div class="print-actions">
+        <button type="button" id="btnPrintRecord" class="btn-soft">Print</button>
+        <button type="button" id="btnClosePrint" class="btn-soft">Close</button>
+      </div>
+    </div>
+
+    <div id="printArea" class="print-area">
+      <!-- JS will inject record details here -->
+    </div>
+  </div>
+</div>
+
     </main>
   </div>
 
@@ -132,5 +155,8 @@
     initLayout("add-record.html");
   </script>
   <script src="js/add-record.js"></script>
+  <!-- Print root (hidden, only used during printing) -->
+<div id="printRoot"></div>
+
 </body>
 </html>

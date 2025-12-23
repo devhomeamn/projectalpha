@@ -9,6 +9,7 @@ const {
   updateRecord,
   deleteRecord,
   checkBdUnique,
+  getRecordForPrint,
 } = require("../controllers/recordController");
 
 const Record = require("../models/recordModel");
@@ -54,6 +55,9 @@ router.get("/by-rack/:rackId", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// 🖨️ Print/Details by id
+router.get("/print/:id", getRecordForPrint);
+
 
 // 🧮 Count
 router.get("/count", async (req, res) => {

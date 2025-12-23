@@ -483,3 +483,25 @@ exports.checkBdUnique = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// ================== GET SINGLE RECORD (FOR PRINT) ==================
+exports.getRecordForPrint = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: "Invalid record id" });
+
+    const record = await Record.findByPk(id, {
+      include: [
+        { model: Section, attributes: ["id", "name"] },
+        { model: Subcategory, attributes: ["id", "name"] },
+        { model: Rack, attributes: ["id", "name"] },
+      ],
+    });
+
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    return res.json({ record });
+  } catch (err) {
+    console.error("❌ getRecordForPrint error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
+  }
+};
