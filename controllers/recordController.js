@@ -17,6 +17,8 @@ exports.addRecord = async (req, res) => {
       subcategory_id,
       rack_id,
       description,
+      opening_date,
+      record_status,
       closing_date,
       added_by,
       serial_no,
@@ -39,6 +41,36 @@ exports.addRecord = async (req, res) => {
     }
 
     // cast ids to int (safe)
+
+    // ✅ Opening date required (manual)
+    if (!opening_date) {
+      return res.status(400).json({ error: "Opening Date is required" });
+    }
+
+    // ✅ Current Status (manual) defaults to ongoing
+    const allowedStatuses = ["ongoing", "closed"];
+    record_status = (record_status || "ongoing").toString().toLowerCase().trim();
+    if (!allowedStatuses.includes(record_status)) record_status = "ongoing";
+
+    // ✅ Closing date rule: only required when status is closed
+    if (record_status === "closed" && !closing_date) {
+      return res.status(400).json({ error: "Closing Date is required when status is Closed" });
+    }
+    if (record_status !== "closed") {
+      closing_date = null;
+    }
+
+    // ✅ Basic date sanity (DATEONLY strings)
+    const today = new Date().toISOString().slice(0, 10);
+    if (opening_date > today) {
+      return res.status(400).json({ error: "Opening Date cannot be in the future" });
+    }
+    if (closing_date && closing_date > today) {
+      return res.status(400).json({ error: "Closing Date cannot be in the future" });
+    }
+    if (closing_date && closing_date < opening_date) {
+      return res.status(400).json({ error: "Closing Date cannot be before Opening Date" });
+    }
     section_id = parseInt(section_id, 10);
     subcategory_id = parseInt(subcategory_id, 10);
     rack_id = parseInt(rack_id, 10);
@@ -96,6 +128,8 @@ if (dup) {
       subcategory_id,
       rack_id,
       description,
+      opening_date,
+      record_status,
       closing_date,
       added_by,
       serial_no: finalSerial,
@@ -503,5 +537,54 @@ exports.getRecordForPrint = async (req, res) => {
   } catch (err) {
     console.error("❌ getRecordForPrint error:", err);
     return res.status(500).json({ error: err.message || "Server error" });
+  }
+};
+
+// ================== UPDATE WORKFLOW STATUS (ONGOING/CLOSED) ==================
+exports.updateWorkflowStatus = async (req, res) => {
+  try {
+    const id = req.params.id;
+    let { record_status, closing_date, updated_by } = req.body || {};
+
+    record_status = String(record_status || "").toLowerCase().trim();
+
+    if (!["ongoing", "closed"].includes(record_status)) {
+      return res.status(400).json({ error: "Invalid record_status. Use ongoing/closed" });
+    }
+
+    const record = await Record.findByPk(id);
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    // closed হলে closing_date required
+    if (record_status === "closed") {
+      if (!closing_date) {
+        return res.status(400).json({ error: "Closing date is required when status is closed" });
+      }
+
+      // future date block
+      const today = new Date().toISOString().slice(0, 10);
+      if (closing_date > today) {
+        return res.status(400).json({ error: "Closing date cannot be in the future" });
+      }
+
+      // opening_date থাকলে closing >= opening
+      if (record.opening_date && closing_date < record.opening_date) {
+        return res.status(400).json({ error: "Closing date cannot be before opening date" });
+      }
+
+      record.closing_date = closing_date;
+    } else {
+      // ongoing হলে closing_date clear
+      record.closing_date = null;
+    }
+
+    record.record_status = record_status;
+    // চাইলে updated_by আলাদা field না থাকলে description-এ রাখো না; এখন শুধু response এ ফেরত দিচ্ছি
+    await record.save();
+
+    return res.json({ message: "✅ Workflow status updated", record });
+  } catch (err) {
+    console.error("❌ updateWorkflowStatus error:", err);
+    res.status(500).json({ error: err.message });
   }
 };

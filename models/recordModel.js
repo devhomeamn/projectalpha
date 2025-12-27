@@ -32,6 +32,11 @@ const Record = sequelize.define("Record", {
   description: {
     type: DataTypes.TEXT,
   },
+  // 🗓️ Opening date (manual)
+  opening_date: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
   closing_date: {
   type: DataTypes.DATEONLY,
   allowNull: true,
@@ -40,11 +45,19 @@ const Record = sequelize.define("Record", {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  // 🟢 Track current status
+  // 📍 Location (previously called status)
+  // active = In Section, central = In Central
   status: {
     type: DataTypes.ENUM("active", "central"),
     allowNull: false,
     defaultValue: "active",
+  },
+
+  // 🟢 Current workflow status
+  record_status: {
+    type: DataTypes.ENUM("ongoing", "closed"),
+    allowNull: false,
+    defaultValue: "ongoing",
   },
 
   // 🟢 Track previous location info

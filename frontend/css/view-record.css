@@ -416,3 +416,16 @@
     max-width: 95vw;
   }
 }
+
+
+/* ===== Status badges: Current Status (Ongoing/Closed) ===== */
+.status.ongoing{
+  background:#ecfdf5;
+  color:#065f46;
+  border:1px solid #a7f3d0;
+}
+.status.closed{
+  background:#fef2f2;
+  color:#991b1b;
+  border:1px solid #fecaca;
+}

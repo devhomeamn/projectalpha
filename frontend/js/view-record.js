@@ -12,6 +12,8 @@ let selectedSection = "";
 let pageSize = 10;
 
 let currentUser = localStorage.getItem("username") || "Unknown User";
+let lastViewedRecordForPrint = null;
+
 
 /* ================== TOAST ================== */
 function showToast(message, type = "success") {
@@ -142,7 +144,7 @@ function renderTable(records) {
   tbody.innerHTML = "";
 
   if (!records.length) {
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No records found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;">No records found</td></tr>`;
     bindCheckAll();
     return;
   }
@@ -159,8 +161,13 @@ function renderTable(records) {
     const subName = rec.Subcategory?.name || "-";
     const rackName = rec.Rack?.name || "-";
     const serialNo = rec.serial_no ?? "-";
-    const statusClass = rec.status === "central" ? "central" : "section";
-    const statusText = rec.status === "central" ? "In Central" : "In Section";
+    const locationClass = rec.status === "central" ? "central" : "section";
+    const locationText = rec.status === "central" ? "In Central" : "In Section";
+    const currentStatus = (rec.record_status || "ongoing").toLowerCase();
+    const currentClass = currentStatus === "closed" ? "closed" : "ongoing";
+    const currentText = currentStatus === "closed" ? "Closed" : "Ongoing";
+    const openingDate = rec.opening_date || "-";
+    const closingDate = rec.closing_date || "-";
     const tableSerial = startIndex + idx + 1;
 
     tr.innerHTML = `
@@ -176,7 +183,10 @@ function renderTable(records) {
       <td><strong>${serialNo}</strong></td>
       <td>${rec.added_by || "-"}</td>
       <td>${rec.moved_by || "-"}</td>
-      <td><span class="status ${statusClass}">${statusText}</span></td>
+      <td><span class="status ${currentClass}">${currentText}</span></td>
+      <td><span class="status ${locationClass}">${locationText}</span></td>
+      <td>${openingDate}</td>
+      <td>${closingDate}</td>
       <td class="action-icons">
         <i class="icon-edit" data-id="${rec.id}" title="Edit">✏️</i>
         <i class="icon-move" data-id="${rec.id}" title="Move">🚚</i>
@@ -458,6 +468,8 @@ function bindCheckAll() {
 
 /* ================== DETAILS MODAL ================== */
 function showDetails(rec) {
+lastViewedRecordForPrint = rec;
+
   const modal = document.getElementById("recordModal");
   const body = document.getElementById("modalBody");
 
@@ -500,9 +512,107 @@ function showDetails(rec) {
       <p><strong>📌 Status:</strong> ${status}</p>
     </div>
   `;
+    // --- workflow status UI bind ---
+  bindWorkflowControls(rec);
+
 
   modal.style.display = "flex";
 }
+function startPrintFromView() {
+  if (!lastViewedRecordForPrint) {
+    alert("No record selected for print");
+    return;
+  }
+
+  const r = lastViewedRecordForPrint;
+  const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
+
+  // ✅ Your print template (Serial বড়)
+  const html = `
+    <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14mm;">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <h2 style="margin:0 0 6px 0;">SFC Air FRMS</h2>
+          <div style="font-size:13px;opacity:.75;">Record Print Copy</div>
+        </div>
+
+        <div style="text-align:right;font-size:13px;">
+          <div><b>BD No:</b> ${r.bd_no || "-"}</div>
+          <div style="font-size:32px;font-weight:900;">
+            <b>Serial:</b> ${r.serial_no ?? "-"}
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:12px 0;"/>
+
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:6px 0;width:180px;"><b>File Name</b></td><td>${r.file_name || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Section</b></td><td>${r.Section?.name || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Subcategory</b></td><td>${r.Subcategory?.name || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Rack</b></td><td>${r.Rack?.name || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Added By</b></td><td>${r.added_by || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Moved By</b></td><td>${r.moved_by || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Created At</b></td><td>${createdAt}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Description</b></td><td>${r.description || ""}</td></tr>
+      </table>
+
+      <hr style="margin:12px 0;"/>
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;">
+        <div>Signature: ____________________</div>
+        <div>Date: ____________________</div>
+      </div>
+    </div>
+  `;
+
+  // ✅ Create/reuse hidden iframe
+  let frame = document.getElementById("printFrame");
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.id = "printFrame";
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    document.body.appendChild(frame);
+  }
+
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Record Print</title>
+        <style>
+          @page { margin: 10mm; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { vertical-align: top; }
+          hr { margin: 12px 0; }
+        </style>
+      </head>
+      <body>${html}</body>
+    </html>
+  `);
+  doc.close();
+
+  // ✅ Print once (no duplicate pages)
+  frame.onload = () => {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  };
+}
+
+window.addEventListener("afterprint", () => {
+  const root = document.getElementById("printRoot");
+  if (root) root.innerHTML = "";
+  document.body.classList.remove("printing");
+});
+
 
 function closeModal() {
   document.getElementById("recordModal").style.display = "none";
@@ -539,6 +649,103 @@ function bindSearch() {
     }
   });
 }
+//date current not over 
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function setWfMsg(text, ok = true) {
+  const el = document.getElementById("wfClosingMsg");
+  if (!el) return;
+  el.textContent = text || "";
+  if (!text) return;
+  el.style.color = ok ? "green" : "red";
+}
+function bindWorkflowControls(rec) {
+  const sel = document.getElementById("wfStatusSelect");
+  const closingWrap = document.getElementById("wfClosingWrap");
+  const closingInput = document.getElementById("wfClosingDate");
+  const saveBtn = document.getElementById("wfSaveBtn");
+
+  if (!sel || !closingWrap || !closingInput || !saveBtn) return;
+
+  // set initial
+  const current = (rec.record_status || "ongoing").toLowerCase();
+  sel.value = current;
+
+  closingInput.max = todayISO();
+  closingInput.value = rec.closing_date || "";
+
+  function sync() {
+    const v = (sel.value || "ongoing").toLowerCase();
+    if (v === "closed") {
+      closingWrap.style.display = "";
+      // if empty, keep empty (user will pick)
+    } else {
+      closingWrap.style.display = "none";
+      closingInput.value = "";
+      setWfMsg("", true);
+    }
+  }
+  sync();
+
+  sel.onchange = () => sync();
+
+  closingInput.oninput = () => {
+    if (!closingInput.value) return setWfMsg("", true);
+    if (closingInput.value > todayISO()) return setWfMsg("❌ আজকের পরের date দেওয়া যাবে না", false);
+    if (rec.opening_date && closingInput.value < rec.opening_date) {
+      return setWfMsg("❌ Opening date এর আগে closing দেওয়া যাবে না", false);
+    }
+    setWfMsg("✅ Closing date ঠিক আছে", true);
+  };
+
+  saveBtn.onclick = async () => {
+    const v = (sel.value || "ongoing").toLowerCase();
+    let closing_date = closingInput.value || null;
+
+    if (v === "closed") {
+      if (!closing_date) return showToast("⚠️ Closed হলে Closing Date দিতে হবে", "error");
+      if (closing_date > todayISO()) return showToast("⚠️ আজকের পরের closing date দেওয়া যাবে না", "error");
+      if (rec.opening_date && closing_date < rec.opening_date) {
+        return showToast("⚠️ Closing date, Opening date এর আগে হতে পারবে না", "error");
+      }
+    } else {
+      closing_date = null;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/records/workflow/${rec.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          record_status: v,
+          closing_date,
+          updated_by: currentUser,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update status");
+
+      showToast("✅ Status updated");
+      // local rec update so modal stays accurate
+      rec.record_status = v;
+      rec.closing_date = closing_date;
+
+      // refresh list
+      fetchRecords(currentPage);
+    } catch (err) {
+      showToast("❌ " + err.message, "error");
+    }
+  };
+}
+
+
 
 /* ================== PAGE SIZE (FIX) ================== */
 function bindPageSize() {
@@ -612,5 +819,11 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEditForm();
   bindSingleMove();
   bindBulkMove();
+
+  // ✅ Print button bind (only click will print)
+  document.getElementById("printFromViewBtn")
+    ?.addEventListener("click", startPrintFromView);
+
   loadConfig();
 });
+

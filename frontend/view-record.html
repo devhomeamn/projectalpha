@@ -91,7 +91,10 @@
         <th>R. SL</th>
         <th>Added By</th>
         <th>Moved By</th>
-        <th>Status</th>
+        <th>Current Status</th>
+        <th>Location</th>
+        <th>Opening Date</th>
+        <th>Closing Date</th>
         <th>Action</th>
       </tr>
     </thead>
@@ -117,6 +120,31 @@
       <button class="close-btn" onclick="closeModal()">✖</button>
     </div>
     <div id="modalBody" class="modal-body"></div>
+    <div id="workflowBox" style="padding:12px 16px; border-top:1px solid #eef2f7;">
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+    <div style="min-width:180px;">
+      <label style="font-size:13px; display:block; margin-bottom:4px;">Current Status</label>
+      <select id="wfStatusSelect" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:8px;">
+        <option value="ongoing">Ongoing</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+
+    <div style="min-width:180px;" id="wfClosingWrap">
+      <label style="font-size:13px; display:block; margin-bottom:4px;">Closing Date</label>
+      <input id="wfClosingDate" type="date"
+        style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:8px;" />
+      <div id="wfClosingMsg" style="margin-top:6px; font-size:13px;"></div>
+    </div>
+
+    <button id="wfSaveBtn" class="btn-primary" style="height:38px;">✅ Update</button>
+  </div>
+</div>
+
+    <div style="padding:12px 16px; text-align:right; border-top:1px solid #eef2f7;">
+  <button class="btn-primary" id="printFromViewBtn">🖨️ Print</button>
+</div>
+
   </div>
 </div>
 
@@ -196,5 +224,7 @@
 
   <!-- Page JS -->
   <script src="js/view-record.js"></script>
+  
+
 </body>
 </html>

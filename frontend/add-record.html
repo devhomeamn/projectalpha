@@ -96,12 +96,34 @@
               </div>
               <p class="helper">Read only</p>
             </div>
+            <!-- Current Status -->
+            <div class="form-group span-2">
+              <label for="record_status">Current Status <span class="required">*</span></label>
+              <div class="control">
+                <select id="record_status" required>
+                  <option value="ongoing" selected>Ongoing</option>
+                  <option value="closed">Closed</option>
+                </select>
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+              <p class="helper">Workflow status</p>
+            </div>
+
+            <!-- Opening Date -->
+            <div class="form-group span-2" id="opening_group">
+              <label for="opening_date">Opening Date <span class="required">*</span></label>
+              <div class="control">
+                <input type="date" id="opening_date" required />
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+            </div>
+
             <!-- Closing Date -->
           
           <div class="form-group span-2" id="closing_group">
-            <label for="closing_date">Closing Date <span class="required">*</span></label>
+            <label for="closing_date">Closing Date <span class="required" id="closing_required_star" style="display:none;">*</span></label>
             <div class="control">
-              <input type="date" id="closing_date" required />
+              <input type="date" id="closing_date" />
               <span class="state-icon" aria-hidden="true"></span>
             </div>
           </div>
@@ -126,7 +148,9 @@
       </section>
 
 
-      <!-- ✅ Print Modal -->
+    
+
+<!-- ✅ Print Modal (Add Record) -->
 <div id="printModal" class="print-modal hidden" aria-hidden="true">
   <div class="print-card" role="dialog" aria-modal="true">
     <div class="print-head">
@@ -141,11 +165,13 @@
       </div>
     </div>
 
-    <div id="printArea" class="print-area">
-      <!-- JS will inject record details here -->
-    </div>
+    <div id="printArea" class="print-area"></div>
   </div>
 </div>
+
+
+
+
 
     </main>
   </div>
@@ -155,8 +181,6 @@
     initLayout("add-record.html");
   </script>
   <script src="js/add-record.js"></script>
-  <!-- Print root (hidden, only used during printing) -->
-<div id="printRoot"></div>
 
 </body>
 </html>
