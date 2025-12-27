@@ -3,6 +3,7 @@ console.log("view-record.js loaded");
 let API_BASE = "";
 let allRecords = [];
 let singleMoveTargetId = null;
+let singleMoveTargetRec = null; // ✅ keep selected record for status check
 
 let currentPage = 1;
 let totalPages = 1;
@@ -13,7 +14,6 @@ let pageSize = 10;
 
 let currentUser = localStorage.getItem("username") || "Unknown User";
 let lastViewedRecordForPrint = null;
-
 
 /* ================== TOAST ================== */
 function showToast(message, type = "success") {
@@ -46,20 +46,30 @@ function showToast(message, type = "success") {
       z-index: 9999;
     }
     .toast.error { background: #ef4444; }
+    .toast.warn { background: #f59e0b; }
     .toast.show { opacity: 1; transform: translateY(0); }
+    .icon-move.disabled { opacity: .4; cursor: not-allowed; }
   `;
   document.head.appendChild(style);
 })();
+
+function normalizeApiBase(apiBaseFromServer) {
+  let base = (apiBaseFromServer || window.location.origin || "").trim();
+  if (base.endsWith("/")) base = base.slice(0, -1);
+  if (base.toLowerCase().endsWith("/api")) return base;
+  return `${base}/api`;
+}
 
 /* ================== LOAD CONFIG ================== */
 async function loadConfig() {
   try {
     const res = await fetch("/api/config");
-    const data = await res.json();
-    API_BASE = data.apiBase ? `${data.apiBase}/api` : `${window.location.origin}/api`;
+    const ct = res.headers.get("content-type") || "";
+    const data = ct.includes("application/json") ? await res.json() : {};
+    API_BASE = normalizeApiBase(data.apiBase);
     console.log("API Base loaded:", API_BASE);
   } catch {
-    API_BASE = `${window.location.origin}/api`;
+    API_BASE = normalizeApiBase(null);
   }
 
   await Promise.all([loadSections(), loadCentralRacks()]);
@@ -161,13 +171,17 @@ function renderTable(records) {
     const subName = rec.Subcategory?.name || "-";
     const rackName = rec.Rack?.name || "-";
     const serialNo = rec.serial_no ?? "-";
+
     const locationClass = rec.status === "central" ? "central" : "section";
     const locationText = rec.status === "central" ? "In Central" : "In Section";
+
     const currentStatus = (rec.record_status || "ongoing").toLowerCase();
     const currentClass = currentStatus === "closed" ? "closed" : "ongoing";
     const currentText = currentStatus === "closed" ? "Closed" : "Ongoing";
+
     const openingDate = rec.opening_date || "-";
     const closingDate = rec.closing_date || "-";
+
     const tableSerial = startIndex + idx + 1;
 
     tr.innerHTML = `
@@ -194,13 +208,12 @@ function renderTable(records) {
       </td>
     `;
 
-    // ✅ name Row click = Show details modal
+    // ✅ Row click = details modal
     const fileCell = tr.querySelector(".file-cell");
-fileCell.addEventListener("click", (e) => {
-  e.stopPropagation();
-  showDetails(rec);
-});
-
+    fileCell.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showDetails(rec);
+    });
 
     // Edit click
     tr.querySelector(".icon-edit")?.addEventListener("click", (e) => {
@@ -208,11 +221,27 @@ fileCell.addEventListener("click", (e) => {
       openEditModal(rec);
     });
 
-    // Move click
-    tr.querySelector(".icon-move")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openSingleMove(rec);
-    });
+    // Move click (only if CLOSED)
+    const moveIcon = tr.querySelector(".icon-move");
+    const isClosed = (rec.record_status || "ongoing").toLowerCase() === "closed";
+
+    if (moveIcon) {
+      if (!isClosed) {
+        moveIcon.classList.add("disabled");
+        moveIcon.title = "Only CLOSED records can be moved to Central";
+      } else {
+        moveIcon.title = "Move to Central";
+      }
+
+      moveIcon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!isClosed) {
+          showToast("⛔ Ongoing record কে Central এ move করা যাবে না। আগে Closed করুন।", "error");
+          return;
+        }
+        openSingleMove(rec);
+      });
+    }
 
     // Delete click
     tr.querySelector(".icon-delete")?.addEventListener("click", async (e) => {
@@ -305,13 +334,21 @@ function bindEditForm() {
 
 /* ================== SINGLE MOVE ================== */
 function openSingleMove(rec) {
+  // ✅ extra guard (already checked in table click)
+  const isClosed = (rec.record_status || "ongoing").toLowerCase() === "closed";
+  if (!isClosed) {
+    showToast("⛔ Ongoing record কে Central এ move করা যাবে না। আগে Closed করুন।", "error");
+    return;
+  }
+
   singleMoveTargetId = rec.id;
+  singleMoveTargetRec = rec;
+
   document.getElementById("singleMoveModal").style.display = "flex";
 
   const prevSection = rec.Section?.name || rec.previous_section_id || "-";
   const prevRack = rec.Rack?.name || rec.previous_rack_id || "-";
-  document.getElementById("currentLocation").textContent =
-    `${prevSection} → Rack ${prevRack}`;
+  document.getElementById("currentLocation").textContent = `${prevSection} → Rack ${prevRack}`;
 
   computeSingleAutoSerial();
 }
@@ -342,6 +379,7 @@ async function computeSingleAutoSerial() {
 
 function closeSingleMove() {
   singleMoveTargetId = null;
+  singleMoveTargetRec = null;
   document.getElementById("singleMoveModal").style.display = "none";
 }
 
@@ -353,8 +391,21 @@ async function bindSingleMove() {
   rackSelect?.addEventListener("change", computeSingleAutoSerial);
 
   confirmBtn?.addEventListener("click", async () => {
+    // ✅ block if somehow target not closed
+    const isClosed = (singleMoveTargetRec?.record_status || "ongoing").toLowerCase() === "closed";
+    if (!isClosed) {
+      showToast("⛔ Only CLOSED records can be moved to Central.", "error");
+      return;
+    }
+
     const rackId = rackSelect.value;
+    if (!rackId) {
+      showToast("⚠️ Please select a target rack", "warn");
+      return;
+    }
+
     const serial = document.getElementById("singleMoveSerial").value || "auto";
+
     try {
       const res = await fetch(`${API_BASE}/records/move/${singleMoveTargetId}`, {
         method: "PUT",
@@ -379,13 +430,30 @@ async function bindSingleMove() {
 
 /* ================== BULK MOVE ================== */
 function openBulkMove() {
-  const selected = [...document.querySelectorAll(".record-select:checked")]
-    .map((cb) => parseInt(cb.dataset.id));
+  const selectedIds = [...document.querySelectorAll(".record-select:checked")].map((cb) =>
+    parseInt(cb.dataset.id, 10)
+  );
 
-  if (selected.length === 0) return alert("⚠️ Please select at least one record!");
+  if (selectedIds.length === 0) return showToast("⚠️ Please select at least one record!", "warn");
+
+  // ✅ Only CLOSED can bulk-move
+  const selectedRecords = allRecords.filter((r) => selectedIds.includes(r.id));
+  const closedIds = selectedRecords
+    .filter((r) => (r.record_status || "ongoing").toLowerCase() === "closed")
+    .map((r) => r.id);
+
+  if (closedIds.length === 0) {
+    showToast("⛔ Selected records are Ongoing. Only CLOSED records can be moved.", "error");
+    return;
+  }
+
+  const skipped = selectedIds.length - closedIds.length;
+  if (skipped > 0) {
+    showToast(`⚠️ ${skipped} ongoing record(s) skip হবে। Only CLOSED move হবে।`, "warn");
+  }
 
   const modal = document.getElementById("bulkMoveModal");
-  modal.dataset.ids = JSON.stringify(selected);
+  modal.dataset.ids = JSON.stringify(closedIds);
   modal.style.display = "flex";
   computeBulkAutoSerial();
 }
@@ -427,6 +495,12 @@ function bindBulkMove() {
   document.getElementById("bulkConfirm")?.addEventListener("click", async () => {
     const modal = document.getElementById("bulkMoveModal");
     const ids = JSON.parse(modal.dataset.ids || "[]");
+
+    if (!ids.length) {
+      showToast("⛔ No CLOSED records selected for bulk move.", "error");
+      return;
+    }
+
     const rackId = document.getElementById("bulkRackId").value;
     const startSerial = document.getElementById("bulkStartSerial").value || "auto";
 
@@ -468,22 +542,27 @@ function bindCheckAll() {
 
 /* ================== DETAILS MODAL ================== */
 function showDetails(rec) {
-lastViewedRecordForPrint = rec;
+  lastViewedRecordForPrint = rec;
 
   const modal = document.getElementById("recordModal");
   const body = document.getElementById("modalBody");
 
   const section = rec.Section?.name || "-";
-  const subcat  = rec.Subcategory?.name || "-";
-  const rack    = rec.Rack?.name || "-";
+  const subcat = rec.Subcategory?.name || "-";
+  const rack = rec.Rack?.name || "-";
 
   const prev = rec.previous_location || {};
   const prevSection = prev.section_name || "-";
-  const prevSubcat  = prev.subcategory_name || "-";
-  const prevRack    = prev.rack_name || "-";
+  const prevSubcat = prev.subcategory_name || "-";
+  const prevRack = prev.rack_name || "-";
 
   const serial = rec.serial_no ?? "-";
-  const status = rec.status === "central" ? "In Central" : "In Section";
+  const location = rec.status === "central" ? "In Central" : "In Section";
+
+  const currentStatus = (rec.record_status || "ongoing").toLowerCase();
+  const statusText = currentStatus === "closed" ? "Closed" : "Ongoing";
+  const openingDate = rec.opening_date || "-";
+  const closingDate = rec.closing_date || "-";
 
   body.innerHTML = `
     <div class="block">
@@ -509,15 +588,20 @@ lastViewedRecordForPrint = rec;
     <div class="block">
       <p><strong>👤 Added By:</strong> ${rec.added_by || "-"}</p>
       <p><strong>🚚 Moved By:</strong> ${rec.moved_by || "-"}</p>
-      <p><strong>📌 Status:</strong> ${status}</p>
+      <p><strong>🧾 Current Status:</strong> ${statusText}</p>
+      <p><strong>📌 Location:</strong> ${location}</p>
+      <p><strong>📅 Opening Date:</strong> ${openingDate}</p>
+      <p><strong>📅 Closing Date:</strong> ${closingDate}</p>
     </div>
   `;
-    // --- workflow status UI bind ---
-  bindWorkflowControls(rec);
 
+  // --- workflow status UI bind ---
+  bindWorkflowControls(rec);
 
   modal.style.display = "flex";
 }
+
+/* ================== PRINT (View) ================== */
 function startPrintFromView() {
   if (!lastViewedRecordForPrint) {
     alert("No record selected for print");
@@ -527,7 +611,10 @@ function startPrintFromView() {
   const r = lastViewedRecordForPrint;
   const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
 
-  // ✅ Your print template (Serial বড়)
+  const currentStatus = (r.record_status || "ongoing").toLowerCase();
+  const statusText = currentStatus === "closed" ? "Closed" : "Ongoing";
+  const locationText = r.status === "central" ? "In Central" : "In Section";
+
   const html = `
     <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14mm;">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
@@ -551,6 +638,10 @@ function startPrintFromView() {
         <tr><td style="padding:6px 0;"><b>Section</b></td><td>${r.Section?.name || "-"}</td></tr>
         <tr><td style="padding:6px 0;"><b>Subcategory</b></td><td>${r.Subcategory?.name || "-"}</td></tr>
         <tr><td style="padding:6px 0;"><b>Rack</b></td><td>${r.Rack?.name || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Current Status</b></td><td>${statusText}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Location</b></td><td>${locationText}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Opening Date</b></td><td>${r.opening_date || "-"}</td></tr>
+        <tr><td style="padding:6px 0;"><b>Closing Date</b></td><td>${r.closing_date || "-"}</td></tr>
         <tr><td style="padding:6px 0;"><b>Added By</b></td><td>${r.added_by || "-"}</td></tr>
         <tr><td style="padding:6px 0;"><b>Moved By</b></td><td>${r.moved_by || "-"}</td></tr>
         <tr><td style="padding:6px 0;"><b>Created At</b></td><td>${createdAt}</td></tr>
@@ -565,7 +656,6 @@ function startPrintFromView() {
     </div>
   `;
 
-  // ✅ Create/reuse hidden iframe
   let frame = document.getElementById("printFrame");
   if (!frame) {
     frame = document.createElement("iframe");
@@ -600,7 +690,6 @@ function startPrintFromView() {
   `);
   doc.close();
 
-  // ✅ Print once (no duplicate pages)
   frame.onload = () => {
     frame.contentWindow.focus();
     frame.contentWindow.print();
@@ -613,20 +702,20 @@ window.addEventListener("afterprint", () => {
   document.body.classList.remove("printing");
 });
 
-
 function closeModal() {
   document.getElementById("recordModal").style.display = "none";
 }
+
 // Click outside modal to close
-   window.addEventListener("click", (e) => {
-    const modal = document.getElementById("recordModal");
-    if (e.target === modal) closeModal();
-  });
+window.addEventListener("click", (e) => {
+  const modal = document.getElementById("recordModal");
+  if (e.target === modal) closeModal();
+});
 
 // ✅ ESC press to close
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
-  });
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeModal();
+});
 
 /* ================== SEARCH (FIX) ================== */
 function bindSearch() {
@@ -639,7 +728,7 @@ function bindSearch() {
     t = setTimeout(() => {
       currentPage = 1;
       fetchRecords(1);
-    }, 300); // debounce
+    }, 300);
   });
 
   input.addEventListener("keydown", (e) => {
@@ -649,7 +738,8 @@ function bindSearch() {
     }
   });
 }
-//date current not over 
+
+/* ================== Date helpers ================== */
 function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -665,6 +755,8 @@ function setWfMsg(text, ok = true) {
   if (!text) return;
   el.style.color = ok ? "green" : "red";
 }
+
+/* ================== WORKFLOW CONTROLS (Details Modal) ================== */
 function bindWorkflowControls(rec) {
   const sel = document.getElementById("wfStatusSelect");
   const closingWrap = document.getElementById("wfClosingWrap");
@@ -673,7 +765,6 @@ function bindWorkflowControls(rec) {
 
   if (!sel || !closingWrap || !closingInput || !saveBtn) return;
 
-  // set initial
   const current = (rec.record_status || "ongoing").toLowerCase();
   sel.value = current;
 
@@ -684,7 +775,6 @@ function bindWorkflowControls(rec) {
     const v = (sel.value || "ongoing").toLowerCase();
     if (v === "closed") {
       closingWrap.style.display = "";
-      // if empty, keep empty (user will pick)
     } else {
       closingWrap.style.display = "none";
       closingInput.value = "";
@@ -710,7 +800,8 @@ function bindWorkflowControls(rec) {
 
     if (v === "closed") {
       if (!closing_date) return showToast("⚠️ Closed হলে Closing Date দিতে হবে", "error");
-      if (closing_date > todayISO()) return showToast("⚠️ আজকের পরের closing date দেওয়া যাবে না", "error");
+      if (closing_date > todayISO())
+        return showToast("⚠️ আজকের পরের closing date দেওয়া যাবে না", "error");
       if (rec.opening_date && closing_date < rec.opening_date) {
         return showToast("⚠️ Closing date, Opening date এর আগে হতে পারবে না", "error");
       }
@@ -733,19 +824,16 @@ function bindWorkflowControls(rec) {
       if (!res.ok) throw new Error(data.error || "Failed to update status");
 
       showToast("✅ Status updated");
-      // local rec update so modal stays accurate
+
       rec.record_status = v;
       rec.closing_date = closing_date;
 
-      // refresh list
       fetchRecords(currentPage);
     } catch (err) {
       showToast("❌ " + err.message, "error");
     }
   };
 }
-
-
 
 /* ================== PAGE SIZE (FIX) ================== */
 function bindPageSize() {
@@ -776,11 +864,21 @@ function exportToCSV() {
   if (!allRecords.length) return showToast("No records to export", "error");
 
   const headers = [
-    "File Name","BD No","Section","Subcategory","Rack",
-    "Serial No","Added By","Moved By","Status"
+    "File Name",
+    "BD No",
+    "Section",
+    "Subcategory",
+    "Rack",
+    "Serial No",
+    "Added By",
+    "Moved By",
+    "Current Status",
+    "Location",
+    "Opening Date",
+    "Closing Date",
   ];
 
-  const rows = allRecords.map(r => ([
+  const rows = allRecords.map((r) => [
     r.file_name || "",
     r.bd_no || "",
     r.Section?.name || "",
@@ -789,13 +887,16 @@ function exportToCSV() {
     r.serial_no ?? "",
     r.added_by || "",
     r.moved_by || "",
-    r.status || "active",
-  ]));
+    (r.record_status || "ongoing").toLowerCase(),
+    r.status === "central" ? "central" : "active",
+    r.opening_date || "",
+    r.closing_date || "",
+  ]);
 
   let csv = headers.join(",") + "\n";
-  csv += rows.map(row =>
-    row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")
-  ).join("\n");
+  csv += rows
+    .map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -808,7 +909,6 @@ function exportToCSV() {
   URL.revokeObjectURL(url);
 }
 
-/* make export accessible from button onclick */
 window.exportToCSV = exportToCSV;
 
 /* ================== INIT ================== */
@@ -820,10 +920,9 @@ document.addEventListener("DOMContentLoaded", () => {
   bindSingleMove();
   bindBulkMove();
 
-  // ✅ Print button bind (only click will print)
-  document.getElementById("printFromViewBtn")
+  document
+    .getElementById("printFromViewBtn")
     ?.addEventListener("click", startPrintFromView);
 
   loadConfig();
 });
-

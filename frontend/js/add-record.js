@@ -89,6 +89,14 @@ function setMsg(el, text, ok = true, mode = "normal") {
 // ================== PAGE INIT ==================
 function initPage() {
   wirePrintButtonsOnce();
+  
+  const fileInput = document.getElementById("file_name");
+if (fileInput) {
+  fileInput.addEventListener("input", () => {
+    fileInput.value = fileInput.value.toUpperCase();
+  });
+}
+
 
   const userInfo = document.getElementById("userInfo");
   if (userInfo) {
