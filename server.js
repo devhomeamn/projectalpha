@@ -47,7 +47,7 @@ app.get('/', (req, res) => {
 });
 
 // ✅ Database sync
-sequelize.sync({ alter: false })
+sequelize.sync({ alter: true })
   .then(() => console.log("✅ Database synced with approval system"))
   .catch(console.error);
 
