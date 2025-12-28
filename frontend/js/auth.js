@@ -111,23 +111,14 @@ function initForms() {
           showToast('Login Successful!', 'success');
 
           localStorage.setItem('token', data.token);
-          
-        // store user info
-        if (data.user) {
-          localStorage.setItem('name', data.user.name || '');
-          localStorage.setItem('username', data.user.username || '');
-          localStorage.setItem('role', data.user.role || '');
-          localStorage.setItem('serviceid', data.user.serviceid ?? '');
-          localStorage.setItem('email', data.user.email || '');
-        }
-localStorage.setItem('role', data.user.role);
+          localStorage.setItem('role', data.user.role);
           localStorage.setItem('username', data.user.username);
           localStorage.setItem('name', data.user.name);
 
           const role = (data.user.role || "").toLowerCase();
 
           setTimeout(() => {
-            window.location.href = (role === "admin" || role === "master"||role === "general")
+            window.location.href = (role === "admin" || role === "general")
               ? "dashboard.html"
               : "dashboard-user.html";
           }, 1000);
@@ -148,6 +139,8 @@ localStorage.setItem('role', data.user.role);
 
       const name = document.getElementById('name').value;
       const serviceid = document.getElementById('serviceid').value;
+      const emailEl = document.getElementById('email');
+      const email = emailEl ? emailEl.value.trim() : '';
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
       const role = document.getElementById('role').value;
@@ -156,7 +149,7 @@ localStorage.setItem('role', data.user.role);
         const res = await fetch(`${API_BASE}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, serviceid, username, password, role }),
+          body: JSON.stringify({ name, serviceid, email, username, password, role }),
         });
 
         const data = await res.json();
@@ -177,3 +170,42 @@ localStorage.setItem('role', data.user.role);
 }
 
 loadConfig();
+
+/* ================== PASSWORD SHOW/HIDE (Login/Register) ================== */
+(function initPasswordToggles() {
+  function setIcon(btn, isShown) {
+    const icon = btn.querySelector('i');
+    if (!icon) return;
+    icon.classList.toggle('fa-eye', !isShown);
+    icon.classList.toggle('fa-eye-slash', isShown);
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.toggle-eye');
+    if (!btn) return;
+
+    const targetId = btn.getAttribute('data-target');
+    if (!targetId) return;
+
+    const input = document.getElementById(targetId);
+    if (!input) return;
+
+    const isShown = input.type === 'text';
+    input.type = isShown ? 'password' : 'text';
+
+    setIcon(btn, !isShown);
+
+    try {
+      const len = input.value.length;
+      input.setSelectionRange(len, len);
+      input.focus();
+    } catch (_) {}
+  });
+
+  document.querySelectorAll('.toggle-eye[data-target]').forEach((btn) => {
+    const targetId = btn.getAttribute('data-target');
+    const input = targetId ? document.getElementById(targetId) : null;
+    if (!input) return;
+    setIcon(btn, input.type === 'text');
+  });
+})();
