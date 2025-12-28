@@ -17,6 +17,8 @@ export async function initLayout(activePage) {
   let role = localStorage.getItem("role");
   const username = localStorage.getItem("username");
   const name = localStorage.getItem("name");
+  const email = localStorage.getItem("email");
+  const serviceid = localStorage.getItem("serviceid");
 
   if (!token) return (window.location.href = "login.html");
 
@@ -71,21 +73,27 @@ export async function initLayout(activePage) {
   }
 
   /* ------------------------------
-        Fill Topbar User Info (SAFE)
-  ------------------------------ */
-  const nameEl = document.getElementById("name");
-  const usernameEl = document.getElementById("username");
-  const roleEl = document.getElementById("role");
-  const roleLabelEl = document.getElementById("roleLabel");
+      Fill Topbar User Info (SAFE)
+------------------------------ */
+const chipNameEl = document.getElementById("username"); // chip main line in topbar.html
+const roleEl = document.getElementById("role");
+const umNameEl = document.getElementById("umName");
+const umEmailEl = document.getElementById("umEmail");
+const umServiceIdEl = document.getElementById("umServiceId");
 
-  if (nameEl) nameEl.textContent = name || "User";
-  if (usernameEl) usernameEl.textContent = username || "Unknown";
-  if (roleEl) roleEl.textContent = role || "Unknown";
-  if (roleLabelEl) roleLabelEl.textContent = `Your Role: ${role}`;
+// Chip
+if (chipNameEl) chipNameEl.textContent = username || "User";
+if (roleEl) roleEl.textContent = role || "Role";
 
-  /* ------------------------------
-        Sidebar Toggle
-  ------------------------------ */
+// Dropdown header
+if (umNameEl) umNameEl.textContent = name  || "User";
+if (umEmailEl) umEmailEl.textContent = email || "—";
+if (umServiceIdEl) umServiceIdEl.textContent = `Service ID: ${serviceid || "—"}`;
+
+/* ------------------------------
+      Sidebar Toggle
+------------------------------ */
+ 
   window.toggleSidebar = function () {
     const sidebar = document.querySelector(".sidebar");
     const overlay = document.getElementById("overlay");
@@ -108,6 +116,37 @@ export async function initLayout(activePage) {
       sidebar?.classList.remove("open");
     });
   }
+
+/* ------------------------------
+      Settings: Coming soon message
+------------------------------ */
+(function initSettingsSoonMessage() {
+  const settingsLink = document.querySelector('.user-menu-item[href="settings.html"]');
+  if (!settingsLink) return;
+
+  function showSimpleToast(msg) {
+    // use global showToast if exists (from auth/add-record), else fallback
+    if (typeof window.showToast === "function") return window.showToast(msg, "info");
+    const host = document.getElementById("toastHost") || document.body;
+    const t = document.createElement("div");
+    t.className = "toast info";
+    t.textContent = msg;
+    host.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
+    setTimeout(() => {
+      t.classList.remove("show");
+      t.addEventListener("transitionend", () => t.remove(), { once: true });
+    }, 2500);
+  }
+
+  settingsLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    showSimpleToast("⚙️ Settings: Soon will be developed.");
+    // keep dropdown open/close natural
+    const dd = document.querySelector(".user-dropdown");
+    dd?.classList.remove("open");
+  });
+})();
 
   // ===== Topbar profile dropdown =====
 (function () {

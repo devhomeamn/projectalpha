@@ -154,7 +154,7 @@ function renderTable(records) {
   tbody.innerHTML = "";
 
   if (!records.length) {
-    tbody.innerHTML = `<tr><td colspan="15" style="text-align:center;">No records found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;">No records found</td></tr>`;
     bindCheckAll();
     return;
   }
@@ -185,27 +185,32 @@ function renderTable(records) {
     const tableSerial = startIndex + idx + 1;
 
     tr.innerHTML = `
-      <td>${tableSerial}</td>
-      <td><input type="checkbox" class="record-select" data-id="${rec.id}"></td>
-      <td class="file-cell" style="cursor:pointer; font-weight:600; color:#111827;">
-        ${rec.file_name}
-      </td>
-      <td>${rec.bd_no || "-"}</td>
-      <td>${sectionName}</td>
-      <td>${subName}</td>
-      <td>${rackName}</td>
-      <td><strong>${serialNo}</strong></td>
-      <td>${rec.added_by || "-"}</td>
-      <td>${rec.moved_by || "-"}</td>
-      <td><span class="status ${currentClass}">${currentText}</span></td>
-      <td><span class="status ${locationClass}">${locationText}</span></td>
-      <td>${openingDate}</td>
-      <td>${closingDate}</td>
-      <td class="action-icons">
-        <i class="icon-edit" data-id="${rec.id}" title="Edit">✏️</i>
-        <i class="icon-move" data-id="${rec.id}" title="Move">🚚</i>
-        ${canDelete ? `<i class="icon-delete" data-id="${rec.id}" title="Delete">🗑️</i>` : ""}
-      </td>
+<td>${tableSerial}</td>
+  <td><input type="checkbox" class="record-select" data-id="${rec.id}"></td>
+ 
+ <td class="file-cell" title="View details">${rec.file_name}</td>
+
+
+  <td>${rec.bd_no || "-"}</td>
+  <td>${sectionName}</td>
+  <td>${subName}</td>
+
+  <!-- 🔴 Rack -->
+  <td class="rack-red">${rackName}</td>
+
+  <!-- 🔴 Rack Serial -->
+  <td class="rsl-red">${serialNo}</td>
+
+  <td><span class="status ${currentClass}">${currentText}</span></td>
+  <td><span class="status ${locationClass}">${locationText}</span></td>
+  <td>${openingDate}</td>
+  <td>${closingDate}</td>
+
+  <td class="action-icons">
+    <i class="icon-edit" data-id="${rec.id}">✏️</i>
+    <i class="icon-move" data-id="${rec.id}">🚚</i>
+    ${canDelete ? `<i class="icon-delete" data-id="${rec.id}">🗑️</i>` : ""}
+  </td>
     `;
 
     // ✅ Row click = details modal

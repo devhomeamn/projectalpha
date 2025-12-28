@@ -429,3 +429,27 @@
   color:#991b1b;
   border:1px solid #fecaca;
 }
+
+
+/* ================== Highlight SL + Rack in table ================== */
+/* ================== Highlight Rack + Rack Serial ================== */
+#recordTable td.rack-red,
+#recordTable td.rsl-red {
+  color: #dc2626;        /* red */
+  font-weight: 700;
+  font-size: 18px ;
+  text-align: center;
+}
+/* ================== File name clickable ================== */
+#recordTable td.file-cell {
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+
+
+#recordTable td.file-cell:hover {
+  color: #1d4ed8;   /* subtle hover color */
+}

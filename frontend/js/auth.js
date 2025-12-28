@@ -111,14 +111,23 @@ function initForms() {
           showToast('Login Successful!', 'success');
 
           localStorage.setItem('token', data.token);
-          localStorage.setItem('role', data.user.role);
+          
+        // store user info
+        if (data.user) {
+          localStorage.setItem('name', data.user.name || '');
+          localStorage.setItem('username', data.user.username || '');
+          localStorage.setItem('role', data.user.role || '');
+          localStorage.setItem('serviceid', data.user.serviceid ?? '');
+          localStorage.setItem('email', data.user.email || '');
+        }
+localStorage.setItem('role', data.user.role);
           localStorage.setItem('username', data.user.username);
           localStorage.setItem('name', data.user.name);
 
           const role = (data.user.role || "").toLowerCase();
 
           setTimeout(() => {
-            window.location.href = (role === "admin" || role === "master")
+            window.location.href = (role === "admin" || role === "master"||role === "general")
               ? "dashboard.html"
               : "dashboard-user.html";
           }, 1000);

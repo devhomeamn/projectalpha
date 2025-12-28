@@ -5,11 +5,11 @@ const { Op } = require('sequelize');
 
 // ✅ Register (new user = pending)
 exports.register = async (req, res) => {
-  const { name, serviceid, username, password, role } = req.body;
+  const { name, serviceid, email, username, password, role } = req.body;
   try {
     const existingUser = await User.findOne({
       where: {
-        [Op.or]: [{ username }, { serviceid }],
+        [Op.or]: [{ username }, { serviceid }, { email }],
       },
     });
 
@@ -18,7 +18,9 @@ exports.register = async (req, res) => {
         error:
           existingUser.username === username
             ? 'Username already exists'
-            : 'Service ID already exists',
+            : existingUser.serviceid === Number(serviceid)
+            ? 'Service ID already exists'
+            : 'Email already exists',
       });
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -26,6 +28,7 @@ exports.register = async (req, res) => {
       name,
       username,
       serviceid,
+      email,
       password: hashedPassword,
       role,
       status: 'pending', // 👈 pending by default
@@ -71,12 +74,14 @@ exports.login = async (req, res) => {
       message: '✅ Login Successful',
       token,
       user: {
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        role: user.role,
-        status: user.status,
-      },
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    serviceid: user.serviceid,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+},
     });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -119,7 +124,7 @@ exports.rejectUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
-      attributes: ['id', 'name', 'username', 'serviceid', 'role', 'status', 'createdAt'],
+      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'status', 'createdAt'],
       order: [['createdAt', 'DESC']]
     });
     res.json(users);

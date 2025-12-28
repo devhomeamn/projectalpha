@@ -25,30 +25,30 @@
 }
 
 .section-page .page-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #1f2937;
   margin-bottom: 4px;
 }
 
 .section-page .subtext {
-  font-size: 14px;
+  font-size: 13px;
   color: #6b7280;
 }
 
-/* Section titles (Add Subcategory / Rack / Overview) */
+/* Section titles */
 .section-page .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #374151;
   margin-top: 4px;
 }
 
-/* Divider (kept but we will hide in new grid) */
+/* Divider */
 .section-page .divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 18px 0;
+  margin: 14px 0;
   border-radius: 999px;
 }
 
@@ -57,20 +57,21 @@
 =========================================== */
 .section-page .form-card {
   background: #fff;
-  padding: 20px;
+  padding: 14px;
   border-radius: 14px;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.06);
-  max-width: 760px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  max-width: none;
+  margin-bottom: 12px;
 }
 
 /* form group */
 .section-page .form-group {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .section-page .form-group label {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #374151;
   margin-bottom: 6px;
@@ -83,22 +84,22 @@
   margin-left: 3px;
 }
 
-/* inputs/select/textarea (only inside section-page) */
+/* inputs/select/textarea */
 .section-page input,
 .section-page select,
 .section-page textarea {
   width: 100%;
-  padding: 11px 12px;
+  padding: 9px 10px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #fafafa;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   transition: 0.2s ease;
 }
 
 .section-page textarea {
-  min-height: 90px;
+  min-height: 72px;
   resize: vertical;
 }
 
@@ -110,140 +111,48 @@
   box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
 }
 
-/* Buttons spacing (no override of layout btn colors) */
+/* Buttons spacing */
 #sectionForm .btn-primary,
 #subForm .btn-secondary,
 #rackForm .btn-tertiary,
 #centralRackForm .btn-primary {
   width: 100%;
   margin-top: 4px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 10px;
   font-weight: 700;
-  font-size: 15px;
-  transition: 0.2s ease;
-}
-
-/* ===========================================
-   LISTS (Existing racks / sections)
-=========================================== */
-.section-page .list-title {
-  margin-top: 14px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #111827;
-}
-
-/* Central rack list */
-.section-page .rack-list {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 10px;
-}
-
-/* Section overview list */
-.section-page .section-list {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 12px;
-}
-
-/* Common card style for list items */
-.section-page .rack-list > div,
-.section-page .section-list > div {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  border-left: 5px solid #2563eb;
-  transition: 0.2s ease;
   font-size: 14px;
-  color: #374151;
+  transition: 0.2s ease;
 }
 
-.section-page .rack-list > div:hover,
-.section-page .section-list > div:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.10);
-}
-
-/* If JS adds header/label inside list item */
-.section-page .rack-list h4,
-.section-page .section-list h4 {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  color: #111827;
+/* hint text */
+.section-page .hint{
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
 }
 
 /* ===========================================
-   ✅ NEW: Two-column compact layout
-   Left small forms, right lists (sticky)
+   ✅ Layout: left forms + right lists (sticky)
 =========================================== */
-
-/* tighter headers inside left column */
 .section-page .compact-head{
   margin: 10px 0 6px;
 }
 .section-page .compact-head .section-title{
   margin: 0;
-  font-size: 16px;
 }
 
-/* main grid */
 .section-page .section-grid{
   display: grid;
-  grid-template-columns: 420px 1fr; /* left narrow, right wide */
+  grid-template-columns: 420px 1fr;
   gap: 14px;
   align-items: start;
-}
-
-/* left */
-.section-page .left-col .form-card{
-  max-width: none;          /* override 760px for grid */
-  padding: 14px;            /* smaller */
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-  margin-bottom: 12px;
-}
-
-/* remove big dividers in new layout */
-.section-page .left-col .divider{
-  display: none;
-}
-
-.section-page .left-col .form-group{
-  margin-bottom: 10px;
-}
-
-.section-page .left-col input,
-.section-page .left-col select,
-.section-page .left-col textarea{
-  padding: 9px 10px;
-  font-size: 13.5px;
-  border-radius: 10px;
-}
-
-.section-page .left-col textarea{
-  min-height: 72px;
-}
-
-/* buttons compact */
-#sectionForm .btn-primary,
-#subForm .btn-secondary,
-#rackForm .btn-tertiary,
-#centralRackForm .btn-primary{
-  padding: 10px 12px;
-  font-size: 14px;
-  border-radius: 10px;
 }
 
 /* right column sticky + scroll */
 .section-page .right-col{
   position: sticky;
-  top: 84px; /* topbar space */
+  top: 84px;
   max-height: calc(100vh - 98px);
   overflow: auto;
   padding-right: 6px;
@@ -257,20 +166,109 @@
   box-shadow: 0 8px 18px rgba(0,0,0,0.06);
 }
 
-/* make lists denser on right */
-.section-page .right-col .rack-list{
-  grid-template-columns: 1fr;
-  gap: 8px;
+/* ===========================================
+   Lists UI (mini list)
+=========================================== */
+.section-page .list-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
 }
-.section-page .right-col .section-list{
-  grid-template-columns: 1fr;
-  gap: 10px;
+.section-page .list-head h4{
+  margin:0;
+  font-size: 15px;
+  font-weight: 800;
+  color:#111827;
+}
+.section-page .list-head .mini{
+  font-size:12px;
+  color:#6b7280;
 }
 
-.section-page .right-col .rack-list > div,
-.section-page .right-col .section-list > div{
-  padding: 10px 12px;
-  font-size: 13.5px;
+.section-page .mini-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.section-page .mini-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+  background:#f9fafb;
+  border:1px solid #eef2f7;
+  border-radius:12px;
+  padding:10px 12px;
+  cursor:pointer;
+  transition: .15s ease;
+}
+.section-page .mini-item:hover{
+  background:#fff;
+  border-color:#dbeafe;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+
+.section-page .mini-item .title{
+  font-size:13.5px;
+  font-weight:800;
+  color:#111827;
+  line-height:1.2;
+}
+.section-page .mini-item .desc{
+  margin-top:4px;
+  font-size:12px;
+  color:#6b7280;
+  line-height:1.3;
+}
+.section-page .mini-item .meta{
+  text-align:right;
+  font-size:12px;
+  color:#6b7280;
+  white-space:nowrap;
+}
+
+.section-page .pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#3730a3;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* right panel sections */
+.section-page .right-stack{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* Selected section header */
+.section-page .selected-box{
+  background:#0f172a;
+  color:#fff;
+  border-radius:14px;
+  padding:12px 14px;
+}
+.section-page .selected-box .sel-title{
+  font-size:14px;
+  font-weight:900;
+  margin:0;
+}
+.section-page .selected-box .sel-sub{
+  margin-top:6px;
+  font-size:12px;
+  color:#cbd5e1;
 }
 
 /* ===========================================
@@ -279,13 +277,6 @@
 @media (max-width: 1100px){
   .section-page .section-grid{
     grid-template-columns: 380px 1fr;
-  }
-}
-
-@media (max-width: 992px) {
-  .section-page .rack-list,
-  .section-page .section-list {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -302,8 +293,6 @@
 }
 
 @media (max-width: 768px) {
-
-  /* drawer sidebar => full content */
   .dashboard-container .main-content {
     margin-left: 0;
     width: 100%;
@@ -318,16 +307,10 @@
     font-size: 20px;
   }
 
-  .section-page .form-card {
-    padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-  }
-
   .section-page input,
   .section-page select,
   .section-page textarea {
-    font-size: 13.5px;
+    font-size: 13px;
     padding: 10px 11px;
   }
 
@@ -337,5 +320,9 @@
   #centralRackForm .btn-primary {
     font-size: 14px;
     padding: 11px 12px;
+  }
+
+  .section-page .mini-list{
+    max-height: 260px;
   }
 }
