@@ -614,49 +614,91 @@ function startPrintFromView() {
   }
 
   const r = lastViewedRecordForPrint;
+
   const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
 
   const currentStatus = (r.record_status || "ongoing").toLowerCase();
   const statusText = currentStatus === "closed" ? "Closed" : "Ongoing";
   const locationText = r.status === "central" ? "In Central" : "In Section";
 
+  const sectionName = r.Section?.name || "-";
+  const subName = r.Subcategory?.name || "-";
+  const rackNo = r.Rack?.name || "-";
+  const serialNo = r.serial_no ?? "-";
+  const bdNo = r.bd_no || "-";
+  const fileName = r.file_name || "-";
+  const openingDate = r.opening_date || "-";
+  const closingDate = r.closing_date || "-";
+
+  // ✅ QR contains everything (same idea as add-record)
+  const qrText = `
+SFC Air FRMS
+File Name: ${fileName}
+BD No: ${bdNo}
+Section: ${sectionName}
+Subcategory: ${subName}
+Rack No: ${rackNo}
+Serial No: ${serialNo}
+Status: ${statusText}
+Location: ${locationText}
+Opening Date: ${openingDate}
+Closing Date: ${closingDate}
+Created At: ${createdAt}
+Description: ${r.description || ""}
+`.trim();
+
+  const qrUrl =
+    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`;
+
+  // ✅ A4 HTML (screenshot style)
   const html = `
-    <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14mm;">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-        <div>
-          <h2 style="margin:0 0 6px 0;">SFC Air FRMS</h2>
-          <div style="font-size:13px;opacity:.75;">Record Print Copy</div>
+    <div class="a4">
+      <h1 class="title">SFC Air FRMS</h1>
+      <div class="subtitle">File & Record Management System</div>
+
+      <div class="grid">
+        <!-- Section/Subcategory -->
+        <div class="secBlock">
+          <div class="secLabel">Section :</div>
+          <div class="secVal">${sectionName}</div>
+
+          <div class="secLabel">Subcategory:</div>
+          <div class="secVal">${subName}</div>
         </div>
 
-        <div style="text-align:right;font-size:13px;">
-          <div><b>BD No:</b> ${r.bd_no || "-"}</div>
-          <div style="font-size:32px;font-weight:900;">
-            <b>Serial:</b> ${r.serial_no ?? "-"}
-          </div>
+        <!-- QR -->
+        <div class="qrBox">
+          <div class="qrTitle">QR CODE</div>
+          <img src="${qrUrl}" alt="QR"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="qrFallback" style="display:none;">QR</div>
+        </div>
+
+        <!-- Rack + Serial (moved up a bit) -->
+        <div class="card rackCard">
+          <div class="cardLabel">Rack No.</div>
+          <div class="cardValue">${rackNo}</div>
+        </div>
+
+        <div class="card serialCard">
+          <div class="cardLabel">Serial No.</div>
+          <div class="cardValue">${serialNo}</div>
         </div>
       </div>
 
-      <hr style="margin:12px 0;"/>
+      <!-- Bottom info -->
+      <div class="info">
+        <div class="infoLeft">
+          <div class="infoRow"><div class="k">File Name :</div><div class="v">${fileName}</div></div>
+          <div class="infoRow"><div class="k">File/BD No :</div><div class="v">${bdNo}</div></div>
+          <div class="infoRow"><div class="k">Opening Date :</div><div class="v">${openingDate}</div></div>
+        </div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr><td style="padding:6px 0;width:180px;"><b>File Name</b></td><td>${r.file_name || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Section</b></td><td>${r.Section?.name || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Subcategory</b></td><td>${r.Subcategory?.name || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Rack</b></td><td>${r.Rack?.name || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Current Status</b></td><td>${statusText}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Location</b></td><td>${locationText}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Opening Date</b></td><td>${r.opening_date || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Closing Date</b></td><td>${r.closing_date || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Added By</b></td><td>${r.added_by || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Moved By</b></td><td>${r.moved_by || "-"}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Created At</b></td><td>${createdAt}</td></tr>
-        <tr><td style="padding:6px 0;"><b>Description</b></td><td>${r.description || ""}</td></tr>
-      </table>
-
-      <hr style="margin:12px 0;"/>
-      <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;">
-        <div>Signature: ____________________</div>
-        <div>Date: ____________________</div>
+        <div class="infoRight">
+          <div class="infoRow"><div class="k">Status :</div><div class="v">${statusText}</div></div>
+          <div class="infoRow"><div class="k">Location :</div><div class="v">${locationText}</div></div>
+          <div class="infoRow"><div class="k">Closing Date :</div><div class="v">${closingDate || "-"}</div></div>
+        </div>
       </div>
     </div>
   `;
@@ -671,6 +713,7 @@ function startPrintFromView() {
     frame.style.width = "0";
     frame.style.height = "0";
     frame.style.border = "0";
+    frame.setAttribute("aria-hidden", "true");
     document.body.appendChild(frame);
   }
 
@@ -683,11 +726,87 @@ function startPrintFromView() {
         <meta charset="utf-8" />
         <title>Record Print</title>
         <style>
-          @page { margin: 10mm; }
-          body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-          table { width: 100%; border-collapse: collapse; }
-          td { vertical-align: top; }
-          hr { margin: 12px 0; }
+          @page { size: A4; margin: 12mm; }
+          body{ font-family: Arial, sans-serif; color:#000; margin:0; }
+          .a4{ width:100%; }
+
+          .title{
+            text-align:center;
+            font-weight:900;
+            font-size:30px;
+            margin:0;
+            letter-spacing:.5px;
+          }
+          .subtitle{
+            text-align:center;
+            font-size:13px;
+            opacity:.85;
+            margin-top:4px;
+          }
+
+          .grid{
+            margin-top:20px;
+            display:grid;
+            grid-template-columns: 1fr 1fr 240px;
+            column-gap: 34px;
+            row-gap: 22px;
+            align-items:start;
+          }
+
+          .secBlock{
+            grid-column: 1 / 3;
+            display:grid;
+            grid-template-columns: 160px 1fr;
+            row-gap: 12px;
+            column-gap: 20px;
+            padding-top: 6px;
+          }
+          .secLabel{ font-weight:900; font-size:22px; }
+          .secVal{ font-weight:900; font-size:22px; letter-spacing:.4px; }
+
+          .qrBox{
+            grid-column: 3 / 4;
+            border:2px solid #000;
+            border-radius:14px;
+            padding:14px;
+            text-align:center;
+          }
+          .qrTitle{ font-size:16px; font-weight:900; margin-bottom:10px; }
+          .qrBox img{ width:190px; height:190px; display:block; margin:0 auto; }
+          .qrFallback{
+            width:190px; height:190px; border:2px dashed #000;
+            display:flex; align-items:center; justify-content:center;
+            font-size:18px; font-weight:900; margin:0 auto;
+          }
+
+          .card{
+            border:2px solid #000;
+            border-radius:12px;
+            padding:12px 14px;
+            width: 220px;
+          }
+          .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
+          .cardValue{ font-size:44px; font-weight:900; line-height:1; }
+
+          .rackCard{ grid-column: 1 / 2; margin-top: -160px; }  /* ✅ move up */
+          .serialCard{ grid-column: 2 / 3; margin-top: -160px; }/* ✅ move up */
+
+          .info{
+            margin-top: 34px;
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 60px;
+            row-gap: 12px;
+          }
+          .infoRow{
+            display:grid;
+            grid-template-columns: 140px 1fr;
+            column-gap: 14px;
+            align-items:baseline;
+            margin-bottom: 10px;
+          }
+          .k{ font-weight:900; font-size:14px; }
+          .v{ font-weight:800; font-size:14px; text-align:center; word-break: break-word; }
         </style>
       </head>
       <body>${html}</body>

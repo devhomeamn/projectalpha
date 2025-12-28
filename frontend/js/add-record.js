@@ -711,13 +711,146 @@ function iframePrint(html) {
       <head>
         <meta charset="utf-8" />
         <title>Record Print</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 16px; color:#000; }
-          table { width: 100%; border-collapse: collapse; font-size: 14px; }
-          td { padding: 6px 0; vertical-align: top; }
-          hr { margin: 12px 0; }
-          @page { margin: 10mm; }
-        </style>
+<style>
+  @page { size: A4; margin: 12mm; }
+  body{ font-family: Arial, sans-serif; color:#000; margin:0; }
+  .a4{ width:100%; }
+
+  /* Header */
+  .title{
+    text-align:center;
+    font-weight:900;
+    font-size:30px;
+    margin:0;
+    letter-spacing:.5px;
+  }
+  .subtitle{
+    text-align:center;
+    font-size:13px;
+    opacity:.85;
+    margin-top:4px;
+  }
+
+  /* GRID like screenshot */
+  .grid{
+    margin-top:20px;
+    display:grid;
+    grid-template-columns: 1fr 1fr 240px; /* left, middle, QR */
+    column-gap: 34px;
+    row-gap: 22px;
+    align-items:start;
+  }
+
+  /* Section/Subcategory block placed in left+middle (2 columns span) */
+  .secBlock{
+    grid-column: 1 / 3;
+    display:grid;
+    grid-template-columns: 160px 1fr; /* label | value */
+    row-gap: 12px;
+    column-gap: 20px;
+    padding-top: 6px;
+  }
+  .secLabel{
+    font-weight:900;
+    font-size:22px;
+  }
+  .secVal{
+    font-weight:900;
+    font-size:22px;
+    letter-spacing:.4px;
+  }
+
+  /* QR on right (same row as section) */
+  .qrBox{
+    grid-column: 3 / 4;
+    border:2px solid #000;
+    border-radius:14px;
+    padding:14px;
+    text-align:center;
+  }
+  .qrTitle{
+    font-size:16px;
+    font-weight:900;
+    margin-bottom:10px;
+  }
+  .qrBox img{
+    width:190px;
+    height:190px;
+    display:block;
+    margin:0 auto;
+  }
+  .qrFallback{
+    width:190px;
+    height:190px;
+    border:2px dashed #000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    font-weight:900;
+    margin:0 auto;
+  }
+
+  /* Rack/Serial boxes (row under section) */
+  .card{
+    border:2px solid #000;
+    border-radius:12px;
+    padding:12px 14px;
+    width: 220px; /* like screenshot small cards */
+  }
+  .cardLabel{
+    font-size:12px;
+    font-weight:800;
+    opacity:.85;
+    margin-bottom:8px;
+  }
+  .cardValue{
+    font-size:44px;
+    font-weight:900;
+    line-height:1;
+  }
+  .rackCard{ grid-column: 1 / 2;
+  margin-top: -160px }
+  .serialCard{ 
+  margin-top: -160px
+  grid-column: 2 / 3;
+   }
+
+  /* Bottom info area spans full width */
+  .info{
+    margin-top: 34px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 60px;
+    row-gap: 12px;
+  }
+
+  .infoRow{
+    display:grid;
+    grid-template-columns: 140px 1fr; /* key | value */
+    column-gap: 14px;
+    align-items:baseline;
+    margin-bottom: 10px;
+  }
+  .k{
+    font-weight:900;
+    font-size:14px;
+  }
+  .v{
+    font-weight:800;
+    font-size:14px;
+    text-align:center; /* like screenshot */
+    word-break: break-word;
+  }
+
+  /* right column values align center too */
+  .infoRight .v{ text-align:center; }
+
+  /* make closing date show dash nicely */
+  .dash{ font-weight:900; }
+</style>
+
+
       </head>
       <body>
         ${html}
@@ -772,71 +905,171 @@ function wirePrintButtonsOnce() {
 function safeText(v) {
   return v == null ? "" : String(v);
 }
-
 function renderPrintTemplate(record) {
   const el = document.getElementById("printArea");
   if (!el) return;
 
-  const createdAt = record.createdAt
-    ? new Date(record.createdAt).toLocaleString()
-    : "";
+  const rackNo = safeText(record.Rack?.name || "");
+  const serialNo = safeText(record.serial_no || "");
+  const bdNo = safeText(record.bd_no || "");
 
+  const sectionName = safeText(record.Section?.name || "");
+  const subName = safeText(record.Subcategory?.name || "");
+  const fileName = safeText(record.file_name || "");
+
+  const statusText = safeText(record.record_status || "ongoing");
+  const locationText = record.status === "central" ? "In Central" : "In Section";
+  const openingDate = safeText(record.opening_date || "");
+  const closingDate = safeText(record.closing_date || "");
+
+  // QR includes everything
+  const qrText = `
+SFC Air FRMS
+File Name: ${fileName}
+BD No: ${bdNo}
+Section: ${sectionName}
+Subcategory: ${subName}
+Rack No: ${rackNo}
+Serial No: ${serialNo}
+Status: ${statusText}
+Location: ${locationText}
+Opening Date: ${openingDate}
+Closing Date: ${closingDate}
+Added By: ${safeText(record.added_by || "")}
+Created At: ${safeText(record.createdAt ? new Date(record.createdAt).toLocaleString() : "")}
+Description: ${safeText(record.description || "")}
+`.trim();
+
+  const qrUrl =
+    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`;
+
+  // ✅ preview modal styled too (same css injected)
   el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-      <div>
-        <h2 style="margin:0 0 6px 0;">SFC Air FRMS</h2>
-        <div style="font-size:13px;opacity:.75;">Record Print Copy</div>
+    <style>
+      @page { size: A4; margin: 12mm; }
+      .a4{ width:100%; font-family: Arial, sans-serif; color:#000; }
+
+      .title{ text-align:center; font-weight:900; font-size:30px; margin:0; letter-spacing:.5px; }
+      .subtitle{ text-align:center; font-size:13px; opacity:.85; margin-top:4px; }
+
+      .grid{
+        margin-top:20px;
+        display:grid;
+        grid-template-columns: 1fr 1fr 240px;
+        column-gap: 34px;
+        row-gap: 22px;
+        align-items:start;
+      }
+
+      .secBlock{
+        grid-column: 1 / 3;
+        display:grid;
+        grid-template-columns: 160px 1fr;
+        row-gap: 12px;
+        column-gap: 20px;
+        padding-top: 6px;
+      }
+      .secLabel{ font-weight:900; font-size:22px; }
+      .secVal{ font-weight:900; font-size:22px; letter-spacing:.4px; }
+
+      .qrBox{
+        grid-column: 3 / 4;
+        border:2px solid #000;
+        border-radius:14px;
+        padding:14px;
+        text-align:center;
+      }
+      .qrTitle{ font-size:16px; font-weight:900; margin-bottom:10px; }
+      .qrBox img{ width:190px; height:190px; display:block; margin:0 auto; }
+      .qrFallback{
+        width:190px; height:190px; border:2px dashed #000;
+        display:flex; align-items:center; justify-content:center;
+        font-size:18px; font-weight:900; margin:0 auto;
+      }
+
+      .card{
+        border:2px solid #000;
+        border-radius:12px;
+        padding:12px 14px;
+        width:220px;
+      }
+      .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
+      .cardValue{ font-size:44px; font-weight:900; line-height:1; }
+
+      .rackCard{ grid-column: 1 / 2; 
+      margin-top: -160px}
+      .serialCard{ grid-column: 2 / 3; 
+      margin-top: -160px}
+
+      .info{
+        margin-top:34px;
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 60px;
+        row-gap: 12px;
+      }
+
+      .infoRow{
+        display:grid;
+        grid-template-columns: 140px 1fr;
+        column-gap: 14px;
+        align-items:baseline;
+        margin-bottom: 10px;
+      }
+      .k{ font-weight:900; font-size:14px; }
+      .v{ font-weight:800; font-size:14px; text-align:center; word-break:break-word; }
+      .infoRight .v{ text-align:center; }
+      .dash{ font-weight:900; }
+    </style>
+
+    <div class="a4">
+      <h1 class="title">SFC Air FRMS</h1>
+      <div class="subtitle">File & Record Management System</div>
+
+      <div class="grid">
+        <!-- Section/Subcategory left -->
+        <div class="secBlock">
+          <div class="secLabel">Section</div>
+          <div class="secVal">${sectionName || "-"}</div>
+
+          <div class="secLabel">Subcategory</div>
+          <div class="secVal">${subName || "-"}</div>
+        </div>
+
+        <!-- QR right -->
+        <div class="qrBox">
+          <div class="qrTitle">QR CODE</div>
+          <img src="${qrUrl}" alt="QR"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="qrFallback" style="display:none;">QR</div>
+        </div>
+
+        <!-- Rack + Serial row under section -->
+        <div class="card rackCard">
+          <div class="cardLabel">Rack No.</div>
+          <div class="cardValue">${rackNo || "-"}</div>
+        </div>
+
+        <div class="card serialCard">
+          <div class="cardLabel">Serial No.</div>
+          <div class="cardValue">${serialNo || "-"}</div>
+        </div>
       </div>
-      <div style="text-align:right;font-size:13px;">
-        <div><b>BD No:</b> ${safeText(record.bd_no)}</div>
-        <div style="font-size:22px;font-weight:900;"><b>Serial:</b> ${safeText(
-          record.serial_no
-        )}</div>
+
+      <!-- Bottom info -->
+      <div class="info">
+        <div class="infoLeft">
+          <div class="infoRow"><div class="k">File Name</div><div class="v">${fileName || "-"}</div></div>
+          <div class="infoRow"><div class="k">BD No</div><div class="v">${bdNo || "-"}</div></div>
+          <div class="infoRow"><div class="k">Opening Date</div><div class="v">${openingDate || "-"}</div></div>
+        </div>
+
+        <div class="infoRight">
+          <div class="infoRow"><div class="k">Status</div><div class="v">${statusText}</div></div>
+          <div class="infoRow"><div class="k">Location</div><div class="v">${locationText}</div></div>
+          <div class="infoRow"><div class="k">Closing Date</div><div class="v">${closingDate || '<span class="dash">-</span>'}</div></div>
+        </div>
       </div>
-    </div>
-
-    <hr style="margin:12px 0;"/>
-
-    <table style="width:100%;border-collapse:collapse;font-size:14px;">
-      <tr><td style="padding:6px 0;width:180px;"><b>File Name</b></td><td>${safeText(
-        record.file_name
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Section</b></td><td>${safeText(
-        record.Section?.name
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Subcategory</b></td><td>${safeText(
-        record.Subcategory?.name
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Rack</b></td><td>${safeText(
-        record.Rack?.name
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Current Status</b></td><td>${safeText(
-        record.record_status || "ongoing"
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Location</b></td><td>${
-        record.status === "central" ? "In Central" : "In Section"
-      }</td></tr>
-      <tr><td style="padding:6px 0;"><b>Opening Date</b></td><td>${safeText(
-        record.opening_date || ""
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Closing Date</b></td><td>${safeText(
-        record.closing_date || ""
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Added By</b></td><td>${safeText(
-        record.added_by || ""
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Created At</b></td><td>${safeText(
-        createdAt
-      )}</td></tr>
-      <tr><td style="padding:6px 0;"><b>Description</b></td><td>${safeText(
-        record.description || ""
-      )}</td></tr>
-    </table>
-
-    <hr style="margin:12px 0;"/>
-    <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;">
-      <div>Signature: ____________________</div>
-      <div>Date: ____________________</div>
     </div>
   `;
 }
