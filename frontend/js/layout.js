@@ -13,7 +13,7 @@ export async function initLayout(activePage) {
   await new Promise((r) => setTimeout(r, 50));
 
   // 2) Retrieve user info (NOW variables exist)
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token"); 
   let role = localStorage.getItem("role");
 
   const username = localStorage.getItem("username");
