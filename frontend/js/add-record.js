@@ -86,17 +86,41 @@ function setMsg(el, text, ok = true, mode = "normal") {
   else el.style.color = ok ? "green" : "red";
 }
 
+/* ================== OP SECTION FIELD ================== */
+// ✅ Allocate Table only for OP-1 / OP-2
+function syncAllocateTable(sectionName) {
+  const group = document.getElementById("allocate_table_group");
+  const input = document.getElementById("allocate_table");
+  const star = document.getElementById("allocate_table_star");
+  if (!group || !input) return;
+
+  const name = (sectionName || "").trim().toLowerCase();
+  const isOP =
+    name === "officers pay (op-1)".toLowerCase() ||
+    name === "officers pay (op-2)".toLowerCase();
+
+  group.style.display = isOP ? "" : "none";
+  input.required = !!isOP;
+  if (star) star.style.display = isOP ? "inline" : "none";
+
+  // hide হলে value clear করে দাও
+  if (!isOP) input.value = "";
+}
+
 // ================== PAGE INIT ==================
 function initPage() {
   wirePrintButtonsOnce();
-  
-  const fileInput = document.getElementById("file_name");
-if (fileInput) {
-  fileInput.addEventListener("input", () => {
-    fileInput.value = fileInput.value.toUpperCase();
-  });
-}
 
+  // ✅ initial hide allocate_table
+  syncAllocateTable("");
+
+  // ✅ file_name auto uppercase
+  const fileInput = document.getElementById("file_name");
+  if (fileInput) {
+    fileInput.addEventListener("input", () => {
+      fileInput.value = fileInput.value.toUpperCase();
+    });
+  }
 
   const userInfo = document.getElementById("userInfo");
   if (userInfo) {
@@ -193,6 +217,9 @@ async function loadSections() {
     rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
     serialInput.value = "";
 
+    // initial hide
+    syncAllocateTable("");
+
     data.forEach((sec) => {
       if ((sec.name || "").trim().toLowerCase() === "central room") return;
       const opt = document.createElement("option");
@@ -217,9 +244,15 @@ async function loadSections() {
       setMsg(ensureBdMsg(), "", true);
       bdOk = true;
 
-      if (!sectionId) return;
+      if (!sectionId) {
+        syncAllocateTable(""); // hide allocate table
+        return;
+      }
 
       const selected = data.find((s) => s.id == sectionId);
+
+      // ✅ OP-1 / OP-2 -> show allocate table
+      syncAllocateTable(selected?.name || "");
 
       if (selected?.Subcategories?.length) {
         selected.Subcategories.forEach((sub) => {
@@ -456,6 +489,7 @@ function getDedupeKey(payload) {
     payload.opening_date || "",
     payload.record_status || "",
     payload.closing_date || "",
+    payload.allocate_table || "", // ✅ new
   ].join("|");
 }
 
@@ -501,6 +535,13 @@ async function onAddRecord(e) {
   let closing_date = document.getElementById("closing_date")?.value || null;
   if (record_status !== "closed") closing_date = null;
 
+  // ✅ Allocate Table value (only if visible)
+  const allocate_table_group = document.getElementById("allocate_table_group");
+  const allocate_table =
+    allocate_table_group && allocate_table_group.style.display !== "none"
+      ? (document.getElementById("allocate_table")?.value.trim() || "")
+      : "";
+
   const added_by = localStorage.getItem("username") || "Unknown User";
 
   if (!file_name || !section_id || !rack_id) {
@@ -530,6 +571,14 @@ async function onAddRecord(e) {
     }
     if (closing_date < opening_date) {
       showToast("⚠️ Closing Date, Opening Date এর আগে হতে পারবে না।", "warn");
+      return;
+    }
+  }
+
+  // ✅ Allocate Table required only when shown (OP-1/OP-2)
+  if (allocate_table_group && allocate_table_group.style.display !== "none") {
+    if (!allocate_table) {
+      showToast("⚠️ Officers Pay (OP-1/OP-2) হলে Allocate Table দিতে হবে।", "warn");
       return;
     }
   }
@@ -570,6 +619,7 @@ async function onAddRecord(e) {
     record_status,
     closing_date,
     added_by,
+    allocate_table, // ✅ new
   };
 
   const key = getDedupeKey(payload);
@@ -636,6 +686,9 @@ async function onAddRecord(e) {
     e.target.reset();
     const s = document.getElementById("serial_no");
     if (s) s.value = "";
+
+    // ✅ reset allocate table
+    syncAllocateTable("");
 
     // reset messages (DON'T keep subcategory required line always)
     setMsg(ensureBdMsg(), "", true);
@@ -716,7 +769,6 @@ function iframePrint(html) {
   body{ font-family: Arial, sans-serif; color:#000; margin:0; }
   .a4{ width:100%; }
 
-  /* Header */
   .title{
     text-align:center;
     font-weight:900;
@@ -731,36 +783,26 @@ function iframePrint(html) {
     margin-top:4px;
   }
 
-  /* GRID like screenshot */
   .grid{
     margin-top:20px;
     display:grid;
-    grid-template-columns: 1fr 1fr 240px; /* left, middle, QR */
+    grid-template-columns: 1fr 1fr 240px;
     column-gap: 34px;
     row-gap: 22px;
     align-items:start;
   }
 
-  /* Section/Subcategory block placed in left+middle (2 columns span) */
   .secBlock{
     grid-column: 1 / 3;
     display:grid;
-    grid-template-columns: 160px 1fr; /* label | value */
+    grid-template-columns: 160px 1fr;
     row-gap: 12px;
     column-gap: 20px;
     padding-top: 6px;
   }
-  .secLabel{
-    font-weight:900;
-    font-size:22px;
-  }
-  .secVal{
-    font-weight:900;
-    font-size:22px;
-    letter-spacing:.4px;
-  }
+  .secLabel{ font-weight:900; font-size:22px; }
+  .secVal{ font-weight:900; font-size:22px; letter-spacing:.4px; }
 
-  /* QR on right (same row as section) */
   .qrBox{
     grid-column: 3 / 4;
     border:2px solid #000;
@@ -768,55 +810,25 @@ function iframePrint(html) {
     padding:14px;
     text-align:center;
   }
-  .qrTitle{
-    font-size:16px;
-    font-weight:900;
-    margin-bottom:10px;
-  }
-  .qrBox img{
-    width:190px;
-    height:190px;
-    display:block;
-    margin:0 auto;
-  }
+  .qrTitle{ font-size:16px; font-weight:900; margin-bottom:10px; }
+  .qrBox img{ width:190px; height:190px; display:block; margin:0 auto; }
   .qrFallback{
-    width:190px;
-    height:190px;
-    border:2px dashed #000;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:18px;
-    font-weight:900;
-    margin:0 auto;
+    width:190px; height:190px; border:2px dashed #000;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:900; margin:0 auto;
   }
 
-  /* Rack/Serial boxes (row under section) */
   .card{
     border:2px solid #000;
     border-radius:12px;
     padding:12px 14px;
-    width: 220px; /* like screenshot small cards */
+    width: 220px;
   }
-  .cardLabel{
-    font-size:12px;
-    font-weight:800;
-    opacity:.85;
-    margin-bottom:8px;
-  }
-  .cardValue{
-    font-size:44px;
-    font-weight:900;
-    line-height:1;
-  }
-  .rackCard{ grid-column: 1 / 2;
-  margin-top: -160px }
-  .serialCard{ 
-  margin-top: -160px
-  grid-column: 2 / 3;
-   }
+  .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
+  .cardValue{ font-size:44px; font-weight:900; line-height:1; }
+  .rackCard{ grid-column: 1 / 2; margin-top: -160px; }
+  .serialCard{ grid-column: 2 / 3; margin-top: -160px; }
 
-  /* Bottom info area spans full width */
   .info{
     margin-top: 34px;
     display:grid;
@@ -827,30 +839,16 @@ function iframePrint(html) {
 
   .infoRow{
     display:grid;
-    grid-template-columns: 140px 1fr; /* key | value */
+    grid-template-columns: 140px 1fr;
     column-gap: 14px;
     align-items:baseline;
     margin-bottom: 10px;
   }
-  .k{
-    font-weight:900;
-    font-size:14px;
-  }
-  .v{
-    font-weight:800;
-    font-size:14px;
-    text-align:center; /* like screenshot */
-    word-break: break-word;
-  }
-
-  /* right column values align center too */
+  .k{ font-weight:900; font-size:14px; }
+  .v{ font-weight:800; font-size:14px; text-align:center; word-break: break-word; }
   .infoRight .v{ text-align:center; }
-
-  /* make closing date show dash nicely */
   .dash{ font-weight:900; }
 </style>
-
-
       </head>
       <body>
         ${html}
@@ -905,6 +903,7 @@ function wirePrintButtonsOnce() {
 function safeText(v) {
   return v == null ? "" : String(v);
 }
+
 function renderPrintTemplate(record) {
   const el = document.getElementById("printArea");
   if (!el) return;
@@ -921,6 +920,7 @@ function renderPrintTemplate(record) {
   const locationText = record.status === "central" ? "In Central" : "In Section";
   const openingDate = safeText(record.opening_date || "");
   const closingDate = safeText(record.closing_date || "");
+  const allocateTable = safeText(record.allocate_table || "");
 
   // QR includes everything
   const qrText = `
@@ -931,6 +931,7 @@ Section: ${sectionName}
 Subcategory: ${subName}
 Rack No: ${rackNo}
 Serial No: ${serialNo}
+Allocate Table: ${allocateTable || "-"}
 Status: ${statusText}
 Location: ${locationText}
 Opening Date: ${openingDate}
@@ -940,10 +941,10 @@ Created At: ${safeText(record.createdAt ? new Date(record.createdAt).toLocaleStr
 Description: ${safeText(record.description || "")}
 `.trim();
 
-  const qrUrl =
-    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+    qrText
+  )}`;
 
-  // ✅ preview modal styled too (same css injected)
   el.innerHTML = `
     <style>
       @page { size: A4; margin: 12mm; }
@@ -996,10 +997,8 @@ Description: ${safeText(record.description || "")}
       .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
       .cardValue{ font-size:44px; font-weight:900; line-height:1; }
 
-      .rackCard{ grid-column: 1 / 2; 
-      margin-top: -160px}
-      .serialCard{ grid-column: 2 / 3; 
-      margin-top: -160px}
+      .rackCard{ grid-column: 1 / 2; margin-top: -160px; }
+      .serialCard{ grid-column: 2 / 3; margin-top: -160px; }
 
       .info{
         margin-top:34px;
@@ -1027,7 +1026,6 @@ Description: ${safeText(record.description || "")}
       <div class="subtitle">File & Record Management System</div>
 
       <div class="grid">
-        <!-- Section/Subcategory left -->
         <div class="secBlock">
           <div class="secLabel">Section</div>
           <div class="secVal">${sectionName || "-"}</div>
@@ -1036,7 +1034,6 @@ Description: ${safeText(record.description || "")}
           <div class="secVal">${subName || "-"}</div>
         </div>
 
-        <!-- QR right -->
         <div class="qrBox">
           <div class="qrTitle">QR CODE</div>
           <img src="${qrUrl}" alt="QR"
@@ -1044,7 +1041,6 @@ Description: ${safeText(record.description || "")}
           <div class="qrFallback" style="display:none;">QR</div>
         </div>
 
-        <!-- Rack + Serial row under section -->
         <div class="card rackCard">
           <div class="cardLabel">Rack No.</div>
           <div class="cardValue">${rackNo || "-"}</div>
@@ -1056,11 +1052,15 @@ Description: ${safeText(record.description || "")}
         </div>
       </div>
 
-      <!-- Bottom info -->
       <div class="info">
         <div class="infoLeft">
           <div class="infoRow"><div class="k">File Name</div><div class="v">${fileName || "-"}</div></div>
           <div class="infoRow"><div class="k">BD No</div><div class="v">${bdNo || "-"}</div></div>
+          ${
+            allocateTable
+              ? `<div class="infoRow"><div class="k">Allocate Table</div><div class="v">${allocateTable}</div></div>`
+              : ""
+          }
           <div class="infoRow"><div class="k">Opening Date</div><div class="v">${openingDate || "-"}</div></div>
         </div>
 

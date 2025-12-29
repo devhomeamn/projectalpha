@@ -569,10 +569,17 @@ function showDetails(rec) {
   const openingDate = rec.opening_date || "-";
   const closingDate = rec.closing_date || "-";
 
+  // ✅ Allocate Table (show only if exists)
+  const allocateTable = (rec.allocate_table || "").toString().trim();
+  const allocateHtml = allocateTable
+    ? `<p><strong>🧮 Allocate Table:</strong> ${allocateTable}</p>`
+    : "";
+
   body.innerHTML = `
     <div class="block">
       <p><strong>📁 File Name:</strong> ${rec.file_name}</p>
       <p><strong>🆔 BD No:</strong> ${rec.bd_no || "-"}</p>
+      ${allocateHtml}
     </div>
 
     <div class="block">
@@ -605,6 +612,7 @@ function showDetails(rec) {
 
   modal.style.display = "flex";
 }
+
 
 /* ================== PRINT (View) ================== */
 function startPrintFromView() {

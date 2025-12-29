@@ -7,6 +7,17 @@ const Rack = require("../models/rackModel");
 // helper: normalize BD
 const normalizeBd = (v) => (typeof v === "string" ? v.trim() : v);
 
+// helper: pick actor username safely
+function getActor(req, fallbackFromBody) {
+  return (
+    req.user?.username ||
+    req.user?.name ||
+    req.user?.email ||
+    fallbackFromBody ||
+    "Unknown User"
+  );
+}
+
 // ================== ADD NEW RECORD ==================
 exports.addRecord = async (req, res) => {
   try {
@@ -22,9 +33,11 @@ exports.addRecord = async (req, res) => {
       closing_date,
       added_by,
       serial_no,
+      allocate_table, // ✅ new
     } = req.body;
 
     bd_no = normalizeBd(bd_no);
+    file_name = file_name?.trim();
 
     if (!file_name || !section_id || !rack_id) {
       return res
@@ -32,15 +45,12 @@ exports.addRecord = async (req, res) => {
         .json({ error: "File name, Section, and Rack are required" });
     }
 
-    // optional but recommended (since you want unique check in same subcategory)
     if (!subcategory_id) {
       return res.status(400).json({ error: "Subcategory is required" });
     }
     if (!bd_no) {
       return res.status(400).json({ error: "BD No is required" });
     }
-
-    // cast ids to int (safe)
 
     // ✅ Opening date required (manual)
     if (!opening_date) {
@@ -54,7 +64,9 @@ exports.addRecord = async (req, res) => {
 
     // ✅ Closing date rule: only required when status is closed
     if (record_status === "closed" && !closing_date) {
-      return res.status(400).json({ error: "Closing Date is required when status is Closed" });
+      return res
+        .status(400)
+        .json({ error: "Closing Date is required when status is Closed" });
     }
     if (record_status !== "closed") {
       closing_date = null;
@@ -63,17 +75,42 @@ exports.addRecord = async (req, res) => {
     // ✅ Basic date sanity (DATEONLY strings)
     const today = new Date().toISOString().slice(0, 10);
     if (opening_date > today) {
-      return res.status(400).json({ error: "Opening Date cannot be in the future" });
+      return res
+        .status(400)
+        .json({ error: "Opening Date cannot be in the future" });
     }
     if (closing_date && closing_date > today) {
-      return res.status(400).json({ error: "Closing Date cannot be in the future" });
+      return res
+        .status(400)
+        .json({ error: "Closing Date cannot be in the future" });
     }
     if (closing_date && closing_date < opening_date) {
-      return res.status(400).json({ error: "Closing Date cannot be before Opening Date" });
+      return res.status(400).json({
+        error: "Closing Date cannot be before Opening Date",
+      });
     }
+
+    // cast ids to int (safe)
     section_id = parseInt(section_id, 10);
     subcategory_id = parseInt(subcategory_id, 10);
     rack_id = parseInt(rack_id, 10);
+
+    // ✅ Section-based rule: OP-1/OP-2 => allocate_table required
+    const sec = await Section.findByPk(section_id);
+    const secName = (sec?.name || "").toLowerCase();
+    const isOP =
+      secName === "officers pay (op-1)" || secName === "officers pay (op-2)";
+
+    if (isOP) {
+      if (!allocate_table || String(allocate_table).trim() === "") {
+        return res.status(400).json({
+          error: "Allocate Table is required for Officers Pay sections",
+        });
+      }
+      allocate_table = String(allocate_table).trim();
+    } else {
+      allocate_table = null;
+    }
 
     // 🧮 Auto serial
     let finalSerial = serial_no ? parseInt(serial_no, 10) : null;
@@ -106,20 +143,16 @@ exports.addRecord = async (req, res) => {
     }
 
     // ✅ Prevent exact duplicate (same subcategory + bd_no + file_name)
-const dup = await Record.findOne({
-  where: {
-    subcategory_id,
-    bd_no,
-    file_name,
-  },
-});
+    const dup = await Record.findOne({
+      where: { subcategory_id, bd_no, file_name },
+    });
+    if (dup) {
+      return res.status(409).json({
+        error: "Duplicate record: একই Subcategory + BD No + File Name আগেই আছে",
+      });
+    }
 
-if (dup) {
-  return res.status(409).json({
-    error: "Duplicate record: একই Subcategory + BD No + File Name আগেই আছে",
-  });
-}
-
+    const actor = getActor(req, added_by);
 
     const record = await Record.create({
       file_name,
@@ -131,9 +164,10 @@ if (dup) {
       opening_date,
       record_status,
       closing_date,
-      added_by,
+      allocate_table,
       serial_no: finalSerial,
       status: "active",
+      added_by: actor, // ✅ fixed
     });
 
     res.json({ message: "✅ Record added successfully", record });
@@ -262,7 +296,9 @@ exports.moveToCentral = async (req, res) => {
       serial = (Number.isFinite(maxSerial) ? maxSerial : 0) + 1;
     } else {
       serial = parseInt(startSerialNo, 10);
-      const exists = await Record.findOne({ where: { rack_id: newRackId, serial_no: serial } });
+      const exists = await Record.findOne({
+        where: { rack_id: newRackId, serial_no: serial },
+      });
       if (exists)
         return res.status(409).json({ error: `Serial ${serial} already exists in target rack` });
     }
@@ -272,7 +308,9 @@ exports.moveToCentral = async (req, res) => {
     record.rack_id = newRackId;
     record.serial_no = serial;
     record.status = "central";
-    record.moved_by = req.user?.name || moved_by || "Unknown User";
+
+    // ✅ fixed moved_by
+    record.moved_by = getActor(req, moved_by);
 
     await record.save();
 
@@ -400,7 +438,9 @@ exports.bulkMoveRecords = async (req, res) => {
       rec.rack_id = newRackId;
       rec.serial_no = serial++;
       rec.status = "central";
-      rec.moved_by = moved_by || "Unknown User";
+
+      // ✅ fixed moved_by
+      rec.moved_by = getActor(req, moved_by);
 
       await rec.save({ transaction: t });
       movedCount++;
@@ -428,17 +468,19 @@ exports.updateRecord = async (req, res) => {
       rack_id,
       description,
       updated_by,
+      allocate_table, // ✅ allow update if you want
     } = req.body;
 
     // normalize
     if (typeof bd_no === "string") bd_no = bd_no.trim();
+    if (typeof file_name === "string") file_name = file_name.trim();
 
     const record = await Record.findByPk(id);
     if (!record) return res.status(404).json({ error: "Record not found" });
 
     // ✅ effective values (request না দিলে existing value ধরে নাও)
-    const newBd = (bd_no ?? record.bd_no);
-    const newSub = parseInt((subcategory_id ?? record.subcategory_id), 10);
+    const newBd = bd_no ?? record.bd_no;
+    const newSub = parseInt(subcategory_id ?? record.subcategory_id, 10);
 
     // ✅ BD uniqueness check (same subcategory)
     if (newBd && newSub) {
@@ -464,7 +506,15 @@ exports.updateRecord = async (req, res) => {
     record.subcategory_id = subcategory_id ?? record.subcategory_id;
     record.rack_id = rack_id ?? record.rack_id;
     record.description = description ?? record.description;
-    record.updated_by = updated_by || req.user?.name || "Unknown User";
+
+    // allocate_table (optional)
+    if (allocate_table !== undefined) {
+      const v = String(allocate_table || "").trim();
+      record.allocate_table = v ? v : null;
+    }
+
+    // ✅ fixed updated_by
+    record.updated_by = getActor(req, updated_by);
 
     await record.save();
     res.json({ message: "✅ Record updated successfully", record });
@@ -502,9 +552,7 @@ exports.checkBdUnique = async (req, res) => {
     const subcategory_id = parseInt(req.query.subcategory_id, 10);
 
     if (!bd_no || !subcategory_id) {
-      return res
-        .status(400)
-        .json({ error: "bd_no and subcategory_id are required" });
+      return res.status(400).json({ error: "bd_no and subcategory_id are required" });
     }
 
     const exists = await Record.findOne({
@@ -517,6 +565,7 @@ exports.checkBdUnique = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 // ================== GET SINGLE RECORD (FOR PRINT) ==================
 exports.getRecordForPrint = async (req, res) => {
   try {
@@ -544,7 +593,7 @@ exports.getRecordForPrint = async (req, res) => {
 exports.updateWorkflowStatus = async (req, res) => {
   try {
     const id = req.params.id;
-    let { record_status, closing_date, updated_by } = req.body || {};
+    let { record_status, closing_date } = req.body || {};
 
     record_status = String(record_status || "").toLowerCase().trim();
 
@@ -555,31 +604,30 @@ exports.updateWorkflowStatus = async (req, res) => {
     const record = await Record.findByPk(id);
     if (!record) return res.status(404).json({ error: "Record not found" });
 
-    // closed হলে closing_date required
     if (record_status === "closed") {
       if (!closing_date) {
-        return res.status(400).json({ error: "Closing date is required when status is closed" });
+        return res
+          .status(400)
+          .json({ error: "Closing date is required when status is closed" });
       }
 
-      // future date block
       const today = new Date().toISOString().slice(0, 10);
       if (closing_date > today) {
         return res.status(400).json({ error: "Closing date cannot be in the future" });
       }
 
-      // opening_date থাকলে closing >= opening
       if (record.opening_date && closing_date < record.opening_date) {
-        return res.status(400).json({ error: "Closing date cannot be before opening date" });
+        return res.status(400).json({
+          error: "Closing date cannot be before opening date",
+        });
       }
 
       record.closing_date = closing_date;
     } else {
-      // ongoing হলে closing_date clear
       record.closing_date = null;
     }
 
     record.record_status = record_status;
-    // চাইলে updated_by আলাদা field না থাকলে description-এ রাখো না; এখন শুধু response এ ফেরত দিচ্ছি
     await record.save();
 
     return res.json({ message: "✅ Workflow status updated", record });

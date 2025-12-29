@@ -16,9 +16,6 @@ async function loadConfig() {
 }
 
 // --------------------
-// Toast Notification Function
-// --------------------
-// --------------------
 // Smart & Modular Toast with SVG Icons
 // --------------------
 function showToast(message, type = 'info', duration = 5000) {
@@ -28,7 +25,6 @@ function showToast(message, type = 'info', duration = 5000) {
   const toast = document.createElement('div');
   toast.classList.add('toast', type);
 
-  // SVG Icons (মডিউলার — চাইলে পরে চেঞ্জ করা যাবে)
   const icons = {
     success: `
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -54,18 +50,11 @@ function showToast(message, type = 'info', duration = 5000) {
 
   const icon = icons[type] || icons.info;
 
-  const titleMap = {
-    success: 'Success',
-    error: 'Error',
-    info: 'Info'
-  };
-
+  const titleMap = { success: 'Success', error: 'Error', info: 'Info' };
   const title = titleMap[type] || 'Info';
 
   toast.innerHTML = `
-    <div class="toast-icon">
-      ${icon}
-    </div>
+    <div class="toast-icon">${icon}</div>
     <div class="toast-content">
       <p class="t-title">${title}</p>
       <p class="t-msg">${message}</p>
@@ -74,17 +63,14 @@ function showToast(message, type = 'info', duration = 5000) {
 
   toastHost.prepend(toast);
 
-  // অ্যানিমেশন
-  requestAnimationFrame(() => {
-    toast.classList.add('show');
-  });
+  requestAnimationFrame(() => toast.classList.add('show'));
 
-  // অটো রিমুভ
   setTimeout(() => {
     toast.classList.remove('show');
     toast.addEventListener('transitionend', () => toast.remove(), { once: true });
   }, duration);
 }
+
 // --------------------
 // Form handlers
 // --------------------
@@ -110,17 +96,23 @@ function initForms() {
         if (res.ok) {
           showToast('Login Successful!', 'success');
 
+          // ✅ store everything needed for topbar dropdown
           localStorage.setItem('token', data.token);
           localStorage.setItem('role', data.user.role);
           localStorage.setItem('username', data.user.username);
           localStorage.setItem('name', data.user.name);
 
+          // ✅ NEW: email + serviceid saved (from DB via login response)
+          localStorage.setItem('email', data.user.email || '');
+          localStorage.setItem('serviceid', String(data.user.serviceid ?? ''));
+
           const role = (data.user.role || "").toLowerCase();
 
           setTimeout(() => {
-            window.location.href = (role === "admin" || role === "general")
-              ? "dashboard.html"
-              : "dashboard-user.html";
+            window.location.href =
+              (role === "admin" || role === "general")
+                ? "dashboard.html"
+                : "dashboard-user.html";
           }, 1000);
         } else {
           showToast(data.error || 'Login Failed', 'error');

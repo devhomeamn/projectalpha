@@ -14,21 +14,32 @@ async function loadPendingUsers() {
       return;
     }
 
-    tbody.innerHTML = users
-      .map(
-        (u) => `
+   tbody.innerHTML = users
+  .map((u) => {
+    const roleText = (u.role || u.user_role || u.rule || "").toString(); // backend যেটা পাঠায় সেটার সাথে মিলিয়ে নাও
+    const roleLabel = roleText ? roleText.toUpperCase() : "—";
+
+    return `
       <tr>
-        <td>${u.name}</td>
-        <td>${u.username}</td>
-        <td>${u.serviceid}</td>
+        <td>
+          <div class="cell-main">${u.name || ""}</div>
+                  </td>
+
+        <td>
+          <div class="cell-main">${u.username || ""}</div>
+          <div class="cell-sub">Role: <span class="role-badge">${roleLabel}</span></div>
+        </td>
+
+        <td>${u.serviceid || ""}</td>
         <td><span class="status section">${u.status}</span></td>
         <td>
           <button class="btn-move" onclick="approveUser(${u.id})">Approve</button>
           <button class="btn-move" style="background:#ef4444;" onclick="rejectUser(${u.id})">Reject</button>
         </td>
-      </tr>`
-      )
-      .join("");
+      </tr>`;
+  })
+  .join("");
+
   } catch (err) {
     console.error("Error loading pending users:", err);
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error loading data</td></tr>`;

@@ -9,13 +9,16 @@ const Record = sequelize.define("Record", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+
   bd_no: {
     type: DataTypes.STRING,
     allowNull: true,
   },
+
+  // ✅ Section/Subcategory/Rack can be NULL after moving to central
   section_id: {
     type: DataTypes.INTEGER,
-    allowNull: true, // ✅ এখন central move এ null দেওয়া যাবে
+    allowNull: true,
   },
   subcategory_id: {
     type: DataTypes.INTEGER,
@@ -25,26 +28,39 @@ const Record = sequelize.define("Record", {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+
   serial_no: {
     type: DataTypes.INTEGER,
-    allowNull: true, // প্রথমে null, পরে generate হবে
+    allowNull: true,
   },
+
   description: {
     type: DataTypes.TEXT,
+    allowNull: true,
   },
+
+  // ✅ New field (OP-1 / OP-2)
+  allocate_table: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+
   // 🗓️ Opening date (manual)
   opening_date: {
     type: DataTypes.DATEONLY,
     allowNull: true,
   },
+
   closing_date: {
-  type: DataTypes.DATEONLY,
-  allowNull: true,
-},
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
+
   added_by: {
     type: DataTypes.STRING,
     allowNull: true,
   },
+
   // 📍 Location (previously called status)
   // active = In Section, central = In Central
   status: {
@@ -73,11 +89,12 @@ const Record = sequelize.define("Record", {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+
   moved_by: {
-  type: DataTypes.STRING,
-  allowNull: true,
-  comment: "User who moved this record to central",
-},
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: "User who moved this record to central",
+  },
 });
 
 // 🧩 Relationships
