@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Info.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/approve-user.css">
+
+  </head>
+
+
+
+
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <div id="topbar"></div>
+
+      <!-- Page Content -->
+      <section class="content">
+        <header class="page-header">
+          <h2>Info.</h2>
+        </header>
+        <!-- ================= HELP / INFO SECTION ================= -->
+<section class="help-section">
+
+  <div class="help-card">
+    <h3>📘 SFCAIR RMS Alpha — Record Management System</h3>
+    <p>
+      <strong>SFCAIR RMS</strong> একটি ওয়েব-ভিত্তিক Record Management System (RMS),
+      যা অফিসের গুরুত্বপূর্ণ ফাইল ও রেকর্ড সংরক্ষণ, খোঁজা, স্থানান্তর এবং প্রিন্ট
+      ব্যবস্থাপনাকে সহজ ও সুশৃঙ্খল করার জন্য তৈরি করা হয়েছে।
+    </p>
+  </div>
+
+  <div class="help-card">
+    <h4>User Access & Security</h4>
+    <ul>
+      <li>এই পেজটি শুধুমাত্র <strong>Admin User</strong> ব্যবহার করতে পারবেন</li>
+      <li>সকল তথ্য নিরাপদভাবে সার্ভারে সংরক্ষিত থাকে</li>
+      <li>অননুমোদিত ইউজার এই অপশনগুলো দেখতে বা ব্যবহার করতে পারবে না</li>
+    </ul>
+  </div>
+
+  <div class="help-card">
+    <h4>System Structure</h4>
+    <ul>
+      <li><strong>Section</strong> – প্রধান বিভাগ</li>
+      <li><strong>Subcategory</strong> – Section-এর ভেতরের ক্যাটাগরি</li>
+      <li><strong>Rack</strong> – ফাইল সংরক্ষণের নির্দিষ্ট লোকেশন</li>
+      <li><strong>Central Room</strong> – কেন্দ্রীয় সংরক্ষণাগার</li>
+    </ul>
+  </div>
+
+  <div class="help-card">
+    <h4>Management Features</h4>
+    <ul>
+      <li>নতুন Section, Subcategory ও Rack যোগ করা যায়</li>
+      <li>Central Room-এর জন্য আলাদা Rack ব্যবস্থাপনা আছে</li>
+      <li>Section অনুযায়ী সব Subcategory ও Rack একসাথে দেখা যায়</li>
+    </ul>
+  </div>
+
+  <div class="help-card">
+    <h4>🖨️ Print Racks</h4>
+    <ul>
+      <li>প্রতিটি Section-এর পাশে <strong>Print Racks</strong> অপশন রয়েছে</li>
+      <li>A4 পেজে নির্দিষ্ট ফরম্যাটে Rack Label প্রিন্ট করা যায়</li>
+      <li>ফিজিক্যাল ফাইল ট্যাগিং-এর জন্য উপযোগী</li>
+    </ul>
+  </div>
+
+  <div class="help-card warning">
+    <h4>⚠️ গুরুত্বপূর্ণ সতর্কতা</h4>
+    <ul>
+      <li>Delete অপারেশন <strong>স্থায়ী</strong> (Permanent)</li>
+      <li>Section ডিলিট করলে সংশ্লিষ্ট Subcategory ও Rack প্রভাবিত হতে পারে</li>
+      <li>ডিলিট করার আগে ভালোভাবে যাচাই করার পরামর্শ দেওয়া হচ্ছে</li>
+    </ul>
+  </div>
+
+  <div class="help-card tech">
+    <h4>🛠️Technical Overview</h4>
+    <ul>
+      <li>Backend: Node.js + Express</li>
+      <li>Database: MySQL (Sequelize ORM)</li>
+      <li>Authentication: JWT</li>
+      <li>Print System: iframe-based A4 / Label Print</li>
+    </ul>
+  </div>
+
+  <div class="help-card support">
+  <h4>📞 Support</h4>
+  <p>
+    যেকোনো সমস্যা, ত্রুটি, অথবা উন্নয়ন সংক্রান্ত প্রস্তাবের জন্য
+    অনুগ্রহ করে <strong>System Administrator</strong> অথবা
+    <strong>sfcair IT Support Team-(almamun)</strong>-এর সাথে যোগাযোগ করুন।
+  </p>
+  <p style="margin-top:6px;color:#6b7280;font-size:13.5px;">
+    আপনার মতামত ও পরামর্শ সিস্টেম উন্নয়নে গুরুত্বপূর্ণ ভূমিকা রাখে।
+  </p>
+</div>
+
+
+</section>
+<!-- ================= END HELP / INFO SECTION ================= -->
+
+
+
+
+
+        
+  <!-- ✅ Shared Layout Loader -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("info-help.html"); // highlight current sidebar menu
+  </script>
+
+  <!-- Page Scripts -->
+   <script src="js/auth-guard.js"></script>
+   <script src="js/confirm-util.js"></script>
+</body>
+</html>

@@ -291,3 +291,39 @@
   font-weight: 700;
   font-size: 11px;
 }
+
+.help-section {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.help-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.help-card h3,
+.help-card h4 {
+  margin-bottom: 6px;
+  color: #1f2937;
+}
+
+.help-card ul {
+  margin-left: 18px;
+}
+
+.help-card.warning {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.help-card.tech {
+  background: #f8fafc;
+}
+.help-card.support {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}

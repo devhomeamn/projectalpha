@@ -15,6 +15,22 @@ function escapeHtml(str) {
 }
 
 /* =========================
+   Toast
+========================= */
+function showToast(msg, type = "success", ms = 3000) {
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => {
+    t.classList.remove("show");
+    t.addEventListener("transitionend", () => t.remove(), { once: true });
+  }, ms);
+}
+
+/* =========================
    Collapse toggles
 ========================= */
 function initListCollapse() {
@@ -63,7 +79,7 @@ function startPrintRacks(sectionName, racks) {
   const safeSection = escapeHtml(sectionName);
   const rackList = Array.isArray(racks) ? racks : [];
 
-  // প্রতি পেজে 4টা করে
+  // প্রতি পেজে 5টা করে (তোমার কোডে 5 ছিল)
   const pages = [];
   for (let i = 0; i < rackList.length; i += 5) {
     pages.push(rackList.slice(i, i + 5));
@@ -87,12 +103,9 @@ function startPrintRacks(sectionName, racks) {
             })
             .join("");
 
-          // শেষ পেজে যদি ৪টা না হয়, height ঠিক রাখতে empty
           const empties = 5 - group.length;
           const emptyLabels =
-            empties > 0
-              ? `<div class="label empty"></div>`.repeat(empties)
-              : "";
+            empties > 0 ? `<div class="label empty"></div>`.repeat(empties) : "";
 
           return `
             <div class="page">
@@ -114,6 +127,7 @@ function startPrintRacks(sectionName, racks) {
         <div class="label empty"></div>
         <div class="label empty"></div>
         <div class="label empty"></div>
+        <div class="label empty"></div>
       </div>
     `;
 
@@ -127,10 +141,9 @@ function startPrintRacks(sectionName, racks) {
       @page { size: A4; margin: 10mm; }
       body { font-family: Arial, sans-serif; margin: 0; color:#000; }
 
-      /* One A4 page */
       .page{
         width: 100%;
-        min-height: calc(297mm - 20mm); /* A4 height minus margins */
+        min-height: calc(297mm - 20mm);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -138,7 +151,6 @@ function startPrintRacks(sectionName, racks) {
       }
       .page:last-child{ page-break-after: auto; }
 
-      /* Each label (vertical stack) */
       .label{
         border: 1px solid #e5e7eb;
         border-radius: 10px;
@@ -151,10 +163,7 @@ function startPrintRacks(sectionName, racks) {
         padding: 6mm;
       }
       .label:last-child{ margin-bottom: 0; }
-
-      .label.empty{
-        border: 0;
-      }
+      .label.empty{ border: 0; }
 
       .section{
         font-size: 16px;
@@ -163,7 +172,7 @@ function startPrintRacks(sectionName, racks) {
       }
 
       .rack{
-        font-size: 52px;   /* বড় Rack No */
+        font-size: 52px;
         font-weight: 900;
         line-height: 1;
         letter-spacing: 0.5px;
@@ -171,9 +180,7 @@ function startPrintRacks(sectionName, racks) {
         white-space: nowrap;
       }
 
-      .rackText, .rackNo{
-        font-weight: 900;
-      }
+      .rackText, .rackNo{ font-weight: 900; }
 
       @media print {
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -210,7 +217,102 @@ function startPrintRacks(sectionName, racks) {
   iframe.onload = () => setTimeout(() => iframe.remove(), 1500);
 }
 
+/* =========================
+   DELETE HANDLERS (delegated + bind once)
+========================= */
+function initSectionDelete(root) {
+  if (root.dataset.sectionDeleteBound === "1") return;
+  root.dataset.sectionDeleteBound = "1";
 
+  async function runDelete(secId) {
+    const ok = confirm("Are you sure you want to delete this section?");
+    if (!ok) return;
+
+    const res = await fetch(`${API_BASE}/sections/${secId}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showToast(data.error || "Delete failed", "error");
+      return;
+    }
+
+    showToast(data.message || "Section deleted");
+    fetchSections();
+  }
+
+  root.addEventListener("click", (e) => {
+    const btn = e.target.closest(".section-delete-btn");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    runDelete(btn.dataset.secid);
+  });
+
+  root.addEventListener("keydown", (e) => {
+    const btn = e.target.closest(".section-delete-btn");
+    if (!btn) return;
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    e.stopPropagation();
+    runDelete(btn.dataset.secid);
+  });
+}
+
+function initSubDelete(root) {
+  if (root.dataset.subDeleteBound === "1") return;
+  root.dataset.subDeleteBound = "1";
+
+  root.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".sub-delete-btn");
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const id = btn.dataset.subid;
+    const ok = confirm("Delete this subcategory?");
+    if (!ok) return;
+
+    const res = await fetch(`${API_BASE}/sections/sub/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showToast(data.error || "Delete failed", "error");
+      return;
+    }
+
+    showToast(data.message || "Subcategory deleted");
+    fetchSections();
+  });
+}
+
+function initRackDelete(root) {
+  if (root.dataset.rackDeleteBound === "1") return;
+  root.dataset.rackDeleteBound = "1";
+
+  root.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".rack-delete-btn");
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const id = btn.dataset.rackid;
+    const ok = confirm("Delete this rack?");
+    if (!ok) return;
+
+    const res = await fetch(`${API_BASE}/sections/rack/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showToast(data.error || "Delete failed", "error");
+      return;
+    }
+
+    showToast(data.message || "Rack deleted");
+    fetchSections();
+  });
+}
 
 /* =========================
    Section-wise Accordion
@@ -224,8 +326,11 @@ function renderSectionsAccordion(sections = []) {
     return;
   }
 
+  // flexible getters (support different shapes)
   const getRackName = (r) => r?.rack_name || r?.name || r?.rackName || r?.title || "";
+  const getRackId = (r) => r?.id || r?.rack_id || r?.rackId || "";
   const getSubName = (s) => s?.name || s?.sub_name || s?.subcategory_name || s?.title || "";
+  const getSubId = (s) => s?.id || s?.sub_id || s?.subcategory_id || s?.subId || "";
 
   root.innerHTML = sections
     .map((sec, idx) => {
@@ -239,7 +344,10 @@ function renderSectionsAccordion(sections = []) {
         Array.isArray(sec.Subs) ? sec.Subs :
         [];
 
-      const subNames = subsArr.map(getSubName).filter(Boolean);
+      // build sub objects with id+name
+      const subObjs = subsArr
+        .map((s) => ({ id: getSubId(s), name: getSubName(s) }))
+        .filter((x) => x.id && x.name);
 
       // section-level racks
       const sectionRacks =
@@ -247,7 +355,7 @@ function renderSectionsAccordion(sections = []) {
         Array.isArray(sec.racks) ? sec.racks :
         [];
 
-      // subcategory-level racks (if any shape provides it)
+      // subcategory-level racks (if provided by API)
       const subRacks = subsArr.flatMap((s) => {
         const rr =
           Array.isArray(s.Racks) ? s.Racks :
@@ -256,9 +364,19 @@ function renderSectionsAccordion(sections = []) {
         return rr;
       });
 
-      const rackNames = [...new Set([...sectionRacks, ...subRacks].map(getRackName).filter(Boolean))];
+      // build rack objects with id+name (unique by id)
+      const rackObjsRaw = [...sectionRacks, ...subRacks]
+        .map((r) => ({ id: getRackId(r), name: getRackName(r) }))
+        .filter((x) => x.id && x.name);
 
-      const badgeText = `${subNames.length} Sub • ${rackNames.length} Rack`;
+      const rackMap = new Map();
+      rackObjsRaw.forEach((r) => rackMap.set(String(r.id), r));
+      const rackObjs = Array.from(rackMap.values());
+
+      // for print we only need names
+      const rackNamesForPrint = rackObjs.map((r) => r.name);
+
+      const badgeText = `${subObjs.length} Sub • ${rackObjs.length} Rack`;
 
       const open = idx === 0;
       const hid = `acc_head_${sec.id || idx}`;
@@ -273,15 +391,20 @@ function renderSectionsAccordion(sections = []) {
             </div>
 
             <div style="display:flex;align-items:center;gap:8px;">
-                      <span
-          class="rack-print-btn"
-          role="button"
-          tabindex="0"
-          data-secname="${escapeHtml(name)}"
-          data-racks="${escapeHtml(JSON.stringify(rackNames))}">
-          Print Racks
-        </span>
+              <span class="section-delete-btn"
+                    role="button"
+                    tabindex="0"
+                    data-secid="${sec.id}">
+                Delete
+              </span>
 
+              <span class="rack-print-btn"
+                    role="button"
+                    tabindex="0"
+                    data-secname="${escapeHtml(name)}"
+                    data-racks="${escapeHtml(JSON.stringify(rackNamesForPrint))}">
+                Print Racks
+              </span>
 
               <span class="acc-badge">${escapeHtml(badgeText)}</span>
               <span class="acc-chevron">▾</span>
@@ -292,8 +415,20 @@ function renderSectionsAccordion(sections = []) {
             <div class="acc-row">
               <h5>Subcategories</h5>
               ${
-                subNames.length
-                  ? `<ul>${subNames.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+                subObjs.length
+                  ? `<ul>${subObjs
+                      .map(
+                        (s) => `
+                          <li>
+                            ${escapeHtml(s.name)}
+                            <span class="sub-delete-btn"
+                                  role="button"
+                                  tabindex="0"
+                                  data-subid="${escapeHtml(s.id)}"
+                                  title="Delete Subcategory">✖</span>
+                          </li>`
+                      )
+                      .join("")}</ul>`
                   : `<div style="color:#6b7280;font-size:13px;">No subcategories</div>`
               }
             </div>
@@ -301,8 +436,20 @@ function renderSectionsAccordion(sections = []) {
             <div class="acc-row">
               <h5>Racks</h5>
               ${
-                rackNames.length
-                  ? `<ul>${rackNames.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+                rackObjs.length
+                  ? `<ul>${rackObjs
+                      .map(
+                        (r) => `
+                          <li>
+                            ${escapeHtml(r.name)}
+                            <span class="rack-delete-btn"
+                                  role="button"
+                                  tabindex="0"
+                                  data-rackid="${escapeHtml(r.id)}"
+                                  title="Delete Rack">✖</span>
+                          </li>`
+                      )
+                      .join("")}</ul>`
                   : `<div style="color:#6b7280;font-size:13px;">No racks</div>`
               }
             </div>
@@ -314,7 +461,10 @@ function renderSectionsAccordion(sections = []) {
 
   // accordion toggle (one open)
   root.querySelectorAll(".acc-item .acc-head").forEach((headBtn) => {
-    headBtn.addEventListener("click", () => {
+    headBtn.addEventListener("click", (e) => {
+      // prevent toggle when clicking action buttons
+      if (e.target.closest(".section-delete-btn,.rack-print-btn,.sub-delete-btn,.rack-delete-btn")) return;
+
       const item = headBtn.closest(".acc-item");
       const body = item.querySelector(".acc-body");
       const isOpen = item.getAttribute("data-open") === "true";
@@ -337,8 +487,11 @@ function renderSectionsAccordion(sections = []) {
     });
   });
 
-  // print binding once (delegated)
+  // delegated bindings (only once)
   initRackPrint(root);
+  initSectionDelete(root);
+  initSubDelete(root);
+  initRackDelete(root);
 }
 
 /* =========================
@@ -406,7 +559,7 @@ async function fetchSections() {
     renderSectionsAccordion(data);
   } catch (err) {
     console.error("fetchSections error:", err);
-    alert("Failed to load sections!");
+    showToast("Failed to load sections!", "error");
   }
 }
 
@@ -418,7 +571,7 @@ async function onAddSection(e) {
   const name = document.getElementById("sectionName").value.trim();
   const description = document.getElementById("sectionDesc").value.trim();
 
-  if (!name) return alert("Section name required!");
+  if (!name) return showToast("Section name required!", "error");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add`, {
@@ -427,12 +580,14 @@ async function onAddSection(e) {
       body: JSON.stringify({ name, description }),
     });
 
-    if (!res.ok) throw new Error((await res.json()).error);
-    alert("Section added successfully!");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    showToast(data.message || "Section added successfully!");
     e.target.reset();
     fetchSections();
   } catch (err) {
-    alert(err.message);
+    showToast(err.message, "error");
   }
 }
 
@@ -444,7 +599,7 @@ async function onAddSubcategory(e) {
   const sectionId = document.getElementById("sectionSelect").value;
   const name = document.getElementById("subName").value.trim();
 
-  if (!sectionId || !name) return alert("Select section and enter name!");
+  if (!sectionId || !name) return showToast("Select section and enter name!", "error");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add-sub`, {
@@ -452,12 +607,15 @@ async function onAddSubcategory(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sectionId, name }),
     });
-    if (!res.ok) throw new Error((await res.json()).error);
-    alert("Subcategory added!");
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    showToast(data.message || "Subcategory added!");
     e.target.reset();
     fetchSections();
   } catch (err) {
-    alert(err.message);
+    showToast(err.message, "error");
   }
 }
 
@@ -470,7 +628,7 @@ async function onAddRack(e) {
   const name = document.getElementById("rackName").value.trim();
   const description = document.getElementById("rackDesc").value.trim();
 
-  if (!sectionId || !name) return alert("Select section and enter rack name!");
+  if (!sectionId || !name) return showToast("Select section and enter rack name!", "error");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add-rack`, {
@@ -478,13 +636,15 @@ async function onAddRack(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sectionId, name, description }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    alert(data.message);
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    showToast(data.message || "Rack added!");
     e.target.reset();
     fetchSections();
   } catch (err) {
-    alert(err.message);
+    showToast(err.message, "error");
   }
 }
 
@@ -495,7 +655,7 @@ async function onAddCentralRack(e) {
   e.preventDefault();
   const name = document.getElementById("centralRackName").value.trim();
   const description = document.getElementById("centralRackDesc").value.trim();
-  if (!name) return alert("Please enter rack name!");
+  if (!name) return showToast("Please enter rack name!", "error");
 
   try {
     const res = await fetch(`${API_BASE}/sections/add-rack`, {
@@ -503,14 +663,16 @@ async function onAddCentralRack(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, centralRoom: true }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    alert(data.message);
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    showToast(data.message || "Central Rack added!");
     e.target.reset();
     fetchCentralRacks();
     fetchSections();
   } catch (err) {
-    alert(err.message);
+    showToast(err.message, "error");
   }
 }
 
@@ -558,5 +720,5 @@ document.addEventListener("input", (e) => {
 
   const start = el.selectionStart;
   el.value = el.value.toUpperCase();
-  el.setSelectionRange(start, start); // cursor jump prevent
+  el.setSelectionRange(start, start);
 });

@@ -50,7 +50,7 @@ export async function initLayout(activePage) {
     { name: "Approve User",   icon: "verified_user", roles: ["Admin"],                      link: "approve-user.html" },
     { name: "All Users",      icon: "group",         roles: ["Admin"],                      link: "all-users.html" },
     { name: "Reports",        icon: "bar_chart",     roles: ["Admin", "Master", "General"], link: "reports.html" },
-    { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "help.html" }
+    { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" }
   ];
 
   const allowed = menuItems.filter(i => i.roles.includes(role));

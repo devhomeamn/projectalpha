@@ -6,7 +6,10 @@ const {
   getSections,
   addRack,
   getRacksBySection,
-  getCentralRacks
+  getCentralRacks,
+  deleteSection,
+  deleteRack,
+  deleteSubcategory,
 } = require('../controllers/sectionController');
 
 console.log('✅ sectionRoutes.js loaded');
@@ -20,5 +23,8 @@ router.get('/racks/:sectionId', getRacksBySection);
 
 // 🆕 New endpoint for central racks
 router.get('/central/racks', getCentralRacks);
+router.delete("/:id", deleteSection);
+router.delete("/sub/:id", deleteSubcategory);
+router.delete("/rack/:id", deleteRack);
 
 module.exports = router;

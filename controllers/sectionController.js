@@ -130,3 +130,64 @@ exports.getCentralRacks = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// ================== DELETE SECTION (SAFE) ==================
+exports.deleteSection = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const section = await Section.findByPk(id);
+    if (!section)
+      return res.status(404).json({ error: "Section not found" });
+
+    // ❌ Central Room protected
+    if ((section.name || "").toLowerCase() === "central room") {
+      return res.status(400).json({ error: "Central Room cannot be deleted" });
+    }
+
+    const subCount = await Subcategory.count({ where: { section_id: id } });
+    const rackCount = await Rack.count({ where: { section_id: id } });
+
+    if (subCount > 0 || rackCount > 0) {
+      return res.status(400).json({
+        error: `Cannot delete. This section has ${subCount} subcategory(s) and ${rackCount} rack(s).`,
+      });
+    }
+
+    await section.destroy();
+    res.json({ message: "✅ Section deleted successfully" });
+  } catch (err) {
+    console.error("❌ deleteSection error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================== DELETE SUBCATEGORY ==================
+exports.deleteSubcategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const sub = await Subcategory.findByPk(id);
+    if (!sub) return res.status(404).json({ error: "Subcategory not found" });
+
+    await sub.destroy();
+    res.json({ message: "✅ Subcategory deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================== DELETE RACK ==================
+exports.deleteRack = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const rack = await Rack.findByPk(id);
+    if (!rack) return res.status(404).json({ error: "Rack not found" });
+
+    await rack.destroy();
+    res.json({ message: "✅ Rack deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
