@@ -3,17 +3,24 @@ const Subcategory = require("../models/subcategoryModel");
 const Rack = require("../models/rackModel");
 
 // ================== GET ALL SECTIONS ==================
+// ================== GET ALL SECTIONS ==================
 exports.getSections = async (req, res) => {
   try {
     const sections = await Section.findAll({
-      include: [{ model: Subcategory }],
+      include: [
+        { model: Subcategory },   // subcategories
+        { model: Rack },          // ✅ racks under section
+      ],
+      order: [["name", "ASC"]],
     });
+
     res.json(sections);
   } catch (err) {
     console.error("❌ getSections error:", err);
     res.status(500).json({ error: "Server Error" });
   }
 };
+
 
 // ================== ADD SECTION ==================
 exports.addSection = async (req, res) => {

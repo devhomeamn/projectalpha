@@ -1,6 +1,6 @@
 /* ===========================================
    ADD SECTION PAGE (page-specific only)
-   Safe with layout.css, no global conflicts
+   Single Column Layout (NO DIVIDE)
 =========================================== */
 
 /* ------------------------------------------------
@@ -36,36 +36,58 @@
   color: #6b7280;
 }
 
-/* Section titles (Add Subcategory / Rack / Overview) */
+/* Section titles */
 .section-page .section-title {
   font-size: 18px;
   font-weight: 700;
   color: #374151;
-  margin-top: 4px;
-}
-
-/* Divider (kept but we will hide in new grid) */
-.section-page .divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 18px 0;
-  border-radius: 999px;
 }
 
 /* ===========================================
-   FORM CARDS (scoped)
+   ❌ REMOVE GRID DIVIDE
+=========================================== */
+.section-page .section-grid {
+  display: block;   /* grid OFF */
+}
+
+/* left & right now same flow */
+.section-page .left-col,
+.section-page .right-col {
+  width: 100%;
+}
+
+/* disable sticky behavior */
+.section-page .right-col {
+  position: static;
+  max-height: none;
+  overflow: visible;
+  margin-top: 16px;
+}
+
+/* ===========================================
+   FORM CARDS
 =========================================== */
 .section-page .form-card {
   background: #fff;
-  padding: 20px;
+  padding: 18px;
   border-radius: 14px;
   box-shadow: 0 8px 22px rgba(0,0,0,0.06);
-  max-width: 760px;
+  margin-bottom: 14px;
+}
+
+/* compact headers between forms */
+.section-page .compact-head {
+  margin: 12px 0 6px;
+}
+
+.section-page .compact-head .section-title {
+  font-size: 16px;
+  margin: 0;
 }
 
 /* form group */
 .section-page .form-group {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .section-page .form-group label {
@@ -83,12 +105,12 @@
   margin-left: 3px;
 }
 
-/* inputs/select/textarea (only inside section-page) */
+/* inputs */
 .section-page input,
 .section-page select,
 .section-page textarea {
   width: 100%;
-  padding: 11px 12px;
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #fafafa;
@@ -98,7 +120,7 @@
 }
 
 .section-page textarea {
-  min-height: 90px;
+  min-height: 80px;
   resize: vertical;
 }
 
@@ -110,47 +132,83 @@
   box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
 }
 
-/* Buttons spacing (no override of layout btn colors) */
+/* buttons */
 #sectionForm .btn-primary,
 #subForm .btn-secondary,
 #rackForm .btn-tertiary,
 #centralRackForm .btn-primary {
-  width: 100%;
-  margin-top: 4px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 15px;
-  transition: 0.2s ease;
+  width: 25%;
+  margin-top: 8px;
+  margin-right: auto;            /* ✅ right align */
+        /* ✅ smart button layout */
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+   display: flex;        /* inline-flex না, flex দিলে margin-left:auto কাজ করবে */
+   padding: 11px 16px;
+  border-radius: 12px;
+  color: #f3f3f3ee;
+  font-weight: 800;
+  font-size: 14.5px;
+  letter-spacing: 0.2px;
+  background-color: #24C0A9;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.08);
 }
 
+#sectionForm .btn-primary:hover,
+#subForm .btn-secondary:hover,
+#rackForm .btn-tertiary:hover,
+#centralRackForm .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.12);
+  background-color: #009882;
+  filter: brightness(1.02);
+}
+
+#sectionForm .btn-primary:active,
+#subForm .btn-secondary:active,
+#rackForm .btn-tertiary:active,
+#centralRackForm .btn-primary:active {
+  transform: translateY(0px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+}
+
+#sectionForm .btn-primary:focus-visible,
+#subForm .btn-secondary:focus-visible,
+#rackForm .btn-tertiary:focus-visible,
+#centralRackForm .btn-primary:focus-visible {
+  outline: 3px solid rgba(37,99,235,0.22);
+  outline-offset: 2px;
+}
 /* ===========================================
-   LISTS (Existing racks / sections)
+   LIST CARDS (NOW BELOW FORMS)
 =========================================== */
+.section-page .list-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  margin-bottom: 14px;
+}
+
 .section-page .list-title {
-  margin-top: 14px;
   font-size: 16px;
   font-weight: 700;
   color: #111827;
+  margin-bottom: 8px;
 }
 
 /* Central rack list */
-.section-page .rack-list {
-  margin-top: 8px;
+.section-page .rack-list,
+.section-page .section-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
-/* Section overview list */
-.section-page .section-list {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 12px;
-}
-
-/* Common card style for list items */
+/* list items */
 .section-page .rack-list > div,
 .section-page .section-list > div {
   background: #fff;
@@ -158,9 +216,9 @@
   padding: 12px 14px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.06);
   border-left: 5px solid #2563eb;
-  transition: 0.2s ease;
   font-size: 14px;
   color: #374151;
+  transition: 0.2s ease;
 }
 
 .section-page .rack-list > div:hover,
@@ -169,7 +227,6 @@
   box-shadow: 0 8px 18px rgba(0,0,0,0.10);
 }
 
-/* If JS adds header/label inside list item */
 .section-page .rack-list h4,
 .section-page .section-list h4 {
   font-size: 15px;
@@ -179,131 +236,10 @@
 }
 
 /* ===========================================
-   ✅ NEW: Two-column compact layout
-   Left small forms, right lists (sticky)
-=========================================== */
-
-/* tighter headers inside left column */
-.section-page .compact-head{
-  margin: 10px 0 6px;
-}
-.section-page .compact-head .section-title{
-  margin: 0;
-  font-size: 16px;
-}
-
-/* main grid */
-.section-page .section-grid{
-  display: grid;
-  grid-template-columns: 420px 1fr; /* left narrow, right wide */
-  gap: 14px;
-  align-items: start;
-}
-
-/* left */
-.section-page .left-col .form-card{
-  max-width: none;          /* override 760px for grid */
-  padding: 14px;            /* smaller */
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-  margin-bottom: 12px;
-}
-
-/* remove big dividers in new layout */
-.section-page .left-col .divider{
-  display: none;
-}
-
-.section-page .left-col .form-group{
-  margin-bottom: 10px;
-}
-
-.section-page .left-col input,
-.section-page .left-col select,
-.section-page .left-col textarea{
-  padding: 9px 10px;
-  font-size: 13.5px;
-  border-radius: 10px;
-}
-
-.section-page .left-col textarea{
-  min-height: 72px;
-}
-
-/* buttons compact */
-#sectionForm .btn-primary,
-#subForm .btn-secondary,
-#rackForm .btn-tertiary,
-#centralRackForm .btn-primary{
-  padding: 10px 12px;
-  font-size: 14px;
-  border-radius: 10px;
-}
-
-/* right column sticky + scroll */
-.section-page .right-col{
-  position: sticky;
-  top: 84px; /* topbar space */
-  max-height: calc(100vh - 98px);
-  overflow: auto;
-  padding-right: 6px;
-}
-
-/* list cards */
-.section-page .list-card{
-  background: #fff;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-}
-
-/* make lists denser on right */
-.section-page .right-col .rack-list{
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-.section-page .right-col .section-list{
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-.section-page .right-col .rack-list > div,
-.section-page .right-col .section-list > div{
-  padding: 10px 12px;
-  font-size: 13.5px;
-}
-
-/* ===========================================
    RESPONSIVE
 =========================================== */
-@media (max-width: 1100px){
-  .section-page .section-grid{
-    grid-template-columns: 380px 1fr;
-  }
-}
-
-@media (max-width: 992px) {
-  .section-page .rack-list,
-  .section-page .section-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 900px){
-  .section-page .section-grid{
-    grid-template-columns: 1fr;
-  }
-  .section-page .right-col{
-    position: static;
-    max-height: none;
-    overflow: visible;
-    padding-right: 0;
-  }
-}
-
 @media (max-width: 768px) {
 
-  /* drawer sidebar => full content */
   .dashboard-container .main-content {
     margin-left: 0;
     width: 100%;
@@ -320,8 +256,6 @@
 
   .section-page .form-card {
     padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
   }
 
   .section-page input,
@@ -338,4 +272,146 @@
     font-size: 14px;
     padding: 11px 12px;
   }
+}
+/* ==============================
+   List Collapse + Accordion UI
+============================== */
+
+.section-page .list-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.section-page .list-toggle{
+  border: 1px solid #d1d5db;
+  background: #fff;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.section-page .list-toggle:hover{
+  transform: translateY(-1px);
+}
+
+/* collapse animation container */
+.section-page .is-collapsed{
+  display: none;
+}
+
+/* ==============================
+   Accordion
+============================== */
+
+.section-page .accordion-root{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* accordion item card */
+.section-page .acc-item{
+  background:#fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-left: 5px solid #2563eb;
+  overflow: hidden;
+}
+
+/* accordion header button */
+.section-page .acc-head{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+}
+
+.section-page .acc-title{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.section-page .acc-title strong{
+  font-size: 14.5px;
+  color: #111827;
+}
+
+.section-page .acc-title small{
+  font-size: 12.5px;
+  color:#6b7280;
+}
+
+.section-page .acc-badge{
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color:#111827;
+  flex: 0 0 auto;
+}
+
+/* body */
+.section-page .acc-body{
+  padding: 0 14px 12px;
+  border-top: 1px solid #eef2f7;
+}
+
+.section-page .acc-body .acc-row{
+  margin-top: 10px;
+}
+
+.section-page .acc-body .acc-row h5{
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color:#374151;
+}
+
+.section-page .acc-body ul{
+  margin: 0;
+  padding-left: 18px;
+  color:#374151;
+  font-size: 13.5px;
+}
+
+.section-page .acc-chevron{
+  font-weight: 900;
+  transition: 0.2s ease;
+  margin-left: 8px;
+}
+.section-page .acc-item[data-open="true"] .acc-chevron{
+  transform: rotate(180deg);
+}
+.section-page .rack-print-btn{
+  display: inline-block;
+  border: 1px solid #dd004a;
+  background: #fff;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+.section-page .rack-print-btn:hover{ transform: translateY(-1px); }
+.section-page .rack-print-btn:focus{ outline: 2px solid rgba(37,99,235,0.25); }
+
+.force-upper {
+  text-transform: uppercase;
 }
