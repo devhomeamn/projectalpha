@@ -200,18 +200,25 @@ body{
   width: calc(100% - 230px);
   height: 60px;
   background: #2c80ff;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;                /* ✅ NEW: stable spacing */
+  flex-wrap: nowrap;        /* ✅ NEW: don't wrap into middle */
+
   padding: 0 14px;
-  z-index: 350; /* ✅ FIX: ensure topbar never goes under anything */
+  z-index: 350;
   box-shadow: 0 6px 18px rgba(44,128,255,0.25);
 }
 
+/* ✅ NEW: left side should take remaining space */
 .topbar .topbar-left{
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1 1 auto;          /* ✅ allows left to grow */
+  min-width: 0;            /* ✅ prevents overflow pushing right */
 }
 
 .topbar .hamburger{
@@ -226,22 +233,26 @@ body{
 
 .topbar .topbar-search{
   display: flex;
+  position: relative;
   align-items: center;
   gap: 8px;
   background: rgba(255,255,255,0.18);
   border: 1px solid rgba(255,255,255,0.25);
   border-radius: 999px;
-  padding: 8px 12px;
-  min-width: 320px;
+  min-width: 320px;     /* আগে 320px ছিল */
+  flex: 0 1 520px;      /* আগে 1 1 520px ছিল */
+  max-width: 520px;     /* আগে 620px ছিল */
+  padding: 8px 16px;    /* একটু compact */
 }
 
 .topbar .topbar-search .search-icon{
-  font-size: 18px;
+  font-size: 13px;
   color: rgba(255,255,255,0.95);
 }
 
 .topbar .topbar-search input{
-  width: 100%;
+  width: 80%;
+  min-width: 0;            /* ✅ NEW: allow shrink */
   border: none;
   outline: none;
   background: transparent;
@@ -256,7 +267,191 @@ body{
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;       /* ✅ keeps right group at end */
 }
+
+/* ✅ SUPER FIX: if user-dropdown is NOT inside topbar-right,
+   still force it to the far-right inside topbar */
+.topbar .user-dropdown{
+  margin-left: auto;
+}
+
+/* TOPBAR GLOBAL SEARCH DROPDOWN */
+.topbar-search-results{
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+
+  width: 100%;
+  min-width: 360px;
+  max-width: 520px;
+
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.18);
+  padding: 6px;
+  display: none;
+  z-index: 9999;
+
+  max-height: 420px;
+  overflow: auto;
+}
+@media (max-width: 1100px){
+  .topbar-search-results{
+    min-width: 300px;
+    max-width: 80vw;
+  }
+}
+
+.topbar-search-results.show{ display: block; }
+
+/* scrollbar */
+.topbar-search-results::-webkit-scrollbar{ width: 8px; }
+.topbar-search-results::-webkit-scrollbar-thumb{
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+.topbar-search-results::-webkit-scrollbar-track{ background: transparent; }
+
+.topbar-search-results .sr-item{
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.12s ease;
+}
+.topbar-search-results .sr-item:hover{ background: #f3f4f6; }
+
+.topbar-search-results .sr-icon{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: #3730a3;
+  flex: 0 0 34px;
+}
+
+.topbar-search-results .sr-main{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.topbar-search-results .sr-title{
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-search-results .sr-sub{
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-search-results .sr-tag{
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #155e75;
+  margin-left: auto;
+  border: 1px solid #cffafe;
+  flex: 0 0 auto;
+}
+.topbar-search-results .sr-empty{
+  font-size: 12.5px;
+  color: #292a2b;
+}
+
+/* GLOBAL SEARCH MODAL */
+.gs-modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 10000;
+}
+.gs-modal-overlay.show{ display: flex; }
+
+.gs-modal{
+  width: 560px;
+  max-width: 96vw;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+.gs-modal .gs-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.gs-modal .gs-head h3{
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 900;
+  color: #111827;
+}
+.gs-modal .gs-close{
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.gs-modal .gs-body{ padding: 14px 16px; }
+.gs-kv{
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 8px 10px;
+  font-size: 13px;
+  color: #111827;
+}
+.gs-kv .k{ color: #6b7280; font-weight: 700; }
+.gs-kv .v{ font-weight: 800; }
+
+@media (max-width: 520px){
+  .gs-kv{ grid-template-columns: 1fr; }
+  .gs-kv .k{ margin-top: 8px; }
+}
+
+.gs-actions{
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+.gs-actions .btn{
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 900;
+  font-size: 13px;
+}
+.gs-actions .btn-primary{ background: #111827; color: #fff; }
+.gs-actions .btn-secondary{ background: #e5e7eb; color: #111827; }
 
 /* topbar icons */
 .topbar .topbar-icon{
@@ -331,7 +526,7 @@ body{
 /* ---------- MAIN CONTENT ---------- */
 .dashboard-container .main-content{
   margin-left: 230px;
-  padding-top: 60px; /* ✅ FIX: match topbar height */
+  padding-top: 60px;
   width: calc(100% - 230px);
   min-height: 100vh;
 }
@@ -351,21 +546,19 @@ body.sidebar-collapsed .dashboard-container .main-content{
 @media (max-width: 900px){
   .sidebar{
     transform: translateX(-110%);
-    top: 60px; /* below topbar */
+    top: 60px;
     height: calc(100vh - 60px);
   }
   .sidebar.open{
     transform: translateX(0);
   }
 
-  /* ✅ FIX: let menu scroll naturally; don't kill footer */
   .sidebar .sidebar-scroll{
     flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
   }
 
-  /* ✅ FIX: keep footer visible at bottom while menu scrolls */
   .sidebar .sidebar-footer{
     position: sticky;
     bottom: 0;
@@ -381,7 +574,7 @@ body.sidebar-collapsed .dashboard-container .main-content{
   .dashboard-container .main-content{
     margin-left: 0;
     width: 100%;
-    padding-top: 60px !important; /* ✅ FIX */
+    padding-top: 60px !important;
   }
 }
 
@@ -402,13 +595,8 @@ body.sidebar-collapsed .dashboard-container .main-content{
 
 /* ===========================================
    ✅ Profile Dropdown (Topbar)
-   HTML needs:
-   <div class="user-dropdown">
-     <button class="user-chip user-chip-btn" id="userDropdownBtn">...</button>
-     <div class="user-menu" id="userDropdownMenu">...</div>
-   </div>
 =========================================== */
-.user-dropdown{ position: relative; }
+.user-dropdown{ position:relative; }
 
 .user-chip-btn{
   cursor: pointer;
@@ -497,17 +685,11 @@ body.sidebar-collapsed .dashboard-container .main-content{
 
 @media (max-width: 768px){
   .user-menu{ width: 220px; }
-
-  /* ✅ FIX: mobile e username/role hide করলে chip overflow hobe na,
-     কিন্তু dropdown (logout) ঠিক থাকবে */
   .topbar .chip-info{ display: none; }
-
-  /* caret hide optional */
   .user-chip-btn .dd-caret{ display: none; }
-
-  /* slight padding so avatar click easy */
   .topbar .user-chip{ padding: 4px 6px; }
 }
+
 /* ===========================
    MOBILE: HIDE TOPBAR SEARCH
 =========================== */
@@ -516,4 +698,72 @@ body.sidebar-collapsed .dashboard-container .main-content{
     display: none !important;
   }
 }
+
+/* Desktop: hide icon */
+.topbar .topbar-search-btn{ display: none; }
+
+/* Mobile: show icon */
+@media (max-width: 768px){
+  .topbar .topbar-search-btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Mobile overlay for search */
+.msearch-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10000;
+}
+.msearch-box{
+  width: 520px;
+  max-width: 96vw;
+  margin-top: 70px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.25);
+}
+.msearch-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.msearch-row input{
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+}
+.msearch-results{
+  margin-top: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  max-height: 55vh;
+  overflow: auto;
+}
+
+
+/* Search result location highlight */
+.sr-loc-section{
+  color: #00cf11;       /* red-600 */
+  font-weight: 600;
+}
+
+.sr-loc-central{
+  color: #d97706;       /* amber-600 */
+  font-weight: 600;
+}
+
 

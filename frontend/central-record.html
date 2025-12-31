@@ -4,28 +4,17 @@
   <meta charset="UTF-8">
   <title>Central Records</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <link rel="stylesheet" href="css/layout.css">
-   <link rel="stylesheet" href="css/central-record.css">
-
-  
-
- 
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/central-record.css">
 </head>
-
-<!-- ✅ Confirm Modal -->
-
 
 <body>
   <div class="dashboard-container">
-    <!-- Sidebar (shared) -->
     <div id="sidebar"></div>
 
-    <!-- Main Content -->
     <main class="main-content">
-      <!-- Topbar (shared) -->
       <div id="topbar"></div>
 
-      <!-- Page Content -->
       <section class="content">
         <header class="page-header">
           <h2>All Central Records</h2>
@@ -35,23 +24,44 @@
           <input type="text" id="searchInput" placeholder="🔍 Search by File Name, Section, Rack No...">
           <button class="btn-export" onclick="exportToCSV()">📤 Export CSV</button>
         </div>
+         <!-- ✅ Pagination Controls -->
+        <div id="pagerBar" style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;">
+          <div id="pagerInfo" style="font-weight:800;color:#374151;font-size:13px;">Showing 0–0 of 0</div>
+
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="font-size:13px;font-weight:800;color:#374151;">
+              Rows:
+              <select id="pageSizeSelect" style="margin-left:6px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:10px;">
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20" selected>20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+              </select>
+            </label>
+
+            <div id="pagination" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
+          </div>
+        </div>
 
         <table id="recordsTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-      <th>File Name</th>
-      <th>BD No</th>
-      <th>Section</th>
-      <th>Rack</th>
-      <th>Serial No</th>
-      <th>Description</th>
-      <th>Added By</th>
-      <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="recordsBody"></tbody>
-  </table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>File Name</th>
+              <th>BD No</th>
+              <th>Section</th>
+              <th>Rack</th>
+              <th>Serial No</th>
+              <th>Description</th>
+              <th>Added By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+
+       
       </section>
     </main>
   </div>
@@ -67,14 +77,11 @@
     </div>
   </div>
 
-  <!-- ✅ Shared Layout Loader -->
   <script type="module">
     import { initLayout } from "./js/layout.js";
-    initLayout("central-record.html"); // highlight correct sidebar menu
+    initLayout("central-record.html");
   </script>
-
-  <!-- Page-specific script -->
- 
 </body>
- <script src="js/central-record.js"></script>
+
+<script src="js/central-record.js"></script>
 </html>

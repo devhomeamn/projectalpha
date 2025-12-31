@@ -13,7 +13,7 @@ export async function initLayout(activePage) {
   await new Promise((r) => setTimeout(r, 50));
 
   // 2) Retrieve user info (NOW variables exist)
-  const token = localStorage.getItem("token"); 
+  const token = localStorage.getItem("token");
   let role = localStorage.getItem("role");
 
   const username = localStorage.getItem("username");
@@ -89,7 +89,7 @@ export async function initLayout(activePage) {
   /* ------------------------------
       Fill Topbar User Info (SAFE)
   ------------------------------ */
-  const chipNameEl = document.getElementById("username"); // chip main line in topbar.html
+  const chipNameEl = document.getElementById("username");
   const roleEl = document.getElementById("role");
   const umNameEl = document.getElementById("umName");
   const umEmailEl = document.getElementById("umEmail");
@@ -138,7 +138,6 @@ export async function initLayout(activePage) {
     if (!settingsLink) return;
 
     function showSimpleToast(msg) {
-      // use global showToast if exists, else fallback
       if (typeof window.showToast === "function") return window.showToast(msg, "info");
       const host = document.getElementById("toastHost") || document.body;
       const t = document.createElement("div");
@@ -161,7 +160,7 @@ export async function initLayout(activePage) {
   })();
 
   // ===== Topbar profile dropdown =====
-  (function () {
+  (function initTopbarDropdown() {
     const ddWrap = document.querySelector(".user-dropdown");
     const ddBtn = document.getElementById("userDropdownBtn");
 
@@ -182,6 +181,319 @@ export async function initLayout(activePage) {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeDd();
     });
+  })();
+
+  /* ------------------------------
+        Global Topbar Search
+        (BD No / File Name)
+  ------------------------------ */
+  (function initGlobalTopbarSearch() {
+    const input = document.getElementById("topbarSearchInput");
+    const box = document.getElementById("topbarSearchResults");
+
+    // desktop dropdown requires input+box. mobile overlay only needs button.
+    const searchBtn = document.getElementById("topbarSearchBtn");
+
+    let t = null;
+    let lastToken = 0;
+    let lastResults = [];
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function isCentral(r) {
+      return String(r?.status || "active").toLowerCase() === "central";
+    }
+
+    function formatLocationPlain(r) {
+      const section = r.section?.name || "—";
+      const sub = r.subcategory?.name || "—";
+      const rack = r.rack?.name || "—";
+      const serial = r.serial_no ?? "—";
+      const place = isCentral(r) ? "Central" : "Section";
+      return `${place}: ${section} • ${sub} • ${rack} • Serial ${serial}`;
+    }
+
+    function showBox(html) {
+      if (!box) return;
+      box.innerHTML = html;
+      box.classList.add("show");
+      box.setAttribute("aria-hidden", "false");
+    }
+    function hideBox() {
+      if (!box) return;
+      box.classList.remove("show");
+      box.setAttribute("aria-hidden", "true");
+    }
+
+    function openResultModal(r) {
+      // desktop: close dropdown
+      hideBox();
+      if (input) input.blur();
+
+      const overlay = document.createElement("div");
+      overlay.className = "gs-modal-overlay";
+      overlay.innerHTML = `
+        <div class="gs-modal" role="dialog" aria-modal="true">
+          <div class="gs-head">
+            <h3>Record Location</h3>
+            <button class="gs-close" type="button" aria-label="Close">✕</button>
+          </div>
+          <div class="gs-body">
+            <div class="gs-kv">
+              <div class="k">BD No</div><div class="v">${escapeHtml(r.bd_no || "—")}</div>
+              <div class="k">File Name</div><div class="v">${escapeHtml(r.file_name || "—")}</div>
+              <div class="k">Current Location</div><div class="v">${escapeHtml(formatLocationPlain(r))}</div>
+              <div class="k">Record Status</div><div class="v">${escapeHtml((r.record_status || "ongoing").toString())}</div>
+            </div>
+
+            ${isCentral(r) && (r.previous_location?.section_name || r.previous_location?.rack_name)
+              ? `
+                <div style="margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:12px;">
+                  <div style="font-weight:900;color:#111827;margin-bottom:6px;">Previous Location</div>
+                  <div style="font-size:13px;color:#374151;font-weight:800;">
+                    ${escapeHtml(
+                      `${r.previous_location?.section_name || "—"} • ${r.previous_location?.subcategory_name || "—"} • ${r.previous_location?.rack_name || "—"}`
+                    )}
+                  </div>
+                </div>
+              `
+              : ""}
+          </div>
+          <div class="gs-actions">
+            <button class="btn btn-secondary" type="button" data-gs="close">Close</button>
+            <button class="btn btn-primary" type="button" data-gs="go">Open in Records</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add("show"));
+
+      function close() {
+        overlay.classList.remove("show");
+        overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+      }
+
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) close();
+      });
+      overlay.querySelector(".gs-close")?.addEventListener("click", close);
+      overlay.querySelector('[data-gs="close"]')?.addEventListener("click", close);
+      overlay.querySelector('[data-gs="go"]')?.addEventListener("click", () => {
+        const place = isCentral(r) ? "central-record.html" : "view-record.html";
+        window.location.href = `${place}?q=${encodeURIComponent(r.bd_no || r.file_name || "")}`;
+      });
+
+      document.addEventListener(
+        "keydown",
+        (ev) => {
+          if (ev.key === "Escape") close();
+        },
+        { once: true }
+      );
+    }
+
+    async function lookup(value) {
+      const q = String(value || "").trim();
+      if (!q) return [];
+
+      const token = ++lastToken;
+      const res = await fetch(`/api/records/lookup?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (token !== lastToken) return null; // stale
+      return Array.isArray(data) ? data : [];
+    }
+
+    // -------- Desktop dropdown search --------
+    async function doDesktopSearch(value) {
+      const q = String(value || "").trim();
+      if (!q) {
+        lastResults = [];
+        hideBox();
+        return;
+      }
+
+      try {
+        const list = await lookup(q);
+        if (list === null) return; // stale
+        lastResults = list;
+
+        if (!lastResults.length) {
+          showBox(`<div class="sr-empty">No records found for <b>${escapeHtml(q)}</b></div>`);
+          return;
+        }
+
+        const html = lastResults.map((r, idx) => {
+          const central = isCentral(r);
+          const place = central ? "Central" : "Section";
+          const locClass = central ? "sr-loc-central" : "sr-loc-section";
+
+          return `
+            <div class="sr-item" data-idx="${idx}" title="Click to view location">
+              <div class="sr-icon">
+                <span class="material-symbols-rounded" style="font-size:18px;">folder</span>
+              </div>
+
+              <div class="sr-main">
+                <div class="sr-title">
+                  ${escapeHtml(r.bd_no || "—")} — ${escapeHtml(r.file_name || "")}
+                </div>
+
+                <div class="sr-sub">
+                  ${place} :
+                  <span class="${locClass}">
+                    ${escapeHtml(r.section?.name || "—")}
+                    • ${escapeHtml(r.subcategory?.name || "—")}
+                    • ${escapeHtml(r.rack?.name || "—")}
+                    • Serial ${escapeHtml(r.serial_no ?? "—")}
+                  </span>
+                </div>
+              </div>
+
+              <div class="sr-tag">${escapeHtml(place)}</div>
+            </div>
+          `;
+        }).join("");
+
+        showBox(html);
+      } catch (e) {
+        console.error("topbar lookup error", e);
+        showBox(`<div class="sr-empty">Search failed. Please try again.</div>`);
+      }
+    }
+
+    if (box) {
+      box.addEventListener("click", (e) => {
+        const item = e.target.closest(".sr-item");
+        if (!item) return;
+        const idx = parseInt(item.getAttribute("data-idx"), 10);
+        const r = lastResults[idx];
+        if (r) openResultModal(r);
+      });
+    }
+
+    if (input && box) {
+      input.addEventListener("input", () => {
+        const v = input.value;
+        clearTimeout(t);
+        t = setTimeout(() => doDesktopSearch(v), 280);
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          if (lastResults.length) openResultModal(lastResults[0]);
+          else doDesktopSearch(input.value);
+        }
+        if (e.key === "Escape") {
+          hideBox();
+          input.blur();
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        const wrap = document.querySelector(".topbar-search");
+        if (!wrap) return;
+        if (!wrap.contains(e.target)) hideBox();
+      });
+    }
+
+    // -------- Mobile overlay search (icon tap) --------
+    function openMobileOverlay() {
+      if (document.querySelector(".msearch-overlay")) return;
+
+      const overlay = document.createElement("div");
+      overlay.className = "msearch-overlay";
+      overlay.innerHTML = `
+        <div class="msearch-box">
+          <div class="msearch-row">
+            <span class="material-symbols-rounded" style="color:#6b7280;">search</span>
+            <input id="mSearchInput" type="text" placeholder="Input BD No / File Name..." autocomplete="off" />
+            <button id="mSearchClose" type="button"
+              style="border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:6px 8px;cursor:pointer;">✕</button>
+          </div>
+          <div class="msearch-results" id="mSearchResults">
+            <div class="sr-empty" style="padding:12px 10px;">Type to search…</div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      const mInput = overlay.querySelector("#mSearchInput");
+      const mRes = overlay.querySelector("#mSearchResults");
+
+      const close = () => overlay.remove();
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+      overlay.querySelector("#mSearchClose")?.addEventListener("click", close);
+
+      let timer = null;
+      mInput.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          const q = mInput.value.trim();
+          if (!q) {
+            mRes.innerHTML = `<div class="sr-empty" style="padding:12px 10px;">Type to search…</div>`;
+            return;
+          }
+
+          try {
+            const list = await lookup(q);
+            if (list === null) return; // stale
+            if (!Array.isArray(list) || !list.length) {
+              mRes.innerHTML = `<div class="sr-empty" style="padding:12px 10px;">No records found</div>`;
+              return;
+            }
+
+            mRes.innerHTML = list.map((r, idx) => {
+              const central = isCentral(r);
+              const place = central ? "Central" : "Section";
+              const locClass = central ? "sr-loc-central" : "sr-loc-section";
+
+              return `
+                <div class="sr-item" data-idx="${idx}" style="padding:10px 12px;cursor:pointer;">
+                  <div class="sr-title" style="font-weight:900;font-size:13.5px;color:#111827;">
+                    ${escapeHtml(r.bd_no || "—")} — ${escapeHtml(r.file_name || "")}
+                  </div>
+                  <div class="sr-sub" style="font-size:12px;color:#6b7280;margin-top:2px;">
+                    ${place} •
+                    <span class="${locClass}">
+                      ${escapeHtml(r.section?.name || "—")}
+                      • ${escapeHtml(r.subcategory?.name || "—")}
+                      • ${escapeHtml(r.rack?.name || "—")}
+                      • Serial ${escapeHtml(r.serial_no ?? "—")}
+                    </span>
+                  </div>
+                </div>
+              `;
+            }).join("");
+
+            mRes.querySelectorAll(".sr-item").forEach((el, idx) => {
+              el.addEventListener("click", () => {
+                const picked = list[idx];
+                close();
+                openResultModal(picked);
+              });
+            });
+          } catch (e) {
+            console.error("mobile lookup error", e);
+            mRes.innerHTML = `<div class="sr-empty" style="padding:12px 10px;">Search failed</div>`;
+          }
+        }, 250);
+      });
+
+      setTimeout(() => mInput.focus(), 30);
+    }
+
+    if (searchBtn) {
+      searchBtn.addEventListener("click", openMobileOverlay);
+    }
   })();
 
   /* ------------------------------

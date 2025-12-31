@@ -254,6 +254,81 @@ exports.getRecords = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// ================== LOOKUP RECORDS (Topbar global search) ==================
+// উদ্দেশ্য: BD No বা File Name দিয়ে দ্রুত record টা কোথায় আছে (Section/Central) দেখানো
+// Returns: up to 8 matches (most recently updated first)
+exports.lookupRecords = async (req, res) => {
+  try {
+    const qRaw = req.query.q || "";
+    const q = qRaw.toString().trim();
+    if (!q) return res.json([]);
+
+    const matches = await Record.findAll({
+      where: {
+        [Op.or]: [
+          { bd_no: { [Op.like]: `%${q}%` } },
+          { file_name: { [Op.like]: `%${q}%` } },
+        ],
+      },
+      include: [
+        { model: Section, attributes: ["id", "name"] },
+        { model: Subcategory, attributes: ["id", "name"] },
+        { model: Rack, attributes: ["id", "name"] },
+      ],
+      order: [["updatedAt", "DESC"]],
+      limit: 8,
+    });
+
+    const enhanced = await Promise.all(
+      matches.map(async (r) => {
+        let prevSection = null,
+          prevSub = null,
+          prevRack = null;
+
+        if (r.previous_section_id) {
+          const s = await Section.findByPk(r.previous_section_id);
+          prevSection = s ? s.name : null;
+        }
+        if (r.previous_subcategory_id) {
+          const sb = await Subcategory.findByPk(r.previous_subcategory_id);
+          prevSub = sb ? sb.name : null;
+        }
+        if (r.previous_rack_id) {
+          const rk = await Rack.findByPk(r.previous_rack_id);
+          prevRack = rk ? rk.name : null;
+        }
+
+        return {
+          id: r.id,
+          bd_no: r.bd_no,
+          file_name: r.file_name,
+          record_status: r.record_status,
+          status: r.status, // 'active' | 'central'
+          serial_no: r.serial_no,
+          section: r.Section ? { id: r.Section.id, name: r.Section.name } : null,
+          subcategory: r.Subcategory
+            ? { id: r.Subcategory.id, name: r.Subcategory.name }
+            : null,
+          rack: r.Rack ? { id: r.Rack.id, name: r.Rack.name } : null,
+          previous_location: {
+            section_name: prevSection,
+            subcategory_name: prevSub,
+            rack_name: prevRack,
+          },
+          updatedAt: r.updatedAt,
+        };
+      })
+    );
+
+    res.json(enhanced);
+  } catch (err) {
+    console.error("❌ lookupRecords error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
 
 // ================== MOVE SINGLE RECORD TO CENTRAL ==================
 exports.moveToCentral = async (req, res) => {

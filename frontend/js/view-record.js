@@ -62,6 +62,15 @@ function normalizeApiBase(apiBaseFromServer) {
 
 /* ================== LOAD CONFIG ================== */
 async function loadConfig() {
+ //topbar search bringing
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const qParam = (params.get("q") || "").trim();
+    const searchEl = document.getElementById("searchInput");
+    if (qParam && searchEl) searchEl.value = qParam;
+  } catch {}
+
+
   try {
     const res = await fetch("/api/config");
     const ct = res.headers.get("content-type") || "";

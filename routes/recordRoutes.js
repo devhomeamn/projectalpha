@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   addRecord,
   getRecords,
+  lookupRecords,
   moveToCentral,
   getCentralRecords,
   bulkMoveRecords,
@@ -26,6 +27,8 @@ router.delete("/delete/:id", deleteRecord);
 
 // ✅ Live BD check
 router.get("/check-bd", checkBdUnique);
+// topbar search
+router.get("/lookup", lookupRecords);
 
 // ➕ Add new record
 router.post("/add", addRecord);

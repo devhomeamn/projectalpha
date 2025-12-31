@@ -6,14 +6,22 @@
     <span class="material-symbols-rounded hamburger" onclick="toggleSidebar()">menu</span>
 
     <!-- Search -->
-    <div class="topbar-search">
-      <span class="material-symbols-rounded search-icon">search</span>
-      <input id="topbarSearchInput" type="text" placeholder="Search files, cases..." />
-    </div>
-  </div>
+<div class="topbar-search">
+  <span class="material-symbols-rounded search-icon">search</span>
+  <input id="topbarSearchInput" type="text"
+         placeholder="Search by BD No / File Name..."
+         autocomplete="off" />
+
+  <div class="topbar-search-results" id="topbarSearchResults" aria-hidden="true"></div>
+</div>
+
 
   <div class="topbar-right">
     <!-- Actions -->
+     <button class="topbar-icon topbar-search-btn" id="topbarSearchBtn" type="button" title="Search">
+  <span class="material-symbols-rounded">search</span>
+</button>
+
     <button class="topbar-icon" title="Notifications" type="button">
       <span class="material-symbols-rounded">notifications</span>
     </button>
