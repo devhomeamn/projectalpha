@@ -6,16 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="images/site-icon.ico">
 
-
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/dashboard.css">
+
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
   <script src="js/auth-guard.js"></script>
 </head>
 
 <body>
-
-  <!-- overlay for mobile sidebar -->
   <div id="overlay" class="overlay"></div>
 
   <div class="dashboard-container">
@@ -24,25 +23,55 @@
     <main class="main-content">
       <div id="topbar"></div>
 
-      <!-- top stats -->
+      <!-- Modern Page Header -->
+      <div class="page-header">
+        <div class="header-content">
+          <div class="header-main">
+            <h1 class="header-title">
+              <span class="material-symbols-rounded header-icon">dashboard</span>
+              Dashboard
+            </h1>
+            <p class="header-subtitle">
+              সিস্টেমের সামগ্রিক ওভারভিউ এবং সেকশন পরিসংখ্যান
+            </p>
+          </div>
+
+          <div class="header-meta">
+            <div class="meta-item">
+              <span class="material-symbols-rounded">calendar_today</span>
+              <span id="currentDate">Loading...</span>
+            </div>
+            <div class="meta-item">
+              <span class="material-symbols-rounded">schedule</span>
+              <span id="currentTime">Loading...</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-wave"></div>
+      </div>
+
+      <!-- Top Stats -->
       <section class="stats">
         <div class="stat-card green">
+          <span class="stat-icon material-symbols-rounded">category</span>
           <h3 id="totalSections">0</h3>
           <p>Total Sections</p>
         </div>
 
         <div class="stat-card purple">
+          <span class="stat-icon material-symbols-rounded">description</span>
           <h3 id="totalRecords">0</h3>
           <p>Total Records</p>
         </div>
 
         <div class="stat-card blue">
+          <span class="stat-icon material-symbols-rounded">tune</span>
           <h3 id="centralToggleLabel">Central Excluded</h3>
           <p>Filter Mode</p>
         </div>
       </section>
 
-      <!-- Section overview -->
+      <!-- Section Overview -->
       <section class="section-overview">
         <div class="overview-header">
           <h2>Sections Overview</h2>
@@ -55,10 +84,9 @@
         </div>
 
         <div id="sectionsContainer" class="sections-container">
-          <!-- JS will render -->
+          <!-- JS rendered -->
         </div>
       </section>
-
     </main>
   </div>
 
@@ -69,7 +97,7 @@
 
   <script src="js/dashboard.js"></script>
 
-  <!-- sidebar close on outside click -->
+  <!-- Overlay close -->
   <script>
     document.getElementById("overlay").addEventListener("click", () => {
       const sidebar = document.querySelector(".sidebar");
@@ -78,6 +106,5 @@
       overlay?.classList.remove("show");
     });
   </script>
-
 </body>
 </html>

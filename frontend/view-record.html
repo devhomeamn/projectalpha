@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/view-record.css">
 
+  <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      referrerpolicy="no-referrer" />
+      
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
  
@@ -59,7 +64,7 @@
           </div>
           <div>
             <button id="exportBtn" onclick="exportToCSV()">⬇️ Export CSV</button>
-            <button id="openBulkMove" class="btn-primary">📦 Bulk Move</button>
+            <button id="openBulkMove" class="btn-save"> Bulk Move</button>
           </div>
         </div>
 
@@ -113,42 +118,41 @@
   </div>
 
   <!-- ✅ Record Details Modal -->
+<!-- ✅ Record Details Modal (Fixed Structure) -->
 <div id="recordModal" class="modal">
   <div class="modal-content">
-    <div class="modal-header">
-      <h3>📑 Record Details</h3>
-      <button class="close-btn" onclick="closeModal()">✖</button>
-    </div>
+    <button class="close-btn" onclick="closeModal()">✖</button>
+    <h3>📑 Record Details</h3>
+
     <div id="modalBody" class="modal-body"></div>
-    <div id="workflowBox" style="padding:12px 16px; border-top:1px solid #eef2f7;">
-  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
-    <div style="min-width:180px;">
-      <label style="font-size:13px; display:block; margin-bottom:4px;">Current Status</label>
-      <select id="wfStatusSelect" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:8px;">
-        <option value="ongoing">Ongoing</option>
-        <option value="closed">Closed</option>
-      </select>
+
+    <!-- Workflow Section -->
+    <div id="workflowBox">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+        <div style="flex:1; min-width:180px;">
+          <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px;">Current Status</label>
+          <select id="wfStatusSelect" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid #d1d5db;">
+            <option value="ongoing">Ongoing</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+
+        <div style="flex:1; min-width:180px;" id="wfClosingWrap">
+          <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px;">Closing Date</label>
+          <input id="wfClosingDate" type="date" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid #d1d5db;" />
+          <div id="wfClosingMsg" style="margin-top:6px; font-size:13px; color:#dc2626;"></div>
+        </div>
+
+        <button id="wfSaveBtn" class="btn-primary">✅ Update Status</button>
+      </div>
     </div>
 
-    <div style="min-width:180px;" id="wfClosingWrap">
-      <label style="font-size:13px; display:block; margin-bottom:4px;">Closing Date</label>
-      <input id="wfClosingDate" type="date"
-        style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:8px;" />
-      <div id="wfClosingMsg" style="margin-top:6px; font-size:13px;"></div>
+    <!-- Print Button -->
+    <div style="padding:16px 24px; text-align:right; border-top:1px solid #e5e7eb; background:#f9fafb;">
+      <button class="btn-save" id="printFromViewBtn">🖨️ Print Details</button>
     </div>
-
-    <button id="wfSaveBtn" class="btn-primary" style="height:38px;">✅ Update</button>
   </div>
 </div>
-
-    <div style="padding:12px 16px; text-align:right; border-top:1px solid #eef2f7;">
-  <button class="btn-primary" id="printFromViewBtn">🖨️ Print</button>
-</div>
-
-  </div>
-</div>
-
-
   <!-- ✅ Edit Record Modal -->
   <div id="editRecordModal" class="modal">
     <div class="modal-content">

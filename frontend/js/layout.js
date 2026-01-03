@@ -299,17 +299,29 @@ export async function initLayout(activePage) {
         { once: true }
       );
     }
+async function lookup(value) {
+  const q = String(value || "").trim();
+  if (!q) return [];
 
-    async function lookup(value) {
-      const q = String(value || "").trim();
-      if (!q) return [];
+  const token = ++lastToken;
 
-      const token = ++lastToken;
-      const res = await fetch(`/api/records/lookup?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      if (token !== lastToken) return null; // stale
-      return Array.isArray(data) ? data : [];
-    }
+  const jwt = localStorage.getItem("token") || "";
+  const res = await fetch(`/api/records/lookup?q=${encodeURIComponent(q)}`, {
+    headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+  });
+
+  // যদি token expire / 401 হয় → login এ পাঠাবে
+  if (res.status === 401) {
+    localStorage.clear();
+    window.location.href = "login.html";
+    return [];
+  }
+
+  const data = await res.json().catch(() => []);
+  if (token !== lastToken) return null; // stale
+
+  return Array.isArray(data) ? data : [];
+}
 
     // -------- Desktop dropdown search --------
     async function doDesktopSearch(value) {

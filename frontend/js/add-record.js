@@ -1,261 +1,302 @@
 console.log("add-record.js loaded");
 
-/* ================== TOAST (Add Record) ================== */
-function showToast(message, type = "success", ms = 3000) {
+/* ================== TOAST NOTIFICATION ================== */
+function showToast(message, type = "success", duration = 3000) {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
   toast.textContent = message;
-
   document.body.appendChild(toast);
+
   requestAnimationFrame(() => toast.classList.add("show"));
 
   setTimeout(() => {
     toast.classList.remove("show");
     toast.addEventListener("transitionend", () => toast.remove(), { once: true });
-  }, ms);
+  }, duration);
 }
-
-// optional: expose globally if needed
 window.showToast = showToast;
 
-// ================== GLOBALS ==================
+/* ================== GLOBAL VARIABLES ================== */
 let API_BASE = "";
 let bdOk = true;
 let isSubmitting = false;
 let lastBdCheckToken = 0;
-
-// for “required msg only when needed”
 let subTouched = false;
 let subSubmitAttempted = false;
 
-// ================== CONFIG LOAD ==================
+// Print-preview confirm modal state
+let lastPreviewRecord = null;
+let previewReady = false;
+
+/* ================== AUTH HELPER ================== */
+function getToken() {
+  return localStorage.getItem("token") || "";
+}
+
+function redirectLogin() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401) {
+    showToast("Session expired. Please login again.", "error");
+    setTimeout(redirectLogin, 700);
+    throw new Error("Unauthorized");
+  }
+  if (res.status === 403) {
+    showToast("Access denied.", "error");
+    throw new Error("Forbidden");
+  }
+  return res;
+}
+
+/* ================== CONFIG & API BASE ================== */
 function normalizeApiBase(apiBaseFromServer) {
   let base = (apiBaseFromServer || window.location.origin || "").trim();
   if (base.endsWith("/")) base = base.slice(0, -1);
-  if (base.toLowerCase().endsWith("/api")) return base;
-  return `${base}/api`;
+  return base.toLowerCase().endsWith("/api") ? base : `${base}/api`;
 }
 
 async function loadConfig() {
   try {
     const res = await fetch("/api/config");
-    const ct = res.headers.get("content-type") || "";
-    if (!ct.includes("application/json")) throw new Error("Config is not JSON");
-
     const data = await res.json();
     API_BASE = normalizeApiBase(data.apiBase);
-
-    console.log("API Base loaded:", API_BASE);
-    initPage();
-  } catch (err) {
-    console.error("Could not load backend config:", err);
+  } catch {
     API_BASE = normalizeApiBase(null);
-    initPage();
   }
+  initPage();
 }
 loadConfig();
 
-// ================== SMALL UI HELPERS ==================
+/* ================== UI HELPERS ================== */
 function todayISO() {
   const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function ensureMsg(afterElementId, msgId) {
+function ensureMsg(afterId, msgId) {
   let el = document.getElementById(msgId);
   if (!el) {
     el = document.createElement("div");
     el.id = msgId;
     el.style.marginTop = "6px";
     el.style.fontSize = "13px";
-    const target = document.getElementById(afterElementId);
-    if (target) target.insertAdjacentElement("afterend", el);
+    document.getElementById(afterId)?.insertAdjacentElement("afterend", el);
   }
   return el;
 }
 
-function setMsg(el, text, ok = true, mode = "normal") {
+function setMsg(el, text, success = true, mode = "normal") {
   if (!el) return;
   el.textContent = text || "";
   if (!text) return;
-
-  if (mode === "warn") el.style.color = "#b36b00";
-  else el.style.color = ok ? "green" : "red";
+  el.style.color = mode === "warn" ? "#b36b00" : success ? "green" : "red";
 }
 
-/* ================== OP SECTION FIELD ================== */
-// ✅ Allocate Table only for OP-1 / OP-2
+function safeText(v) {
+  return v == null ? "" : String(v);
+}
+
+/* ================== LIVE DATE & TIME IN HEADER ================== */
+function updateDateTime() {
+  const now = new Date();
+  const date = now.toLocaleDateString('bn-BD', { day: '2-digit', month: 'long', year: 'numeric' });
+  const time = now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  document.getElementById("currentDate").textContent = date;
+  document.getElementById("currentTime").textContent = time;
+}
+
+/* ================== CONDITIONAL FIELDS ================== */
+// Allocate Table for OP-1 / OP-2
 function syncAllocateTable(sectionName) {
   const group = document.getElementById("allocate_table_group");
   const input = document.getElementById("allocate_table");
   const star = document.getElementById("allocate_table_star");
+
   if (!group || !input) return;
 
-  const name = (sectionName || "").trim().toLowerCase();
-  const isOP =
-    name === "officers pay (op-1)".toLowerCase() ||
-    name === "officers pay (op-2)".toLowerCase();
-
+  const isOP = (sectionName || "").trim().toLowerCase().includes("officers pay (op-");
   group.style.display = isOP ? "" : "none";
-  input.required = !!isOP;
+  input.required = isOP;
   if (star) star.style.display = isOP ? "inline" : "none";
-
-  // hide হলে value clear করে দাও
   if (!isOP) input.value = "";
 }
 
-// ================== PAGE INIT ==================
-function initPage() {
-  wirePrintButtonsOnce();
+// Closing Date visibility based on status
+function toggleClosingDate() {
+  const status = document.getElementById("record_status")?.value || "ongoing";
+  const group = document.getElementById("closing_group");
+  const star = document.getElementById("closing_required_star");
 
-  // ✅ initial hide allocate_table
-  syncAllocateTable("");
-
-  // ✅ file_name auto uppercase
-  const fileInput = document.getElementById("file_name");
-  if (fileInput) {
-    fileInput.addEventListener("input", () => {
-      fileInput.value = fileInput.value.toUpperCase();
-    });
-  }
-
-  const userInfo = document.getElementById("userInfo");
-  if (userInfo) {
-    userInfo.textContent = `Logged in as: ${
-      localStorage.getItem("username") || "Unknown User"
-    }`;
-  }
-
-  // Opening date max = today
-  const openingInput = document.getElementById("opening_date");
-  if (openingInput) {
-    openingInput.max = todayISO();
-    openingInput.addEventListener("input", () => {
-      checkOpeningDateLive(true);
-      checkClosingDateLive(false); // opening বদলালে closing validity re-check
-    });
-    checkOpeningDateLive(false); // initial = no message
-  }
-
-  // Closing date max = today
-  const closingInput = document.getElementById("closing_date");
-  if (closingInput) {
-    closingInput.max = todayISO();
-    closingInput.addEventListener("input", () => checkClosingDateLive(true));
-    checkClosingDateLive(false); // initial = no message
-  }
-
-  // record_status -> closing date show/hide
-  const rs = document.getElementById("record_status");
-  const closingWrap =
-    document.getElementById("closing_date")?.closest(".form-group") ||
-    document.getElementById("closing_date")?.parentElement;
-
-  function syncClosingVisibility() {
-    const v = (rs?.value || "ongoing").toLowerCase();
-    if (!closingWrap) return;
-
-    if (v === "closed") {
-      closingWrap.style.display = "";
-    } else {
-      closingWrap.style.display = "none";
-      const c = document.getElementById("closing_date");
-      if (c) c.value = "";
-      setMsg(ensureClosingMsg(), "", true);
-    }
-  }
-
-  if (rs) {
-    rs.addEventListener("change", () => {
-      syncClosingVisibility();
-      checkOpeningDateLive(false);
-      checkClosingDateLive(false);
-    });
-    syncClosingVisibility();
-  }
-
-  loadSections();
-
-  const form = document.getElementById("recordForm");
-  if (form) form.addEventListener("submit", onAddRecord);
-
-  const bd = document.getElementById("bd_no");
-  const sub = document.getElementById("subcategory_id");
-
-  if (bd) bd.addEventListener("input", () => checkBdNoLive());
-  if (sub) {
-    sub.addEventListener("focus", () => (subTouched = true));
-    sub.addEventListener("change", () => {
-      subTouched = true;
-      checkSubcategoryRequiredLive(false);
-      checkBdNoLive();
-    });
-  }
-
-  // ✅ initial load এ subcategory msg দেখাবে না
-  checkSubcategoryRequiredLive(false);
+  if (group) group.style.display = status === "closed" ? "" : "none";
+  if (star) star.style.display = status === "closed" ? "inline" : "none";
+  if (status !== "closed") document.getElementById("closing_date").value = "";
 }
 
-// ================== LOAD SECTIONS & RACKS ==================
+/* ================== INPUT VALIDATION ================== */
+function validateFileName() {
+  const input = document.getElementById("file_name");
+  const value = input?.value.trim() || "";
+  const msg = ensureMsg("file_name", "file_msg");
+
+  if (!value) {
+    setMsg(msg, "File Name is required", false);
+    return false;
+  }
+  if (value.length < 3 || value.length > 100) {
+    setMsg(msg, "File Name must be 3-100 characters", false);
+    return false;
+  }
+  if (!/^[A-Za-z0-9\s\-_()]+$/.test(value)) {
+    setMsg(msg, "Only letters, numbers, space, -, _, (, ) allowed", false);
+    return false;
+  }
+  setMsg(msg, "", true);
+  return true;
+}
+
+function validateBdFormat() {
+  const input = document.getElementById("bd_no");
+  const value = input?.value.trim() || "";
+  const msg = ensureMsg("bd_no", "bd_format_msg");
+
+  if (!value) return true; // required check on submit
+
+  if (value.length < 6 || value.length > 9) {
+    setMsg(msg, "BD No must be 6-9 characters", false);
+    return false;
+  }
+  if (!/^[A-Za-z0-9\/\-]+$/.test(value)) {
+    setMsg(msg, "Only letters, numbers, -, / allowed", false);
+    return false;
+  }
+  setMsg(msg, "", true);
+  return true;
+}
+
+function validateDescription() {
+  const ta = document.getElementById("description");
+  const value = ta?.value || "";
+  const msg = ensureMsg("description", "desc_msg");
+  if (value.length > 500) {
+    setMsg(msg, "Description too long (max 500 chars)", false);
+    return false;
+  }
+  setMsg(msg, "", true);
+  return true;
+}
+
+function validateAllocateTable() {
+  const group = document.getElementById("allocate_table_group");
+  if (!group || group.style.display === "none") return true;
+
+  const input = document.getElementById("allocate_table");
+  const value = input?.value.trim() || "";
+  const msg = ensureMsg("allocate_table", "alloc_msg");
+
+  if (value.length < 2) {
+    setMsg(msg, "Allocate Table required (min 2 chars)", false);
+    return false;
+  }
+  setMsg(msg, "", true);
+  return true;
+}
+
+/* ================== PAGE INITIALIZATION ================== */
+function initPage() {
+  wirePrintButtonsOnce();
+  wirePreviewConfirmOnce();
+  updateDateTime();
+  setInterval(updateDateTime, 60000);
+
+  // Initial field states
+  syncAllocateTable("");
+  toggleClosingDate();
+
+  // Auto uppercase file name
+  document.getElementById("file_name")?.addEventListener("input", (e) => {
+    e.target.value = e.target.value.toUpperCase();
+    validateFileName();
+  });
+
+  // Date limits
+  document.getElementById("opening_date")?.setAttribute("max", todayISO());
+  document.getElementById("closing_date")?.setAttribute("max", todayISO());
+
+  // Status change handler
+  document.getElementById("record_status")?.addEventListener("change", toggleClosingDate);
+
+  // Live validation
+  document.getElementById("bd_no")?.addEventListener("input", () => {
+    validateBdFormat();
+    checkBdNoLive();
+  });
+  document.getElementById("description")?.addEventListener("input", validateDescription);
+  document.getElementById("allocate_table")?.addEventListener("input", validateAllocateTable);
+
+  // Load sections
+  loadSections();
+
+  // Form submit
+  document.getElementById("recordForm")?.addEventListener("submit", onAddRecord);
+
+  // Subcategory touch
+  const sub = document.getElementById("subcategory_id");
+  sub?.addEventListener("focus", () => subTouched = true);
+  sub?.addEventListener("change", () => { subTouched = true; checkBdNoLive(); });
+}
+
+/* ================== LOAD SECTIONS, SUBCATEGORIES, RACKS & SERIAL ================== */
 async function loadSections() {
   try {
-    const res = await fetch(`${API_BASE}/sections`);
+    const res = await authFetch(`${API_BASE}/sections`);
     const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("Invalid sections data");
 
     const sectionSelect = document.getElementById("section_id");
     const subSelect = document.getElementById("subcategory_id");
     const rackSelect = document.getElementById("rack_id");
     const serialInput = document.getElementById("serial_no");
 
-    if (!sectionSelect || !subSelect || !rackSelect || !serialInput) return;
-
+    // Populate sections (exclude Central Room)
     sectionSelect.innerHTML = '<option value="">-- Select Section --</option>';
-    subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
-    rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
-    serialInput.value = "";
-
-    // initial hide
-    syncAllocateTable("");
-
-    data.forEach((sec) => {
-      if ((sec.name || "").trim().toLowerCase() === "central room") return;
+    data.forEach(sec => {
+      if ((sec.name || "").toLowerCase() === "central room") return;
       const opt = document.createElement("option");
       opt.value = sec.id;
       opt.textContent = sec.name;
       sectionSelect.appendChild(opt);
     });
 
+    // Section change handler
     sectionSelect.addEventListener("change", async () => {
-      const sectionId = sectionSelect.value;
+      const sid = sectionSelect.value;
+      const selected = data.find(s => s.id == sid);
 
+      // Reset dependent fields
       subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
       rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
       serialInput.value = "";
-
-      // section change হলে state reset
-      subTouched = false;
-      subSubmitAttempted = false;
-      setMsg(ensureSubMsg(), "", true);
-
-      // BD msg clear
-      setMsg(ensureBdMsg(), "", true);
-      bdOk = true;
-
-      if (!sectionId) {
-        syncAllocateTable(""); // hide allocate table
-        return;
-      }
-
-      const selected = data.find((s) => s.id == sectionId);
-
-      // ✅ OP-1 / OP-2 -> show allocate table
       syncAllocateTable(selected?.name || "");
 
+      if (!sid) return;
+
+      // Load Subcategories (nested in section response)
       if (selected?.Subcategories?.length) {
-        selected.Subcategories.forEach((sub) => {
+        selected.Subcategories.forEach(sub => {
           const opt = document.createElement("option");
           opt.value = sub.id;
           opt.textContent = sub.name;
@@ -263,645 +304,271 @@ async function loadSections() {
         });
       }
 
+      // Load Racks (separate endpoint)
       try {
-        const resRack = await fetch(`${API_BASE}/sections/racks/${sectionId}`);
-        const racks = await resRack.json();
+        const rackRes = await authFetch(`${API_BASE}/sections/racks/${sid}`);
+        const racks = await rackRes.json();
         rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
-        racks.forEach((r) => {
-          const opt = document.createElement("option");
-          opt.value = r.id;
-          opt.textContent = r.name;
-          rackSelect.appendChild(opt);
-        });
+        if (Array.isArray(racks)) {
+          racks.forEach(r => {
+            const opt = document.createElement("option");
+            opt.value = r.id;
+            opt.textContent = r.name;
+            rackSelect.appendChild(opt);
+          });
+        }
       } catch (err) {
-        console.error("Rack load error:", err);
-        showToast("❌ Rack load করা যায়নি", "error");
+        showToast("Failed to load racks", "error");
       }
     });
 
+    // Rack change → auto generate next serial
     rackSelect.addEventListener("change", async () => {
-      const rackId = rackSelect.value;
-      if (!rackId) {
+      const rid = rackSelect.value;
+      if (!rid) {
         serialInput.value = "";
         return;
       }
 
       try {
-        const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
+        const res = await authFetch(`${API_BASE}/records/by-rack/${rid}`);
         const records = await res.json();
-
-        const used = (records || [])
-          .map((r) => r.serial_no)
-          .filter((n) => n != null)
+        const used = (Array.isArray(records) ? records : [])
+          .map(r => r.serial_no)
+          .filter(n => n != null)
           .map(Number)
           .sort((a, b) => a - b);
 
         let next = 1;
-        for (let num of used) {
-          if (num === next) next++;
+        for (let n of used) {
+          if (n === next) next++;
           else break;
         }
         serialInput.value = next;
-      } catch (err) {
-        console.error("Serial fetch error:", err);
+      } catch {
         serialInput.value = "1";
       }
     });
+
   } catch (err) {
-    console.error("Error loading sections/racks:", err);
-    showToast("❌ Failed to load sections or racks!", "error");
+    showToast("Failed to load sections", "error");
   }
 }
 
-// ================== SUBCATEGORY REQUIRED ==================
-function ensureSubMsg() {
-  return ensureMsg("subcategory_id", "sub_msg");
-}
-
-/**
- * showMsg = true হলে message দেখাবে
- * showMsg = false হলে (initial load) message লুকানো থাকবে
- */
-function checkSubcategoryRequiredLive(showMsg = true) {
-  const subcategory_id = document.getElementById("subcategory_id")?.value || "";
-  const msg = ensureSubMsg();
-
-  const shouldShow = showMsg && (subTouched || subSubmitAttempted);
-
-  if (!subcategory_id) {
-    if (shouldShow) setMsg(msg, "❌ Subcategory অবশ্যই সিলেক্ট করতে হবে", false);
-    else setMsg(msg, "", true);
-    return false;
-  }
-
-  // selected হলে: touch/submit হলে success দেখাবে
-  if (shouldShow) setMsg(msg, "✅ Subcategory ঠিক আছে", true);
-  else setMsg(msg, "", true);
-
-  return true;
-}
-
-// ================== OPENING DATE VALIDATION ==================
-function ensureOpeningMsg() {
-  return ensureMsg("opening_date", "opening_msg");
-}
-
-function checkOpeningDateLive(showMsg = true) {
-  const openingInput = document.getElementById("opening_date");
-  const msg = ensureOpeningMsg();
-  if (!openingInput) return true;
-
-  const v = (openingInput.value || "").trim();
-
-  // required
-  if (!v) {
-    if (showMsg) setMsg(msg, "❌ Opening date দিতে হবে", false);
-    else setMsg(msg, "", true);
-    return false;
-  }
-
-  // not future
-  const max = todayISO();
-  if (v > max) {
-    if (showMsg) setMsg(msg, "❌ আজকের পরের opening date দেওয়া যাবে না", false);
-    else setMsg(msg, "", true);
-    return false;
-  }
-
-  // if closing exists, opening cannot be after closing
-  const closingInput = document.getElementById("closing_date");
-  const c = (closingInput?.value || "").trim();
-  if (c && c < v) {
-    if (showMsg) setMsg(msg, "❌ Opening date closing date এর পরে হতে পারবে না", false);
-    else setMsg(msg, "", true);
-    return false;
-  }
-
-  if (showMsg) setMsg(msg, "✅ Opening date ঠিক আছে", true);
-  else setMsg(msg, "", true);
-  return true;
-}
-
-// ================== CLOSING DATE VALIDATION ==================
-function ensureClosingMsg() {
-  return ensureMsg("closing_date", "closing_msg");
-}
-
-function checkClosingDateLive(showMsg = true) {
-  const closingInput = document.getElementById("closing_date");
-  const msg = ensureClosingMsg();
-  if (!closingInput) return true;
-
-  const v = (closingInput.value || "").trim();
-  if (!v) {
-    setMsg(msg, "", true);
-    return true;
-  }
-
-  const max = todayISO();
-  if (v > max) {
-    if (showMsg) setMsg(msg, "❌ আজকের পরের date দেওয়া যাবে না", false);
-    else setMsg(msg, "", true);
-    return false;
-  }
-
-  // opening date থাকলে closing >= opening হতে হবে
-  const openingInput = document.getElementById("opening_date");
-  const o = (openingInput?.value || "").trim();
-  if (o && v < o) {
-    if (showMsg) setMsg(msg, "❌ Closing date opening date এর আগে হতে পারবে না", false);
-    else setMsg(msg, "", true);
-    return false;
-  }
-
-  if (showMsg) setMsg(msg, "✅ Closing date ঠিক আছে", true);
-  else setMsg(msg, "", true);
-
-  return true;
-}
-
-// ================== BD UNIQUE (LIVE) ==================
-function ensureBdMsg() {
-  return ensureMsg("bd_no", "bd_msg");
-}
-
+/* ================== BD NO UNIQUENESS CHECK (LIVE) ================== */
 async function checkBdNoLive() {
-  const bd_no = document.getElementById("bd_no")?.value.trim() || "";
-  const subcategory_id = document.getElementById("subcategory_id")?.value || "";
-  const msg = ensureBdMsg();
+  const bdInput = document.getElementById("bd_no");
+  const subId = document.getElementById("subcategory_id")?.value;
+  const msg = ensureMsg("bd_no", "bd_unique_msg");
 
-  // sub msg update (but only visible if touched/submit)
-  checkSubcategoryRequiredLive(true);
+  const bdValue = bdInput?.value.trim() || "";
 
-  if (!bd_no || !subcategory_id) {
+  if (!bdValue || !subId) {
     bdOk = true;
-    setMsg(msg, "", true);
-    return true;
+    setMsg(msg, "");
+    return;
   }
 
   const token = ++lastBdCheckToken;
 
   try {
-    const url = `${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(
-      bd_no
-    )}&subcategory_id=${encodeURIComponent(subcategory_id)}`;
+    const res = await authFetch(`${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(bdValue)}&subcategory_id=${subId}`);
+    const data = await res.json();
 
-    const res = await fetch(url);
+    if (token !== lastBdCheckToken) return;
 
-    const ct = res.headers.get("content-type") || "";
-    let data = {};
-    if (ct.includes("application/json")) data = await res.json();
-    else data = { error: `Non-JSON response (status ${res.status})` };
-
-    if (token !== lastBdCheckToken) return bdOk;
-    if (!res.ok) throw new Error(data.error || "Check failed");
-
-    if (data.available) {
+    if (data.unique || data.available) {
       bdOk = true;
-      setMsg(msg, "✅ BD No available", true);
-      return true;
+      setMsg(msg, "BD No available", true);
     } else {
       bdOk = false;
-      setMsg(msg, "❌ এই Subcategory-তে এই BD No আগে থেকেই আছে", false);
-      return false;
+      setMsg(msg, "This BD No already exists in this subcategory", false);
     }
-  } catch (e) {
-    bdOk = true;
-    setMsg(
-      msg,
-      "⚠️ BD No এখন verify করা যাচ্ছে না (server/connection)। Submit করলে server আবার যাচাই করবে।",
-      true,
-      "warn"
-    );
-    return true;
-  }
-}
-
-// ================== SUBMIT DEDUPE ==================
-function getDedupeKey(payload) {
-  return [
-    payload.file_name || "",
-    payload.bd_no || "",
-    payload.section_id || "",
-    payload.subcategory_id || "",
-    payload.rack_id || "",
-    payload.serial_no || "",
-    payload.opening_date || "",
-    payload.record_status || "",
-    payload.closing_date || "",
-    payload.allocate_table || "", // ✅ new
-  ].join("|");
-}
-
-function recentlySubmitted(key, windowMs = 10000) {
-  try {
-    const raw = sessionStorage.getItem("addRecord_lastSubmit");
-    if (!raw) return false;
-    const obj = JSON.parse(raw);
-    if (!obj || obj.key !== key) return false;
-    return Date.now() - obj.ts < windowMs;
   } catch {
-    return false;
+    bdOk = true;
+    setMsg(msg, "Could not verify BD No (will check on submit)", true, "warn");
   }
 }
 
-function markSubmitted(key) {
-  try {
-    sessionStorage.setItem(
-      "addRecord_lastSubmit",
-      JSON.stringify({ key, ts: Date.now() })
-    );
-  } catch {}
-}
-
-// ================== ADD RECORD ==================
+/* ================== FORM SUBMIT ================== */
 async function onAddRecord(e) {
   e.preventDefault();
   if (isSubmitting) return;
 
   subSubmitAttempted = true;
 
-  const file_name = document.getElementById("file_name")?.value.trim() || "";
-  const bd_no = document.getElementById("bd_no")?.value.trim() || "";
-  const section_id = document.getElementById("section_id")?.value || "";
-  const subcategory_id = document.getElementById("subcategory_id")?.value || "";
-  const rack_id = document.getElementById("rack_id")?.value || "";
-  const serial_no = document.getElementById("serial_no")?.value.trim() || "";
-  const description = document.getElementById("description")?.value.trim() || "";
-  const record_status = (
-    document.getElementById("record_status")?.value || "ongoing"
-  ).toLowerCase();
-  const opening_date = document.getElementById("opening_date")?.value || "";
-  let closing_date = document.getElementById("closing_date")?.value || null;
-  if (record_status !== "closed") closing_date = null;
+  // Run all validations
+  const isValid =
+    validateFileName() &&
+    validateBdFormat() &&
+    validateDescription() &&
+    validateAllocateTable() &&
+    document.getElementById("section_id").value &&
+    document.getElementById("subcategory_id").value &&
+    document.getElementById("rack_id").value &&
+    document.getElementById("opening_date").value &&
+    bdOk;
 
-  // ✅ Allocate Table value (only if visible)
-  const allocate_table_group = document.getElementById("allocate_table_group");
-  const allocate_table =
-    allocate_table_group && allocate_table_group.style.display !== "none"
-      ? (document.getElementById("allocate_table")?.value.trim() || "")
-      : "";
-
-  const added_by = localStorage.getItem("username") || "Unknown User";
-
-  if (!file_name || !section_id || !rack_id) {
-    showToast("⚠️ Please fill in all required fields!", "warn");
-    return;
-  }
-
-  // ✅ Opening date required
-  if (!opening_date) {
-    showToast("⚠️ Opening Date দিন।", "warn");
-    return;
-  }
-  if (!checkOpeningDateLive(true)) {
-    showToast("⚠️ Opening Date সঠিক নয়।", "warn");
-    return;
-  }
-
-  // ✅ Closing date required only when Closed
-  if (record_status === "closed") {
-    if (!closing_date) {
-      showToast("⚠️ Closed হলে Closing Date দিতে হবে।", "warn");
-      return;
-    }
-    if (!checkClosingDateLive(true)) {
-      showToast("⚠️ Closing Date সঠিক নয়।", "warn");
-      return;
-    }
-    if (closing_date < opening_date) {
-      showToast("⚠️ Closing Date, Opening Date এর আগে হতে পারবে না।", "warn");
-      return;
-    }
-  }
-
-  // ✅ Allocate Table required only when shown (OP-1/OP-2)
-  if (allocate_table_group && allocate_table_group.style.display !== "none") {
-    if (!allocate_table) {
-      showToast("⚠️ Officers Pay (OP-1/OP-2) হলে Allocate Table দিতে হবে।", "warn");
-      return;
-    }
-  }
-
-  // ✅ required msg show only now
-  const subOk = checkSubcategoryRequiredLive(true);
-
-  if (!bd_no || !subcategory_id || !subOk) {
-    showToast("⚠️ BD No এবং Subcategory অবশ্যই দিতে হবে!", "warn");
-    return;
-  }
-
-  if (record_status === "closed" && !checkClosingDateLive(true)) {
-    showToast("⚠️ Closing Date ঠিক করুন।", "error");
-    return;
-  }
-
-  if (!serial_no) {
-    showToast("⚠️ Please select a Rack to generate Serial No.", "warn");
-    return;
-  }
-
-  await checkBdNoLive();
-  if (!bdOk) {
-    showToast("❌ এই BD No এই Subcategory-তে আগে থেকেই আছে। অন্য BD No দিন।", "error");
+  if (!isValid) {
+    showToast("Please fix the errors in the form", "error");
     return;
   }
 
   const payload = {
-    file_name,
-    bd_no,
-    section_id,
-    subcategory_id,
-    rack_id,
-    serial_no,
-    description,
-    opening_date,
-    record_status,
-    closing_date,
-    added_by,
-    allocate_table, // ✅ new
+    file_name: document.getElementById("file_name").value.trim().toUpperCase(),
+    bd_no: document.getElementById("bd_no").value.trim(),
+    section_id: document.getElementById("section_id").value,
+    subcategory_id: document.getElementById("subcategory_id").value,
+    rack_id: document.getElementById("rack_id").value,
+    serial_no: document.getElementById("serial_no").value.trim(),
+    record_status: document.getElementById("record_status").value,
+    opening_date: document.getElementById("opening_date").value,
+    closing_date: document.getElementById("closing_date").value || null,
+    allocate_table: document.getElementById("allocate_table")?.value.trim() || null,
+    description: document.getElementById("description").value.trim() || null,
   };
 
-  const key = getDedupeKey(payload);
-  if (recentlySubmitted(key, 10000)) {
-    showToast("⚠️ একই ডাটা একটু আগেই submit হয়েছে। আবার submit করবেন না।", "warn");
-    return;
-  }
-
-  const form = document.getElementById("recordForm");
-  const submitBtn =
-    form?.querySelector('button[type="submit"]') ||
-    document.querySelector('button[type="submit"]');
-
   isSubmitting = true;
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.dataset._oldText = submitBtn.textContent;
-    submitBtn.textContent = "Saving...";
-  }
+  const btn = e.target.querySelector(".btn-primary");
+  const oldText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="material-symbols-rounded">hourglass_top</span> Saving...`;
 
   try {
-    markSubmitted(key);
-
-    const res = await fetch(`${API_BASE}/records/add`, {
+    const res = await authFetch(`${API_BASE}/records/add`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
-
-    const ct = res.headers.get("content-type") || "";
-    let data = {};
-    if (ct.includes("application/json")) data = await res.json();
-    else data = { error: `Non-JSON response (status ${res.status})` };
+    const data = await res.json();
 
     if (!res.ok) throw new Error(data.error || "Failed to add record");
 
-    // ✅ after add: fetch print details and open modal preview
     const newId = data?.record?.id;
-
     if (newId) {
-      try {
-        const r2 = await fetch(`${API_BASE}/records/print/${newId}`);
-        const ct2 = r2.headers.get("content-type") || "";
-        const d2 = ct2.includes("application/json") ? await r2.json() : null;
-
-        if (r2.ok && d2?.record) {
-          renderPrintTemplate(d2.record);
-
-          // ✅ Toast first, then open modal (so user sees message)
-          showToast("✅ Record Added! Note: Print preview opened.", "success", 1600);
-          setTimeout(() => openPrintModal(), 250);
-        } else {
-          showToast("✅ Record Added! (Print details not available)", "success");
-        }
-      } catch (e2) {
-        console.error("print fetch error:", e2);
-        showToast("✅ Record Added! (Print details fetch failed)", "success");
+      const printRes = await authFetch(`${API_BASE}/records/print/${newId}`);
+      const printData = await printRes.json();
+      if (printRes.ok && printData?.record) {
+        renderPrintTemplate(printData.record);
+        // store record & ask user before opening preview
+        lastPreviewRecord = printData.record;
+        previewReady = true;
+        showToast("Record added successfully!", "success");
+        openPreviewConfirmModal();
+} else {
+        showToast("Record added successfully!", "success");
       }
     } else {
-      showToast("✅ Record Added Successfully!", "success");
+      showToast("Record added successfully!", "success");
     }
 
-    // reset form
+    // reset formm
     e.target.reset();
-    const s = document.getElementById("serial_no");
-    if (s) s.value = "";
-
-    // ✅ reset allocate table
+    document.getElementById("serial_no").value = "";
     syncAllocateTable("");
+    toggleClosingDate();
 
-    // reset messages (DON'T keep subcategory required line always)
-    setMsg(ensureBdMsg(), "", true);
-    setMsg(ensureSubMsg(), "", true);
-    setMsg(ensureOpeningMsg(), "", true);
-    setMsg(ensureClosingMsg(), "", true);
+    // Clear messagesgg
+    ["file_msg", "bd_format_msg", "bd_unique_msg", "desc_msg", "alloc_msg"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = "";
+    });
 
-    bdOk = true;
-    subTouched = false;
-    subSubmitAttempted = false;
-
-    // reset closing visibility (because record_status reset)
-    const rs = document.getElementById("record_status");
-    if (rs) {
-      const closingWrap =
-        document.getElementById("closing_date")?.closest(".form-group") ||
-        document.getElementById("closing_date")?.parentElement;
-      const v = (rs.value || "ongoing").toLowerCase();
-      if (closingWrap) closingWrap.style.display = v === "closed" ? "" : "none";
-    }
   } catch (err) {
-    console.error("addRecord error:", err);
-    showToast("❌ " + err.message, "error");
-
-    try {
-      sessionStorage.removeItem("addRecord_lastSubmit");
-    } catch {}
+    showToast("Error: " + err.message, "error");
   } finally {
     isSubmitting = false;
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = submitBtn.dataset._oldText || "Add Record";
-      delete submitBtn.dataset._oldText;
-    }
+    btn.disabled = false;
+    btn.innerHTML = oldText;
   }
 }
 
-// ================== PRINT MODAL HELPERS ==================
-function openPrintModal() {
-  const m = document.getElementById("printModal");
-  if (!m) return;
-  m.classList.remove("hidden");
-  m.setAttribute("aria-hidden", "false");
+
+/* ================== PRINT PREVIEW CONFIRM (SUCCESS MODAL) ================== */
+let previewConfirmWired = false;
+
+function openPreviewConfirmModal() {
+  const m = document.getElementById("successModal");
+  if (m) m.classList.remove("hidden");
 }
 
-function closePrintModal() {
-  const m = document.getElementById("printModal");
-  if (!m) return;
-  m.classList.add("hidden");
-  m.setAttribute("aria-hidden", "true");
+function closePreviewConfirmModal() {
+  const m = document.getElementById("successModal");
+  if (m) m.classList.add("hidden");
 }
 
-/**
- * ✅ iframe print (no duplicate/blank page)
- * Keeps your preview modal on screen, but print happens in iframe.
- */
+function wirePreviewConfirmOnce() {
+  if (previewConfirmWired) return;
+  previewConfirmWired = true;
+
+  const yesBtn = document.getElementById("btnPrintFromSuccess");
+  const noBtn = document.getElementById("btnCloseSuccess");
+
+  // Yes → open print preview (only if previewReady)
+  yesBtn?.addEventListener("click", () => {
+    if (!previewReady || !lastPreviewRecord) {
+      showToast("Preview not available for this record.", "warn");
+      closePreviewConfirmModal();
+      previewReady = false;
+      lastPreviewRecord = null;
+      return;
+    }
+    closePreviewConfirmModal();
+    document.getElementById("printModal")?.classList.remove("hidden");
+  });
+
+  // No → just close
+  noBtn?.addEventListener("click", () => {
+    closePreviewConfirmModal();
+    previewReady = false;
+    lastPreviewRecord = null;
+  });
+
+  // optional: click outside card to close
+  document.getElementById("successModal")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "successModal") {
+      closePreviewConfirmModal();
+      previewReady = false;
+      lastPreviewRecord = null;
+    }
+  });
+}
+
+
+/* ================== PRINT MODAL & TEMPLATE ================== */
+function wirePrintButtonsOnce() {
+  document.getElementById("btnClosePrint")?.addEventListener("click", () => {
+    document.getElementById("printModal").classList.add("hidden");
+  });
+
+  document.getElementById("btnPrintRecord")?.addEventListener("click", () => {
+    const area = document.getElementById("printArea");
+    if (area) iframePrint(area.innerHTML);
+  });
+}
+
 function iframePrint(html) {
   const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.display = "none";
   document.body.appendChild(iframe);
-
   const doc = iframe.contentWindow.document;
   doc.open();
   doc.write(`
-    <!doctype html>
     <html>
       <head>
-        <meta charset="utf-8" />
-        <title>Record Print</title>
-<style>
-  @page { size: A4; margin: 12mm; }
-  body{ font-family: Arial, sans-serif; color:#000; margin:0; }
-  .a4{ width:100%; }
-
-  .title{
-    text-align:center;
-    font-weight:900;
-    font-size:30px;
-    margin:0;
-    letter-spacing:.5px;
-  }
-  .subtitle{
-    text-align:center;
-    font-size:13px;
-    opacity:.85;
-    margin-top:4px;
-  }
-
-  .grid{
-    margin-top:20px;
-    display:grid;
-    grid-template-columns: 1fr 1fr 240px;
-    column-gap: 34px;
-    row-gap: 22px;
-    align-items:start;
-  }
-
-  .secBlock{
-    grid-column: 1 / 3;
-    display:grid;
-    grid-template-columns: 160px 1fr;
-    row-gap: 12px;
-    column-gap: 20px;
-    padding-top: 6px;
-  }
-  .secLabel{ font-weight:900; font-size:22px; }
-  .secVal{ font-weight:900; font-size:22px; letter-spacing:.4px; }
-
-  .qrBox{
-    grid-column: 3 / 4;
-    border:2px solid #000;
-    border-radius:14px;
-    padding:14px;
-    text-align:center;
-  }
-  .qrTitle{ font-size:16px; font-weight:900; margin-bottom:10px; }
-  .qrBox img{ width:190px; height:190px; display:block; margin:0 auto; }
-  .qrFallback{
-    width:190px; height:190px; border:2px dashed #000;
-    display:flex; align-items:center; justify-content:center;
-    font-size:18px; font-weight:900; margin:0 auto;
-  }
-
-  .card{
-    border:2px solid #000;
-    border-radius:12px;
-    padding:12px 14px;
-    width: 220px;
-  }
-  .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
-  .cardValue{ font-size:44px; font-weight:900; line-height:1; }
-  .rackCard{ grid-column: 1 / 2; margin-top: -160px; }
-  .serialCard{ grid-column: 2 / 3; margin-top: -160px; }
-
-  .info{
-    margin-top: 34px;
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 60px;
-    row-gap: 12px;
-  }
-
-  .infoRow{
-    display:grid;
-    grid-template-columns: 140px 1fr;
-    column-gap: 14px;
-    align-items:baseline;
-    margin-bottom: 10px;
-  }
-  .k{ font-weight:900; font-size:14px; }
-  .v{ font-weight:800; font-size:14px; text-align:center; word-break: break-word; }
-  .infoRight .v{ text-align:center; }
-  .dash{ font-weight:900; }
-</style>
+        <style>
+          @page { size: A4; margin: 12mm; }
+          body { font-family: Arial, sans-serif; color: #000; }
+        </style>
       </head>
-      <body>
-        ${html}
-      </body>
+      <body>${html}</body>
     </html>
   `);
   doc.close();
-
   setTimeout(() => {
     iframe.contentWindow.focus();
     iframe.contentWindow.print();
     setTimeout(() => iframe.remove(), 700);
-  }, 250);
-}
-
-function startPrintFromModal() {
-  const area = document.getElementById("printArea");
-  if (!area) return showToast("❌ Print area not found!", "error");
-  iframePrint(area.innerHTML);
-}
-
-function wirePrintButtonsOnce() {
-  const btnClose = document.getElementById("btnClosePrint");
-  const btnPrint = document.getElementById("btnPrintRecord");
-  const modal = document.getElementById("printModal");
-
-  if (btnClose && !btnClose.dataset.bound) {
-    btnClose.dataset.bound = "1";
-    btnClose.addEventListener("click", closePrintModal);
-  }
-
-  if (btnPrint && !btnPrint.dataset.bound) {
-    btnPrint.dataset.bound = "1";
-    btnPrint.addEventListener("click", startPrintFromModal);
-  }
-
-  if (modal && !modal.dataset.bound) {
-    modal.dataset.bound = "1";
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closePrintModal();
-    });
-  }
-
-  if (!document.body.dataset.printEscBound) {
-    document.body.dataset.printEscBound = "1";
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closePrintModal();
-    });
-  }
-}
-
-function safeText(v) {
-  return v == null ? "" : String(v);
+  }, 300);
 }
 
 function renderPrintTemplate(record) {
@@ -922,7 +589,6 @@ function renderPrintTemplate(record) {
   const closingDate = safeText(record.closing_date || "");
   const allocateTable = safeText(record.allocate_table || "");
 
-  // QR includes everything
   const qrText = `
 SFC Air FRMS
 File Name: ${fileName}
@@ -941,9 +607,7 @@ Created At: ${safeText(record.createdAt ? new Date(record.createdAt).toLocaleStr
 Description: ${safeText(record.description || "")}
 `.trim();
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    qrText
-  )}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`;
 
   el.innerHTML = `
     <style>
@@ -1016,7 +680,7 @@ Description: ${safeText(record.description || "")}
         margin-bottom: 10px;
       }
       .k{ font-weight:900; font-size:14px; }
-      .v{ font-weight:800; font-size:14px; text-align:center; word-break:break-word; }
+      .v{ font-weight:800; font-size:14px; text-align:center; word-break: break-word; }
       .infoRight .v{ text-align:center; }
       .dash{ font-weight:900; }
     </style>
@@ -1056,11 +720,7 @@ Description: ${safeText(record.description || "")}
         <div class="infoLeft">
           <div class="infoRow"><div class="k">File Name</div><div class="v">${fileName || "-"}</div></div>
           <div class="infoRow"><div class="k">BD No</div><div class="v">${bdNo || "-"}</div></div>
-          ${
-            allocateTable
-              ? `<div class="infoRow"><div class="k">Allocate Table</div><div class="v">${allocateTable}</div></div>`
-              : ""
-          }
+          ${allocateTable ? `<div class="infoRow"><div class="k">Allocate Table</div><div class="v">${allocateTable}</div></div>` : ""}
           <div class="infoRow"><div class="k">Opening Date</div><div class="v">${openingDate || "-"}</div></div>
         </div>
 
@@ -1072,10 +732,4 @@ Description: ${safeText(record.description || "")}
       </div>
     </div>
   `;
-}
-
-// ================== LOGOUT ==================
-function logout() {
-  localStorage.clear();
-  window.location.href = "login.html";
 }

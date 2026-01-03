@@ -1,0 +1,33 @@
+.action-icons{
+  display:flex;
+  gap:10px;
+  width: relative;
+  justify-content:center;
+  align-items:center;
+}
+
+.action-icons .action-icon{
+  cursor:pointer;
+  font-size:1.1rem;
+  transition: color .2s ease, transform .12s ease, opacity .2s ease;
+  line-height:1;
+}
+
+.action-icons .action-icon:hover{
+  transform: translateY(-1px);
+}
+
+.action-icons .action-icon--edit{ color:#2563eb; }
+.action-icons .action-icon--move{ color:#059669; }
+.action-icons .action-icon--delete{ color:#dc2626; }
+
+.action-icons .action-icon--edit:hover{ color:#1e40af; }
+.action-icons .action-icon--move:hover{ color:#047857; }
+.action-icons .action-icon--delete:hover{ color:#b91c1c; }
+
+/* you already use .disabled class */
+.action-icons .action-icon.disabled{
+  opacity:.4;
+  cursor:not-allowed;
+  pointer-events:auto; /* click ধরবে, তারপর toast দেখাবে */
+}

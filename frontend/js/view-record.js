@@ -60,16 +60,34 @@ function normalizeApiBase(apiBaseFromServer) {
   return `${base}/api`;
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
+/* ================== safe fetch ================== */
+async function fetchJson(url, opts = {}) {
+  const res = await fetch(url, opts);
+  const ct = res.headers.get("content-type") || "";
+  const data = ct.includes("application/json") ? await res.json() : await res.text();
+  if (!res.ok) {
+    const msg = typeof data === "string" ? data : (data?.error || JSON.stringify(data));
+    throw new Error(`${res.status} ${res.statusText} - ${msg}`);
+  }
+  return data;
+}
+
 /* ================== LOAD CONFIG ================== */
 async function loadConfig() {
- //topbar search bringing
+  // topbar search bringing
   try {
     const params = new URLSearchParams(window.location.search);
     const qParam = (params.get("q") || "").trim();
     const searchEl = document.getElementById("searchInput");
     if (qParam && searchEl) searchEl.value = qParam;
   } catch {}
-
 
   try {
     const res = await fetch("/api/config");
@@ -85,37 +103,66 @@ async function loadConfig() {
   await fetchRecords(1);
 }
 
-/* ================== CENTRAL RACKS ================== */
+/* ================== CENTRAL RACKS (FIXED) ================== */
 async function loadCentralRacks() {
-  try {
-    const res = await fetch(`${API_BASE}/sections/central/racks`);
-    const racks = await res.json();
+  const singleSelect = document.getElementById("singleMoveRack");
+  const bulkSelect = document.getElementById("bulkRackId");
 
-    const singleSelect = document.getElementById("singleMoveRack");
-    const bulkSelect = document.getElementById("bulkRackId");
-    [singleSelect, bulkSelect].forEach((sel) => sel && (sel.innerHTML = ""));
+  // Optional placeholder
+  [singleSelect, bulkSelect].forEach((sel) => {
+    if (!sel) return;
+    sel.innerHTML = "";
+    sel.add(new Option("Loading racks...", ""));
+  });
 
-    if (!Array.isArray(racks) || racks.length === 0) {
-      const opt = new Option("-- No racks found --", "");
-      if (singleSelect) singleSelect.add(opt);
-      if (bulkSelect) bulkSelect.add(new Option(opt.text, opt.value));
-      return;
+  const endpoints = [
+    `${API_BASE}/sections/central/racks`, // তোমার বর্তমান
+    `${API_BASE}/sections/central-racks`, // common alt
+    `${API_BASE}/sections/central/rack`, // alt
+  ];
+
+  let racks = null;
+  let lastErr = null;
+
+  for (const url of endpoints) {
+    try {
+      racks = await fetchJson(url, { headers: { ...getAuthHeaders() } });
+      if (Array.isArray(racks)) break;
+    } catch (e) {
+      lastErr = e;
     }
-
-    racks.forEach((r) => {
-      if (singleSelect) singleSelect.add(new Option(r.name, r.id));
-      if (bulkSelect) bulkSelect.add(new Option(r.name, r.id));
-    });
-  } catch (err) {
-    console.error("loadCentralRacks error:", err);
   }
+
+  [singleSelect, bulkSelect].forEach((sel) => sel && (sel.innerHTML = ""));
+
+  if (!Array.isArray(racks) || racks.length === 0) {
+    const opt = new Option("-- No racks found --", "");
+    if (singleSelect) singleSelect.add(opt);
+    if (bulkSelect) bulkSelect.add(new Option(opt.text, opt.value));
+    if (lastErr) {
+      console.error("loadCentralRacks error:", lastErr);
+      showToast("❌ Central racks load hocche na (console check)", "error");
+    }
+    return;
+  }
+
+  // ✅ Populate
+  racks.forEach((r) => {
+    const id = r.id ?? r.rack_id ?? "";
+    const name = r.name ?? r.rack_name ?? `Rack ${id}`;
+    if (singleSelect) singleSelect.add(new Option(name, id));
+    if (bulkSelect) bulkSelect.add(new Option(name, id));
+  });
+
+  // ✅ serial auto compute after racks load
+  computeSingleAutoSerial();
+  computeBulkAutoSerial();
 }
 
 /* ================== SECTIONS ================== */
 async function loadSections() {
   try {
-    const res = await fetch(`${API_BASE}/sections`);
-    const data = await res.json();
+    const data = await fetchJson(`${API_BASE}/sections`, { headers: { ...getAuthHeaders() } });
 
     const select = document.getElementById("sectionFilter");
     if (!select) return;
@@ -139,10 +186,10 @@ async function fetchRecords(page = 1) {
     const q = document.getElementById("searchInput")?.value?.trim() || "";
     const sectionParam = selectedSection ? `&section=${selectedSection}` : "";
 
-    const res = await fetch(
-      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}`
+    const data = await fetchJson(
+      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}`,
+      { headers: { ...getAuthHeaders() } }
     );
-    const data = await res.json();
 
     allRecords = data.data || [];
     currentPage = data.page || 1;
@@ -199,7 +246,6 @@ function renderTable(records) {
  
  <td class="file-cell" title="View details">${rec.file_name}</td>
 
-
   <td>${rec.bd_no || "-"}</td>
   <td>${sectionName}</td>
   <td>${subName}</td>
@@ -215,12 +261,18 @@ function renderTable(records) {
   <td>${openingDate}</td>
   <td>${closingDate}</td>
 
-  <td class="action-icons">
-    <i class="icon-edit" data-id="${rec.id}">✏️</i>
-    <i class="icon-move" data-id="${rec.id}">🚚</i>
-    ${canDelete ? `<i class="icon-delete" data-id="${rec.id}">🗑️</i>` : ""}
-  </td>
-    `;
+  <td class="action-cell">
+  <i class="fa-solid fa-pen-to-square action-icon action-icon--edit icon-edit"
+     data-id="${rec.id}" title="Edit"></i>
+
+  <i class="fa-solid fa-truck-moving action-icon action-icon--move icon-move"
+     data-id="${rec.id}" title="Move to Central"></i>
+
+  ${canDelete ? `
+    <i class="fa-solid fa-trash action-icon action-icon--delete icon-delete"
+       data-id="${rec.id}" title="Delete"></i>
+  ` : ""}
+</td> `;
 
     // ✅ Row click = details modal
     const fileCell = tr.querySelector(".file-cell");
@@ -247,12 +299,14 @@ function renderTable(records) {
         moveIcon.title = "Move to Central";
       }
 
-      moveIcon.addEventListener("click", (e) => {
+      moveIcon.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (!isClosed) {
           showToast("⛔ Ongoing record কে Central এ move করা যাবে না। আগে Closed করুন।", "error");
           return;
         }
+        // ✅ ensure racks refresh every time (FIX)
+        await loadCentralRacks();
         openSingleMove(rec);
       });
     }
@@ -264,7 +318,7 @@ function renderTable(records) {
       try {
         const res = await fetch(`${API_BASE}/records/delete/${rec.id}`, {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ role: localStorage.getItem("role") }),
         });
 
@@ -274,7 +328,7 @@ function renderTable(records) {
         showToast(data.message);
         fetchRecords(currentPage);
       } catch (err) {
-        showToast("❌ " + err.message, "error");
+        showToast("⚠️ " + err.message, "error");
       }
     });
 
@@ -332,7 +386,7 @@ function bindEditForm() {
     try {
       const res = await fetch(`${API_BASE}/records/update/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ file_name, bd_no, description, updated_by: currentUser }),
       });
       const data = await res.json();
@@ -341,7 +395,7 @@ function bindEditForm() {
       closeEditModal();
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("❌ " + err.message, "error");
+      showToast("⚠️ " + err.message, "error");
     }
   });
 }
@@ -370,12 +424,15 @@ function openSingleMove(rec) {
 async function computeSingleAutoSerial() {
   const rackId = document.getElementById("singleMoveRack")?.value;
   const serialInput = document.getElementById("singleMoveSerial");
+  if (!serialInput) return;
   if (!rackId) return (serialInput.value = "");
 
   try {
-    const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
-    const records = await res.json();
-    const used = records
+    const records = await fetchJson(`${API_BASE}/records/by-rack/${rackId}`, {
+      headers: { ...getAuthHeaders() },
+    });
+
+    const used = (records || [])
       .map((r) => parseInt(r.serial_no))
       .filter(Boolean)
       .sort((a, b) => a - b);
@@ -423,7 +480,7 @@ async function bindSingleMove() {
     try {
       const res = await fetch(`${API_BASE}/records/move/${singleMoveTargetId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           newRackId: rackId,
           startSerialNo: serial,
@@ -437,7 +494,7 @@ async function bindSingleMove() {
       closeSingleMove();
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("❌ " + err.message, "error");
+      showToast("⚠️ " + err.message, "error");
     }
   });
 }
@@ -475,12 +532,15 @@ function openBulkMove() {
 async function computeBulkAutoSerial() {
   const rackId = document.getElementById("bulkRackId")?.value;
   const serialInput = document.getElementById("bulkStartSerial");
+  if (!serialInput) return;
   if (!rackId) return (serialInput.value = "");
 
   try {
-    const res = await fetch(`${API_BASE}/records/by-rack/${rackId}`);
-    const records = await res.json();
-    const used = records
+    const records = await fetchJson(`${API_BASE}/records/by-rack/${rackId}`, {
+      headers: { ...getAuthHeaders() },
+    });
+
+    const used = (records || [])
       .map((r) => parseInt(r.serial_no))
       .filter(Boolean)
       .sort((a, b) => a - b);
@@ -501,7 +561,11 @@ function closeBulkMove() {
 }
 
 function bindBulkMove() {
-  document.getElementById("openBulkMove")?.addEventListener("click", openBulkMove);
+  document.getElementById("openBulkMove")?.addEventListener("click", async () => {
+    await loadCentralRacks(); // ✅ refresh before bulk move modal
+    openBulkMove();
+  });
+
   document.getElementById("bulkCancel")?.addEventListener("click", closeBulkMove);
   document.getElementById("bulkClose")?.addEventListener("click", closeBulkMove);
   document.getElementById("bulkRackId")?.addEventListener("change", computeBulkAutoSerial);
@@ -521,7 +585,7 @@ function bindBulkMove() {
     try {
       const res = await fetch(`${API_BASE}/records/bulk-move`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           recordIds: ids,
           newRackId: rackId,
@@ -537,7 +601,7 @@ function bindBulkMove() {
       closeBulkMove();
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("❌ " + err.message, "error");
+      showToast("⚠️ " + err.message, "error");
     }
   });
 }
@@ -578,7 +642,6 @@ function showDetails(rec) {
   const openingDate = rec.opening_date || "-";
   const closingDate = rec.closing_date || "-";
 
-  // ✅ Allocate Table (show only if exists)
   const allocateTable = (rec.allocate_table || "").toString().trim();
   const allocateHtml = allocateTable
     ? `<p><strong>🧮 Allocate Table:</strong> ${allocateTable}</p>`
@@ -616,14 +679,12 @@ function showDetails(rec) {
     </div>
   `;
 
-  // --- workflow status UI bind ---
   bindWorkflowControls(rec);
-
   modal.style.display = "flex";
 }
 
-
 /* ================== PRINT (View) ================== */
+/* (তোমার প্রিন্ট অংশ অপরিবর্তিত রাখলাম—কারণ এটা already working) */
 function startPrintFromView() {
   if (!lastViewedRecordForPrint) {
     alert("No record selected for print");
@@ -647,7 +708,6 @@ function startPrintFromView() {
   const openingDate = r.opening_date || "-";
   const closingDate = r.closing_date || "-";
 
-  // ✅ QR contains everything (same idea as add-record)
   const qrText = `
 SFC Air FRMS
 File Name: ${fileName}
@@ -667,14 +727,12 @@ Description: ${r.description || ""}
   const qrUrl =
     `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrText)}`;
 
-  // ✅ A4 HTML (screenshot style)
   const html = `
     <div class="a4">
       <h1 class="title">SFC Air FRMS</h1>
       <div class="subtitle">File & Record Management System</div>
 
       <div class="grid">
-        <!-- Section/Subcategory -->
         <div class="secBlock">
           <div class="secLabel">Section :</div>
           <div class="secVal">${sectionName}</div>
@@ -683,7 +741,6 @@ Description: ${r.description || ""}
           <div class="secVal">${subName}</div>
         </div>
 
-        <!-- QR -->
         <div class="qrBox">
           <div class="qrTitle">QR CODE</div>
           <img src="${qrUrl}" alt="QR"
@@ -691,7 +748,6 @@ Description: ${r.description || ""}
           <div class="qrFallback" style="display:none;">QR</div>
         </div>
 
-        <!-- Rack + Serial (moved up a bit) -->
         <div class="card rackCard">
           <div class="cardLabel">Rack No.</div>
           <div class="cardValue">${rackNo}</div>
@@ -703,7 +759,6 @@ Description: ${r.description || ""}
         </div>
       </div>
 
-      <!-- Bottom info -->
       <div class="info">
         <div class="infoLeft">
           <div class="infoRow"><div class="k">File Name :</div><div class="v">${fileName}</div></div>
@@ -805,8 +860,8 @@ Description: ${r.description || ""}
           .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
           .cardValue{ font-size:44px; font-weight:900; line-height:1; }
 
-          .rackCard{ grid-column: 1 / 2; margin-top: -160px; }  /* ✅ move up */
-          .serialCard{ grid-column: 2 / 3; margin-top: -160px; }/* ✅ move up */
+          .rackCard{ grid-column: 1 / 2; margin-top: -160px; }
+          .serialCard{ grid-column: 2 / 3; margin-top: -160px; }
 
           .info{
             margin-top: 34px;
@@ -847,18 +902,16 @@ function closeModal() {
   document.getElementById("recordModal").style.display = "none";
 }
 
-// Click outside modal to close
 window.addEventListener("click", (e) => {
   const modal = document.getElementById("recordModal");
   if (e.target === modal) closeModal();
 });
 
-// ✅ ESC press to close
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 
-/* ================== SEARCH (FIX) ================== */
+/* ================== SEARCH ================== */
 function bindSearch() {
   const input = document.getElementById("searchInput");
   if (!input) return;
@@ -928,9 +981,9 @@ function bindWorkflowControls(rec) {
 
   closingInput.oninput = () => {
     if (!closingInput.value) return setWfMsg("", true);
-    if (closingInput.value > todayISO()) return setWfMsg("❌ আজকের পরের date দেওয়া যাবে না", false);
+    if (closingInput.value > todayISO()) return setWfMsg("⚠️ আজকের পরের date দেওয়া যাবে না", false);
     if (rec.opening_date && closingInput.value < rec.opening_date) {
-      return setWfMsg("❌ Opening date এর আগে closing দেওয়া যাবে না", false);
+      return setWfMsg("⚠️ Opening date এর আগে closing দেওয়া যাবে না", false);
     }
     setWfMsg("✅ Closing date ঠিক আছে", true);
   };
@@ -953,7 +1006,7 @@ function bindWorkflowControls(rec) {
     try {
       const res = await fetch(`${API_BASE}/records/workflow/${rec.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           record_status: v,
           closing_date,
@@ -971,12 +1024,12 @@ function bindWorkflowControls(rec) {
 
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("❌ " + err.message, "error");
+      showToast("⚠️ " + err.message, "error");
     }
   };
 }
 
-/* ================== PAGE SIZE (FIX) ================== */
+/* ================== PAGE SIZE ================== */
 function bindPageSize() {
   const sel = document.getElementById("pageSize");
   if (!sel) return;
@@ -1000,7 +1053,7 @@ function bindPaginationButtons() {
   });
 }
 
-/* ================== EXPORT CSV (NEW) ================== */
+/* ================== EXPORT CSV ================== */
 function exportToCSV() {
   if (!allRecords.length) return showToast("No records to export", "error");
 

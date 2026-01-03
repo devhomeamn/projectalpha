@@ -31,6 +31,55 @@ function showToast(msg, type = "success", ms = 3000) {
 }
 
 /* =========================
+   ✅ JWT Auth Fetch Wrapper
+   - Adds Authorization header
+   - Handles 401/403
+========================= */
+function getToken() {
+  return localStorage.getItem("token") || "";
+}
+
+function redirectToLogin() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+function redirectToUserDashboard() {
+  // admin page -> non-admin should go to user dashboard
+  window.location.href = "dashboard-user.html";
+}
+
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+
+  // JSON header unless FormData
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { ...options, headers });
+
+  // Token missing/expired
+  if (res.status === 401) {
+    showToast("Session expired. Please login again.", "error", 3500);
+    setTimeout(redirectToLogin, 900);
+    throw new Error("Unauthorized");
+  }
+
+  // Logged in but not admin
+  if (res.status === 403) {
+    showToast("Access denied. Admin only.", "error", 3500);
+    setTimeout(redirectToUserDashboard, 900);
+    throw new Error("Forbidden");
+  }
+
+  return res;
+}
+
+/* =========================
    Collapse toggles
 ========================= */
 function initListCollapse() {
@@ -79,7 +128,7 @@ function startPrintRacks(sectionName, racks) {
   const safeSection = escapeHtml(sectionName);
   const rackList = Array.isArray(racks) ? racks : [];
 
-  // প্রতি পেজে 5টা করে (তোমার কোডে 5 ছিল)
+  // প্রতি পেজে 5টা করে
   const pages = [];
   for (let i = 0; i < rackList.length; i += 5) {
     pages.push(rackList.slice(i, i + 5));
@@ -228,7 +277,7 @@ function initSectionDelete(root) {
     const ok = confirm("Are you sure you want to delete this section?");
     if (!ok) return;
 
-    const res = await fetch(`${API_BASE}/sections/${secId}`, { method: "DELETE" });
+    const res = await authFetch(`${API_BASE}/sections/${secId}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -273,7 +322,7 @@ function initSubDelete(root) {
     const ok = confirm("Delete this subcategory?");
     if (!ok) return;
 
-    const res = await fetch(`${API_BASE}/sections/sub/${id}`, { method: "DELETE" });
+    const res = await authFetch(`${API_BASE}/sections/sub/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -301,7 +350,7 @@ function initRackDelete(root) {
     const ok = confirm("Delete this rack?");
     if (!ok) return;
 
-    const res = await fetch(`${API_BASE}/sections/rack/${id}`, { method: "DELETE" });
+    const res = await authFetch(`${API_BASE}/sections/rack/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -528,7 +577,7 @@ function initPage() {
 ========================= */
 async function fetchSections() {
   try {
-    const res = await fetch(`${API_BASE}/sections`);
+    const res = await authFetch(`${API_BASE}/sections`);
     const data = await res.json();
 
     const sectionSelect = document.getElementById("sectionSelect");
@@ -574,9 +623,8 @@ async function onAddSection(e) {
   if (!name) return showToast("Section name required!", "error");
 
   try {
-    const res = await fetch(`${API_BASE}/sections/add`, {
+    const res = await authFetch(`${API_BASE}/sections/add`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description }),
     });
 
@@ -602,9 +650,8 @@ async function onAddSubcategory(e) {
   if (!sectionId || !name) return showToast("Select section and enter name!", "error");
 
   try {
-    const res = await fetch(`${API_BASE}/sections/add-sub`, {
+    const res = await authFetch(`${API_BASE}/sections/add-sub`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sectionId, name }),
     });
 
@@ -631,9 +678,8 @@ async function onAddRack(e) {
   if (!sectionId || !name) return showToast("Select section and enter rack name!", "error");
 
   try {
-    const res = await fetch(`${API_BASE}/sections/add-rack`, {
+    const res = await authFetch(`${API_BASE}/sections/add-rack`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sectionId, name, description }),
     });
 
@@ -658,9 +704,8 @@ async function onAddCentralRack(e) {
   if (!name) return showToast("Please enter rack name!", "error");
 
   try {
-    const res = await fetch(`${API_BASE}/sections/add-rack`, {
+    const res = await authFetch(`${API_BASE}/sections/add-rack`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, centralRoom: true }),
     });
 
@@ -681,7 +726,7 @@ async function onAddCentralRack(e) {
 ========================= */
 async function fetchCentralRacks() {
   try {
-    const res = await fetch(`${API_BASE}/sections/central/racks`);
+    const res = await authFetch(`${API_BASE}/sections/central/racks`);
     const racks = await res.json();
 
     const list = document.getElementById("centralRackList");

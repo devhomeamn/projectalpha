@@ -88,6 +88,18 @@ function renderSections(sections) {
   });
 }
 
+
+// Live Date & Time
+function updateDateTime() {
+  const now = new Date();
+  const date = now.toLocaleDateString('bn-BD', { day: '2-digit', month: 'long', year: 'numeric' });
+  const time = now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  document.getElementById("currentDate").textContent = date;
+  document.getElementById("currentTime").textContent = time;
+}
+
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadConfig();
 
@@ -100,4 +112,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   fetchSummary();
+  updateDateTime();
+setInterval(updateDateTime, 60000);
 });

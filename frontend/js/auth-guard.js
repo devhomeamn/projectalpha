@@ -1,59 +1,46 @@
-// ✅ Role-based route protection for all pages
-(function () {
+(async function () {
+  // page flash বন্ধ
+  document.documentElement.style.visibility = "hidden";
+
   const token = localStorage.getItem("token");
-  const roleRaw = localStorage.getItem("role") || "";
-  const role = roleRaw.trim(); // keep original case for matching
-
-  // 🚫 Hide body immediately (prevent flash of content)
-  document.documentElement.style.display = "none";
-
-  // 1️⃣ Check login status
   if (!token) {
     window.location.replace("login.html");
     return;
   }
 
-  // 2️⃣ Define restricted pages
-  const currentPage = window.location.pathname.split("/").pop();
+  // API base load
+  let API_BASE = window.location.origin;
+  try {
+    const c = await fetch("/api/config");
+    const d = await c.json();
+    API_BASE = d.apiBase || window.location.origin;
+  } catch (_) {}
 
-  const restrictedPages = {
-    "add-section.html": ["Admin", "Master"],
-    "approve-user.html": ["Admin"],
-    "all-users.html": ["Admin"],
-  };
-
-  // 3️⃣ Access control check
-  if (restrictedPages[currentPage]) {
-    const allowedRoles = restrictedPages[currentPage];
-
-    if (!allowedRoles.includes(role)) {
-      alert("Access Denied: You do not have permission to view this page.");
-      window.location.replace("dashboard.html");
-      return;
-    }
+  // ✅ JWT verify + role from server (/me)
+  let role = "";
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("unauthorized");
+    const data = await res.json();
+    role = String(data.user?.role || "").toLowerCase();
+  } catch (e) {
+    localStorage.clear();
+    window.location.replace("login.html");
+    return;
   }
 
-  // 4️⃣ Unhide page for authorized users
-  document.documentElement.style.display = "";
+  // ✅ admin-only pages list
+  const page = location.pathname.split("/").pop();
+  const adminOnly = new Set(["approve-user.html", "all-users.html", "add-section.html"]);
 
-  // 5️⃣ Hide restricted menu items dynamically (NO :contains)
-  document.addEventListener("DOMContentLoaded", () => {
-    const lowerRole = role.toLowerCase();
+  if (adminOnly.has(page) && role !== "admin") {
+    // admin না হলে ঢুকতেই দেবে না
+    window.location.replace("dashboard.html");
+    return;
+  }
 
-    // যেসব মেনু admin/master ছাড়া দেখাবে না
-    const restrictedMenus = ["Add Section", "Approve User", "All Users"];
-
-    // সব sidebar li নাও (sidebar load হলে কাজ করবে)
-    const allLis = [...document.querySelectorAll(".sidebar-menu li")];
-
-    allLis.forEach((li) => {
-      const text = (li.innerText || "").trim();
-
-      if (restrictedMenus.includes(text)) {
-        if (!(lowerRole === "admin" || lowerRole === "master")) {
-          li.style.display = "none";
-        }
-      }
-    });
-  });
+  // ok, show page
+  document.documentElement.style.visibility = "visible";
 })();

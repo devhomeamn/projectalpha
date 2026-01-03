@@ -1,12 +1,14 @@
+<!-- add-record.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Add Record</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-   <link rel="icon" href="images/site-icon.ico">
+  <link rel="icon" href="images/site-icon.ico">
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/add-record.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
   <script src="js/auth-guard.js"></script>
 </head>
 
@@ -21,38 +23,48 @@
 
       <section class="content">
 
-        <!-- Header -->
-        <div class="page-head">
-          <a class="back-link" href="dashboard.html">← Back</a>
-          <h2 class="page-title">Add New Record</h2>
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-main">
+                 <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">note_add</span>
+                Add New Record
+              </h1>
+              <p class="header-subtitle">নতুন রেকর্ড এন্ট্রি করুন এবং সিস্টেমে সংরক্ষণ করুন</p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
         </div>
 
-        <!-- Form Card -->
         <form id="recordForm" class="form-card">
-
           <div class="form-grid">
-
-            <!-- File Name -->
             <div class="form-group span-3">
               <label for="file_name">File Name <span class="required">*</span></label>
               <div class="control">
                 <input type="text" id="file_name" placeholder="Enter File Name" required />
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-
             </div>
 
-            <!-- BD No -->
             <div class="form-group">
               <label for="bd_no">BD No. <span class="required">*</span></label>
               <div class="control">
                 <input type="text" id="bd_no" placeholder="Enter BD No." required />
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-              
             </div>
 
-            <!-- Section -->
             <div class="form-group">
               <label for="section_id">Select Section <span class="required">*</span></label>
               <div class="control">
@@ -61,10 +73,8 @@
                 </select>
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-            
             </div>
 
-            <!-- Sub Category -->
             <div class="form-group">
               <label for="subcategory_id">Select Subcategory <span class="required">*</span></label>
               <div class="control">
@@ -73,10 +83,8 @@
                 </select>
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-              
             </div>
 
-            <!-- Rack -->
             <div class="form-group">
               <label for="rack_id">Select Rack <span class="required">*</span></label>
               <div class="control">
@@ -85,19 +93,17 @@
                 </select>
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-           
             </div>
 
-            <!-- Serial No -->
-            <div class="form-group span">
+            <div class="form-group">
               <label for="serial_no">Serial No.</label>
               <div class="control">
                 <input type="text" id="serial_no" readonly placeholder="Auto-generated" />
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-              <p class="helper">Read only</p>
+              <p class="helper">Auto-generated after submission</p>
             </div>
-            <!-- Current Status -->
+
             <div class="form-group span-2">
               <label for="record_status">Current Status <span class="required">*</span></label>
               <div class="control">
@@ -107,11 +113,9 @@
                 </select>
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-              <p class="helper">Workflow status</p>
             </div>
 
-            <!-- Opening Date -->
-            <div class="form-group span-2" id="opening_group">
+            <div class="form-group" id="opening_group">
               <label for="opening_date">Opening Date <span class="required">*</span></label>
               <div class="control">
                 <input type="date" id="opening_date" required />
@@ -119,70 +123,74 @@
               </div>
             </div>
 
-            <!-- Closing Date -->
-          
-          <div class="form-group span-2" id="closing_group">
-            <label for="closing_date">Closing Date <span class="required" id="closing_required_star" style="display:none;">*</span></label>
-            <div class="control">
-              <input type="date" id="closing_date" />
-              <span class="state-icon" aria-hidden="true"></span>
-            </div>
-          </div>
-          <!-- Allocate Table (Only for OP-1 / OP-2) -->
-<div class="form-group span-3" id="allocate_table_group" style="display:none;">
-  <label for="allocate_table">Allocate Table <span class="required" id="allocate_table_star" style="display:none;">*</span></label>
-  <div class="control">
-    <input type="text" id="allocate_table" placeholder="Enter Allocate Table" />
-    <span class="state-icon" aria-hidden="true"></span>
-  </div>
-</div>
-
-
-
-            <!-- Description -->
-            <div class="form-group span-3">
-              <label for="description">Description</label>
+            <div class="form-group" id="closing_group">
+              <label for="closing_date">Closing Date <span class="required" id="closing_required_star" style="display:none;">*</span></label>
               <div class="control">
-                <textarea id="description" placeholder="Add Description (optional)"></textarea>
+                <input type="date" id="closing_date" />
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
-           
             </div>
 
-          
-          
-          <button type="submit" class="btn-primary">Add Record</button>
-      
-        </form>
+            <div class="form-group span-3" id="allocate_table_group" style="display:none;">
+              <label for="allocate_table">Allocate Table <span class="required" id="allocate_table_star" style="display:none;">*</span></label>
+              <div class="control">
+                <input type="text" id="allocate_table" placeholder="Enter Allocate Table" />
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+            </div>
 
+            <div class="form-group span-3">
+              <label for="description">Description (Optional)</label>
+              <div class="control">
+                <textarea id="description" placeholder="Add any additional notes or description..."></textarea>
+                <span class="state-icon" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">
+            <span class="material-symbols-rounded">save</span>
+            Add Record
+          </button>
+        </form>
       </section>
 
-
-    
-
-<!-- ✅ Print Modal (Add Record) -->
-<div id="printModal" class="print-modal hidden" aria-hidden="true">
-  <div class="print-card" role="dialog" aria-modal="true">
-    <div class="print-head">
-      <div>
-        <h3 class="print-title">Record Details</h3>
-        <p class="print-sub">Print this record information</p>
+      <div id="successModal" class="modal-overlay hidden">
+        <div class="success-card">
+          <div class="success-icon">
+            <span class="material-symbols-rounded">check_circle</span>
+          </div>
+          <h3>Record Added!</h3>
+          <p>Recorded added. Want to see print preview?</p>
+          
+          <div class="success-actions">
+            <button type="button" id="btnPrintFromSuccess" class="btn-primary">
+              <span class="material-symbols-rounded">visibility</span> Yes, Show Preview
+            </button>
+            <button type="button" id="btnCloseSuccess" class="btn-outline">
+              Close
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div class="print-actions">
-        <button type="button" id="btnPrintRecord" class="btn-soft">Print</button>
-        <button type="button" id="btnClosePrint" class="btn-soft">Close</button>
+      <div id="printModal" class="modal-overlay hidden">
+        <div class="print-card">
+          <div class="print-head">
+            <div>
+              <h3 class="print-title">Record Details</h3>
+              <p class="print-sub">Ready for printing</p>
+            </div>
+            <button type="button" id="btnClosePrint" class="btn-soft">Close</button>
+          </div>
+          <div id="printArea" class="print-area"></div>
+          <div class="print-footer">
+            <button type="button" id="btnPrintRecord" class="btn-primary">
+              <span class="material-symbols-rounded">print</span> Print Now
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div id="printArea" class="print-area"></div>
-  </div>
-</div>
-
-
-
-
-
     </main>
   </div>
 
@@ -191,6 +199,5 @@
     initLayout("add-record.html");
   </script>
   <script src="js/add-record.js"></script>
-
 </body>
 </html>

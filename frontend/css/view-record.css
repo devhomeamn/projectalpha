@@ -1,237 +1,241 @@
 /* ===========================================
-   VIEW RECORD PAGE (page-specific only)
-   Works with layout.css, no global conflicts
+   MODERN VIEW-RECORD.CSS (2026 Style) - Fully Compatible
 =========================================== */
 
-/* ------------------------------------------------
-   Desktop spacing for fixed sidebar + topbar
------------------------------------------------- */
+:root {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-light: #dbeafe;
+  --success: #10b981;
+  --danger: #ef4444;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  --text: #1e293b;
+  --bg: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow: 0 4px 14px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
+  --radius: 12px;
+  --radius-lg: 16px;
+  --transition: all 0.25s ease;
+}
+
+/* Layout */
 .dashboard-container > .main-content {
-  margin-left: 230px;           /* sidebar width */
-  margin-top: 70px;             /* topbar height */
-  width: calc(100% - 230px);
-  padding: 0;
-  transition: 0.3s ease;
+  margin-left: 240px;
+  margin-top: 64px;
+  width: calc(100% - 240px);
+  transition: var(--transition);
 }
 
-/* Page content */
-.dashboard-container .content {
-  padding: 20px;
+.content {
+  padding: 32px 24px;
+  min-height: calc(100vh - 64px);
+  background: #f8fafc;
 }
 
-/* Header */
-.content .page-header {
-  margin-bottom: 14px;
+/* Page Header */
+.page-header h2 {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--gray-900);
+  margin-bottom: 8px;
 }
 
-.content .page-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 4px;
+.page-header p {
+  font-size: 16px;
+  color: var(--gray-500);
 }
 
-.content .page-header p {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-/* ===========================================
-   TOOLBAR
-=========================================== */
+/* Toolbar */
 .toolbar {
-  background: #fff;
-  padding: 12px 14px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  background: var(--bg);
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gray-200);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 24px;
 }
 
 .toolbar .search-box {
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
-  min-width: 220px;
-  outline: none;
-  background: #fafafa;
-  transition: 0.2s ease;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-300);
+  font-size: 15px;
+  min-width: 300px;
+  background: var(--gray-50);
+  transition: var(--transition);
 }
 
 .toolbar .search-box:focus {
-  border-color: #2563eb;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  border-color: var(--primary);
+  background: var(--bg);
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
 }
 
 .toolbar select#sectionFilter {
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
-  background: #fff;
-  outline: none;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-300);
+  background: var(--bg);
+  font-size: 15px;
+  min-width: 200px;
 }
 
-/* Export button (local only) */
-#exportBtn {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  padding: 9px 14px;
-  border-radius: 10px;
-  cursor: pointer;
+#exportBtn, .btn-save {
+  padding: 13px 24px;
+  border-radius: 999px;
   font-weight: 600;
-  font-size: 14px;
-  transition: 0.2s ease;
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+#exportBtn {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
 }
 
 #exportBtn:hover {
-  background: #e5e7eb;
+  background: var(--gray-200);
+  transform: translateY(-1px);
 }
 
-/* Bulk move uses layout.css .btn-primary, no override */
-
-/* ===========================================
-   PAGINATION INFO + PAGE SIZE
-=========================================== */
-#paginationInfo {
-  font-size: 14px;
-  color: #374151;
-  margin-top: 8px;
+.btn-save {
+  background: var(--primary);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
 }
 
-#pageSizeControl {
-  margin-top: 8px;
-  text-align: right;
-  font-size: 14px;
-  color: #374151;
+.btn-save:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
 }
 
-#pageSizeControl select {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  outline: none;
-}
-
-/* ===========================================
-   TABLE + HORIZONTAL SCROLL
-=========================================== */
+/* Table */
 .table-wrapper {
-  width: 100%;
-  margin-top: 12px;
-  overflow-x: auto;                 /* ✅ horizontal scroll */
-  -webkit-overflow-scrolling: touch;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background: var(--bg);
+  margin-top: 24px;
+  overflow-x: auto;
 }
-
-/* Scrollbar (nice) */
-.table-wrapper::-webkit-scrollbar { height: 8px; }
-.table-wrapper::-webkit-scrollbar-thumb {
-  background: #c4c4c4;
-  border-radius: 999px;
-}
-.table-wrapper::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
 #recordTable {
   width: 100%;
-  min-width: 1100px;               /* ✅ ensures scroll on small screens */
-  border-collapse: collapse;
-  font-size: 14px;
-  background: #fff;
+  min-width: 1100px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14.5px;
 }
 
 #recordTable thead {
-  background: #f3f4f6;
+  background: linear-gradient(to bottom, var(--gray-100), var(--gray-50));
 }
 
 #recordTable th {
-  text-align: left;
-  padding: 12px 14px;
+  padding: 18px 20px;
   font-weight: 700;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
+  color: var(--gray-900);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--gray-300);
 }
 
 #recordTable td {
-  padding: 11px 14px;
-  color: #374151;
-  border-bottom: 1px solid #f1f5f9;
-  white-space: nowrap;
+  padding: 16px 20px;
+  color: var(--gray-700);
+  border-bottom: 1px solid var(--gray-200);
 }
 
 #recordTable tbody tr:hover {
-  background: #f9fafb;
+  background: var(--primary-light);
 }
 
-/* Status badge */
-#recordTable .status {
-  display: inline-block;
-  padding: 4px 10px;
+/* Status & Highlights */
+.status {
+  padding: 7px 14px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-#recordTable .status.central {
-  background: #fee2e2;
-  color: #b91c1c;
+.status.central { background: rgba(239,68,68,0.12); color: #dc2626; }
+.status.section { background: rgba(34,197,94,0.12); color: #16a34a; }
+.status.ongoing { background: rgba(16,185,129,0.12); color: #059669; }
+.status.closed { background: rgba(239,68,68,0.12); color: #b91c1c; }
+
+td.rack-red, td.rsl-red {
+  color: var(--danger);
+  font-weight: 800;
+  font-size: 20px;
+  text-align: center;
 }
 
-#recordTable .status.section {
-  background: #dcfce7;
-  color: #15803d;
+td.file-cell {
+  font-weight: 600;
+  color: var(--primary-dark);
+  cursor: pointer;
 }
 
-/* ===========================================
-   PAGINATION CONTROLS
-=========================================== */
+td.file-cell:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Pagination */
 #paginationControls {
-  margin-top: 14px;
+  margin-top: 28px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 14px;
 }
 
 #paginationControls button {
-  padding: 7px 14px;
-  border-radius: 8px;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: white;
   border: none;
-  background: #2563eb;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-#paginationControls button:hover {
-  background: #1e40af;
-}
-
-#pageDisplay {
   font-weight: 600;
-  color: #111827;
+  transition: var(--transition);
 }
 
-/* ===========================================
-   MODALS (Details / Edit / Move / Bulk)
-=========================================== */
+#paginationControls button:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+#paginationControls button:disabled {
+  background: var(--gray-300);
+  cursor: not-allowed;
+}
+
+/* ================== MODALS - Modern & Fixed ================== */
 .modal {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
   z-index: 800;
   justify-content: center;
   align-items: center;
@@ -240,216 +244,251 @@
 
 .modal .modal-content {
   width: 100%;
-  max-width: 480px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
-  padding: 18px;
+  max-width: 560px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--gray-200);
   position: relative;
-  animation: vrFadeUp 0.25s ease-out;
+  animation: fadeUp 0.3s ease-out;
 }
 
-@keyframes vrFadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal h3 {
+  margin: 0 0 20px 0;
+  padding: 24px 24px 0 24px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--gray-900);
 }
 
 .modal .close-btn {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gray-100);
   border: none;
-  background: none;
   font-size: 20px;
   cursor: pointer;
-  color: #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-700);
+  transition: var(--transition);
 }
 
-/* modal form groups */
+.modal .close-btn:hover {
+  background: var(--gray-200);
+  transform: scale(1.1);
+}
+
+/* Form Groups */
 .modal .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 18px;
+  padding: 0 24px;
 }
 
 .modal .form-group label {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 5px;
   display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--gray-700);
+  font-size: 14px;
 }
 
 .modal .form-group input,
 .modal .form-group select,
 .modal .form-group textarea {
   width: 100%;
-  padding: 9px 10px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-300);
+  background: var(--gray-50);
+  font-size: 15px;
+  transition: var(--transition);
+}
+
+.modal .form-group input:focus,
+.modal .form-group select:focus,
+.modal .form-group textarea:focus {
   outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+  background: var(--bg);
 }
 
 .modal .form-group textarea {
-  min-height: 80px;
+  min-height: 100px;
+  resize: vertical;
 }
 
-/* =========================================================
-   ✅ DETAILS MODAL ONLY (recordModal) - COMPACT + BEAUTIFUL
-   (Overrides only the details modal, not edit/move/bulk)
-========================================================= */
-#recordModal.modal{
-  background: rgba(17, 24, 39, 0.55);
-  backdrop-filter: blur(3px);
+/* Details Modal Specific */
+#recordModal .modal-content {
+  max-width: 640px;
 }
 
-/* remove padding for details modal so header/body looks neat */
-#recordModal .modal-content{
-  max-width: 520px;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 16px;
+#recordModal .modal-body {
+  padding: 0 24px 16px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-/* we will use a header bar even if your HTML has h3 + close button */
-#recordModal .modal-content > h3{
-  margin: 0;
-  padding: 12px 16px;
-  font-size: 16px;
-  font-weight: 800;
-  color: #111827;
-  background: linear-gradient(180deg, #f9fafb, #ffffff);
-  border-bottom: 1px solid #eef2f7;
+#recordModal .block {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
 }
 
-/* keep close button in header area */
-#recordModal .close-btn{
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  font-size: 18px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition: 0.15s ease;
-  color:#111827;
-}
-#recordModal .close-btn:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+#recordModal #workflowBox,
+#recordModal > .modal-content > div:last-of-type {
+  padding: 16px 24px;
+  border-top: 1px solid var(--gray-200);
+  background: var(--gray-50);
 }
 
-/* scroll inside modal body (prevents huge modal) */
-#recordModal .modal-body{
-  padding: 14px 16px;
-  font-size: 14px;
-  color:#374151;
-  max-height: min(70vh, 520px);
-  overflow: auto;
+/* Buttons inside modals */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
-#recordModal .modal-body p{
-  margin: 0 0 10px 0;
-  line-height: 1.45;
+.btn-primary:hover {
+  background: var(--primary-dark);
 }
 
-/* cards inside modal */
-#recordModal .modal-body .block{
-  background: #f9fafb;
-  border: 1px solid #eef2f7;
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin: 10px 0;
-}
-
-/* ===========================================
-   MOBILE RESPONSIVE (force override)
-=========================================== */
+/* Mobile Responsive */
 @media (max-width: 768px) {
-
-  /* ✅ force full width on mobile even if other css conflicts */
   .dashboard-container > .main-content {
     margin-left: 0 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin-top: 70px !important;
-    padding: 0 !important;
+    margin-top: 64px !important;
   }
 
-  .dashboard-container .content {
-    padding: 12px;
-  }
+  .content { padding: 16px; }
 
-  /* Toolbar stacked */
   .toolbar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .toolbar > div {
-    width: 100%;
-  }
-
   .toolbar .search-box,
-  .toolbar select#sectionFilter,
-  .toolbar button,
-  #exportBtn {
+  .toolbar select,
+  .toolbar button {
     width: 100%;
+    min-width: unset;
   }
 
-  /* page size control align left */
-  #pageSizeControl {
-    text-align: left;
-  }
-
-  /* smaller table text */
   #recordTable th,
   #recordTable td {
-    font-size: 13px;
-    padding: 10px 12px;
+    padding: 12px 14px;
+    font-size: 13.5px;
   }
 
   .modal .modal-content {
     max-width: 95vw;
+    margin: 10px;
+  }
+
+  .modal h3 {
+    padding: 20px 20px 0;
+  }
+
+  .modal .form-group,
+  .modal .modal-body {
+    padding: 0 20px;
   }
 }
 
 
-/* ===== Status badges: Current Status (Ongoing/Closed) ===== */
-.status.ongoing{
-  background:#ecfdf5;
-  color:#065f46;
-  border:1px solid #a7f3d0;
-}
-.status.closed{
-  background:#fef2f2;
-  color:#991b1b;
-  border:1px solid #fecaca;
+/* ================== ACTION ICONS - Perfectly Aligned ================== */
+#recordTable td.action-cell {
+  text-align: center;              /* horizontal center */
+  vertical-align: middle;          /* vertical center - most important */
+  padding: 16px 20px !important;   /* same as other cells */
 }
 
-
-/* ================== Highlight SL + Rack in table ================== */
-/* ================== Highlight Rack + Rack Serial ================== */
-#recordTable td.rack-red,
-#recordTable td.rsl-red {
-  color: #dc2626;        /* red */
-  font-weight: 700;
-  font-size: 18px ;
-  text-align: center;
+.action-icons {
+  display: inline-flex;            /* flex but inline to respect cell alignment */
+  gap: 14px;                       /* better spacing */
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0;                  /* extra breathing room inside */
+  border-radius: 12px;
+  transition: background 0.2s ease;
 }
-/* ================== File name clickable ================== */
-#recordTable td.file-cell {
-  font-weight: 600;
-  color: #111827;
+
+.action-icons:hover {
+  background: rgba(59, 130, 246, 0.08); /* subtle hover bg on whole action area */
+}
+
+.action-icons .action-icon {
   cursor: pointer;
-  transition: color 0.15s ease, text-decoration 0.15s ease;
+  font-size: 1.25rem;              /* slightly larger for better click */
+  transition: all 0.2s ease;
+  padding: 6px;                    /* larger click area */
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.action-icons .action-icon:hover {
+  transform: translateY(-2px) scale(1.1);
+  background: rgba(0,0,0,0.05);
+}
+
+.action-icons .action-icon:active {
+  transform: translateY(0) scale(1);
+}
+
+/* Colors */
+.action-icons .action-icon--edit { color: #2563eb; }
+.action-icons .action-icon--move { color: #059669; }
+.action-icons .action-icon--delete { color: #dc2626; }
+
+.action-icons .action-icon--edit:hover { color: #1d4ed8; }
+.action-icons .action-icon--move:hover { color: #047857; }
+.action-icons .action-icon--delete:hover { color: #b91c1c; }
+
+/* Disabled state */
+.action-icons .action-icon.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: auto; /* allows tooltip/toast on click */
+}
+
+.action-icons .action-icon.disabled:hover {
+  transform: none;
+  background: none;
+}
+#recordTable th:nth-child(10),
+#recordTable td:nth-child(10) {
+  white-space: nowrap !important;
+  min-width: 150px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 
-
-#recordTable td.file-cell:hover {
-  color: #1d4ed8;   /* subtle hover color */
+@media (max-width: 768px) {
+  .action-icons {
+    gap: 12px;
+  }
+  .action-icons .action-icon {
+    font-size: 1.4rem; /* mobile-এ বড় করে click সহজ করা */
+  }
 }
