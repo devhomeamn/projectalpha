@@ -10,6 +10,7 @@ let totalPages = 1;
 let totalRecords = 0;
 
 let selectedSection = "";
+let selectedRack = ""; // ✅ NEW (Rack filter)
 let pageSize = 10;
 
 let currentUser = localStorage.getItem("username") || "Unknown User";
@@ -103,60 +104,33 @@ async function loadConfig() {
   await fetchRecords(1);
 }
 
-/* ================== CENTRAL RACKS (FIXED) ================== */
+/* ================== CENTRAL RACKS ================== */
 async function loadCentralRacks() {
-  const singleSelect = document.getElementById("singleMoveRack");
-  const bulkSelect = document.getElementById("bulkRackId");
+  try {
+    const racks = await fetchJson(`${API_BASE}/sections/central/racks`, {
+      headers: { ...getAuthHeaders() },
+    });
 
-  // Optional placeholder
-  [singleSelect, bulkSelect].forEach((sel) => {
-    if (!sel) return;
-    sel.innerHTML = "";
-    sel.add(new Option("Loading racks...", ""));
-  });
+    const singleSelect = document.getElementById("singleMoveRack");
+    const bulkSelect = document.getElementById("bulkRackId");
+    [singleSelect, bulkSelect].forEach((sel) => sel && (sel.innerHTML = ""));
 
-  const endpoints = [
-    `${API_BASE}/sections/central/racks`, // তোমার বর্তমান
-    `${API_BASE}/sections/central-racks`, // common alt
-    `${API_BASE}/sections/central/rack`, // alt
-  ];
-
-  let racks = null;
-  let lastErr = null;
-
-  for (const url of endpoints) {
-    try {
-      racks = await fetchJson(url, { headers: { ...getAuthHeaders() } });
-      if (Array.isArray(racks)) break;
-    } catch (e) {
-      lastErr = e;
+    if (!Array.isArray(racks) || racks.length === 0) {
+      const opt = new Option("-- No racks found --", "");
+      if (singleSelect) singleSelect.add(opt);
+      if (bulkSelect) bulkSelect.add(new Option(opt.text, opt.value));
+      return;
     }
+
+    racks.forEach((r) => {
+      const id = r.id ?? r.rack_id ?? "";
+      const name = r.name ?? r.rack_name ?? `Rack ${id}`;
+      if (singleSelect) singleSelect.add(new Option(name, id));
+      if (bulkSelect) bulkSelect.add(new Option(name, id));
+    });
+  } catch (err) {
+    console.error("loadCentralRacks error:", err);
   }
-
-  [singleSelect, bulkSelect].forEach((sel) => sel && (sel.innerHTML = ""));
-
-  if (!Array.isArray(racks) || racks.length === 0) {
-    const opt = new Option("-- No racks found --", "");
-    if (singleSelect) singleSelect.add(opt);
-    if (bulkSelect) bulkSelect.add(new Option(opt.text, opt.value));
-    if (lastErr) {
-      console.error("loadCentralRacks error:", lastErr);
-      showToast("❌ Central racks load hocche na (console check)", "error");
-    }
-    return;
-  }
-
-  // ✅ Populate
-  racks.forEach((r) => {
-    const id = r.id ?? r.rack_id ?? "";
-    const name = r.name ?? r.rack_name ?? `Rack ${id}`;
-    if (singleSelect) singleSelect.add(new Option(name, id));
-    if (bulkSelect) bulkSelect.add(new Option(name, id));
-  });
-
-  // ✅ serial auto compute after racks load
-  computeSingleAutoSerial();
-  computeBulkAutoSerial();
 }
 
 /* ================== SECTIONS ================== */
@@ -170,9 +144,16 @@ async function loadSections() {
     select.innerHTML = `<option value="">All Sections</option>`;
     data.forEach((s) => select.appendChild(new Option(s.name, s.id)));
 
-    select.onchange = (e) => {
+    select.onchange = async (e) => {
       selectedSection = e.target.value;
       currentPage = 1;
+
+      // ✅ reset + reload rack filter when section changes
+      selectedRack = "";
+      const rf = document.getElementById("rackFilter");
+      if (rf) rf.value = "";
+      await loadRacksForSection(selectedSection);
+
       fetchRecords(1);
     };
   } catch (err) {
@@ -180,14 +161,71 @@ async function loadSections() {
   }
 }
 
+/* ================== RACKS (FILTER) ================== */
+async function loadRacksForSection(sectionId) {
+  const sel = document.getElementById("rackFilter");
+  if (!sel) return;
+
+  // reset
+  sel.innerHTML = "";
+  sel.add(new Option("All Racks", ""));
+  sel.disabled = true;
+  selectedRack = "";
+
+  if (!sectionId) return;
+
+  sel.disabled = false;
+  sel.innerHTML = "";
+  sel.add(new Option("Loading racks...", ""));
+
+  // Prefer section-wise racks endpoint
+  const endpoints = [
+    `${API_BASE}/sections/${sectionId}/racks`,
+    `${API_BASE}/sections/${sectionId}/rack`,
+    `${API_BASE}/sections/racks?sectionId=${encodeURIComponent(sectionId)}`,
+  ];
+
+  let racks = null;
+  let lastErr = null;
+
+  for (const url of endpoints) {
+    try {
+      const out = await fetchJson(url, { headers: { ...getAuthHeaders() } });
+      if (Array.isArray(out)) {
+        racks = out;
+        break;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  sel.innerHTML = "";
+  sel.add(new Option("All Racks", ""));
+
+  if (!Array.isArray(racks) || racks.length === 0) {
+    sel.add(new Option("-- No racks found --", ""));
+    sel.disabled = true;
+    if (lastErr) console.error("loadRacksForSection error:", lastErr);
+    return;
+  }
+
+  racks.forEach((r) => {
+    const id = r.id ?? r.rack_id ?? "";
+    const name = r.name ?? r.rack_name ?? `Rack ${id}`;
+    sel.add(new Option(name, id));
+  });
+}
+
 /* ================== FETCH RECORDS ================== */
 async function fetchRecords(page = 1) {
   try {
     const q = document.getElementById("searchInput")?.value?.trim() || "";
     const sectionParam = selectedSection ? `&section=${selectedSection}` : "";
+    const rackParam = selectedRack ? `&rack=${selectedRack}` : "";
 
     const data = await fetchJson(
-      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}`,
+      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}${rackParam}`,
       { headers: { ...getAuthHeaders() } }
     );
 
@@ -250,10 +288,7 @@ function renderTable(records) {
   <td>${sectionName}</td>
   <td>${subName}</td>
 
-  <!-- 🔴 Rack -->
   <td class="rack-red">${rackName}</td>
-
-  <!-- 🔴 Rack Serial -->
   <td class="rsl-red">${serialNo}</td>
 
   <td><span class="status ${currentClass}">${currentText}</span></td>
@@ -261,7 +296,7 @@ function renderTable(records) {
   <td>${openingDate}</td>
   <td>${closingDate}</td>
 
-  <td class="action-cell">
+  <td class="action-icons">
   <i class="fa-solid fa-pen-to-square action-icon action-icon--edit icon-edit"
      data-id="${rec.id}" title="Edit"></i>
 
@@ -299,14 +334,12 @@ function renderTable(records) {
         moveIcon.title = "Move to Central";
       }
 
-      moveIcon.addEventListener("click", async (e) => {
+      moveIcon.addEventListener("click", (e) => {
         e.stopPropagation();
         if (!isClosed) {
           showToast("⛔ Ongoing record কে Central এ move করা যাবে না। আগে Closed করুন।", "error");
           return;
         }
-        // ✅ ensure racks refresh every time (FIX)
-        await loadCentralRacks();
         openSingleMove(rec);
       });
     }
@@ -328,7 +361,7 @@ function renderTable(records) {
         showToast(data.message);
         fetchRecords(currentPage);
       } catch (err) {
-        showToast("⚠️ " + err.message, "error");
+        showToast("❌ " + err.message, "error");
       }
     });
 
@@ -395,14 +428,13 @@ function bindEditForm() {
       closeEditModal();
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("⚠️ " + err.message, "error");
+      showToast("❌ " + err.message, "error");
     }
   });
 }
 
 /* ================== SINGLE MOVE ================== */
 function openSingleMove(rec) {
-  // ✅ extra guard (already checked in table click)
   const isClosed = (rec.record_status || "ongoing").toLowerCase() === "closed";
   if (!isClosed) {
     showToast("⛔ Ongoing record কে Central এ move করা যাবে না। আগে Closed করুন।", "error");
@@ -424,7 +456,6 @@ function openSingleMove(rec) {
 async function computeSingleAutoSerial() {
   const rackId = document.getElementById("singleMoveRack")?.value;
   const serialInput = document.getElementById("singleMoveSerial");
-  if (!serialInput) return;
   if (!rackId) return (serialInput.value = "");
 
   try {
@@ -462,7 +493,6 @@ async function bindSingleMove() {
   rackSelect?.addEventListener("change", computeSingleAutoSerial);
 
   confirmBtn?.addEventListener("click", async () => {
-    // ✅ block if somehow target not closed
     const isClosed = (singleMoveTargetRec?.record_status || "ongoing").toLowerCase() === "closed";
     if (!isClosed) {
       showToast("⛔ Only CLOSED records can be moved to Central.", "error");
@@ -494,7 +524,7 @@ async function bindSingleMove() {
       closeSingleMove();
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("⚠️ " + err.message, "error");
+      showToast("❌ " + err.message, "error");
     }
   });
 }
@@ -507,7 +537,6 @@ function openBulkMove() {
 
   if (selectedIds.length === 0) return showToast("⚠️ Please select at least one record!", "warn");
 
-  // ✅ Only CLOSED can bulk-move
   const selectedRecords = allRecords.filter((r) => selectedIds.includes(r.id));
   const closedIds = selectedRecords
     .filter((r) => (r.record_status || "ongoing").toLowerCase() === "closed")
@@ -532,7 +561,6 @@ function openBulkMove() {
 async function computeBulkAutoSerial() {
   const rackId = document.getElementById("bulkRackId")?.value;
   const serialInput = document.getElementById("bulkStartSerial");
-  if (!serialInput) return;
   if (!rackId) return (serialInput.value = "");
 
   try {
@@ -561,11 +589,7 @@ function closeBulkMove() {
 }
 
 function bindBulkMove() {
-  document.getElementById("openBulkMove")?.addEventListener("click", async () => {
-    await loadCentralRacks(); // ✅ refresh before bulk move modal
-    openBulkMove();
-  });
-
+  document.getElementById("openBulkMove")?.addEventListener("click", openBulkMove);
   document.getElementById("bulkCancel")?.addEventListener("click", closeBulkMove);
   document.getElementById("bulkClose")?.addEventListener("click", closeBulkMove);
   document.getElementById("bulkRackId")?.addEventListener("change", computeBulkAutoSerial);
@@ -601,7 +625,7 @@ function bindBulkMove() {
       closeBulkMove();
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("⚠️ " + err.message, "error");
+      showToast("❌ " + err.message, "error");
     }
   });
 }
@@ -684,7 +708,6 @@ function showDetails(rec) {
 }
 
 /* ================== PRINT (View) ================== */
-/* (তোমার প্রিন্ট অংশ অপরিবর্তিত রাখলাম—কারণ এটা already working) */
 function startPrintFromView() {
   if (!lastViewedRecordForPrint) {
     alert("No record selected for print");
@@ -692,7 +715,6 @@ function startPrintFromView() {
   }
 
   const r = lastViewedRecordForPrint;
-
   const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
 
   const currentStatus = (r.record_status || "ongoing").toLowerCase();
@@ -911,7 +933,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 
-/* ================== SEARCH ================== */
+/* ================== SEARCH (FIX) ================== */
 function bindSearch() {
   const input = document.getElementById("searchInput");
   if (!input) return;
@@ -981,9 +1003,9 @@ function bindWorkflowControls(rec) {
 
   closingInput.oninput = () => {
     if (!closingInput.value) return setWfMsg("", true);
-    if (closingInput.value > todayISO()) return setWfMsg("⚠️ আজকের পরের date দেওয়া যাবে না", false);
+    if (closingInput.value > todayISO()) return setWfMsg("❌ আজকের পরের date দেওয়া যাবে না", false);
     if (rec.opening_date && closingInput.value < rec.opening_date) {
-      return setWfMsg("⚠️ Opening date এর আগে closing দেওয়া যাবে না", false);
+      return setWfMsg("❌ Opening date এর আগে closing দেওয়া যাবে না", false);
     }
     setWfMsg("✅ Closing date ঠিক আছে", true);
   };
@@ -1024,12 +1046,12 @@ function bindWorkflowControls(rec) {
 
       fetchRecords(currentPage);
     } catch (err) {
-      showToast("⚠️ " + err.message, "error");
+      showToast("❌ " + err.message, "error");
     }
   };
 }
 
-/* ================== PAGE SIZE ================== */
+/* ================== PAGE SIZE (FIX) ================== */
 function bindPageSize() {
   const sel = document.getElementById("pageSize");
   if (!sel) return;
@@ -1053,7 +1075,7 @@ function bindPaginationButtons() {
   });
 }
 
-/* ================== EXPORT CSV ================== */
+/* ================== EXPORT CSV (NEW) ================== */
 function exportToCSV() {
   if (!allRecords.length) return showToast("No records to export", "error");
 
@@ -1113,6 +1135,20 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEditForm();
   bindSingleMove();
   bindBulkMove();
+
+  // ✅ Rack filter (works only when section selected)
+  const rackSel = document.getElementById("rackFilter");
+  if (rackSel) {
+    rackSel.innerHTML = "";
+    rackSel.add(new Option("All Racks", ""));
+    rackSel.disabled = true;
+
+    rackSel.addEventListener("change", () => {
+      selectedRack = rackSel.value || "";
+      currentPage = 1;
+      fetchRecords(1);
+    });
+  }
 
   document
     .getElementById("printFromViewBtn")

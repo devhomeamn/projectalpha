@@ -55,18 +55,21 @@
         </header>
 
         <!-- Toolbar -->
-        <div class="toolbar">
-          <div style="display:flex; gap:10px; align-items:center;">
-            <input type="text" id="searchInput" placeholder="Search records..." class="search-box">
-            <select id="sectionFilter">
-              <option value="">All Sections</option>
-            </select>
-          </div>
-          <div>
-            <button id="exportBtn" onclick="exportToCSV()">⬇️ Export CSV</button>
-            <button id="openBulkMove" class="btn-save"> Bulk Move</button>
-          </div>
-        </div>
+<div class="toolbar">
+  <div style="display:flex; gap:10px; align-items:center;">
+    <input type="text" id="searchInput" placeholder="Search records..." class="search-box">
+    <select id="sectionFilter">
+      <option value="">All Sections</option>
+    </select>
+
+    <!-- নতুন Rack Filter -->
+    <select id="rackFilter" disabled><option value="">All Racks</option></select>
+  </div>
+  <div>
+    <button id="exportBtn" onclick="exportToCSV()">⬇️ Export CSV</button>
+    <button id="openBulkMove" class="btn-save"> Bulk Move</button>
+  </div>
+</div>
 
         <!-- Pagination Info -->
         <div id="paginationInfo"></div>

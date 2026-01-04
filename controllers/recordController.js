@@ -180,12 +180,14 @@ exports.addRecord = async (req, res) => {
 // ================== GET ALL RECORDS (with pagination + filter + rack search) ==================
 exports.getRecords = async (req, res) => {
   try {
-    const q = req.query.q || "";
+    const q = (req.query.q || "").trim();
     const sectionFilter = req.query.section || "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const rackFilter = req.query.rack || ""; // ✅ NEW
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const offset = (page - 1) * limit;
 
+    /* ---------- WHERE CLAUSE ---------- */
     const whereClause = {
       ...(q && {
         [Op.or]: [
@@ -197,9 +199,15 @@ exports.getRecords = async (req, res) => {
           { "$Rack.name$": { [Op.like]: `%${q}%` } },
         ],
       }),
+
+      // ✅ Section filter
       ...(sectionFilter && { section_id: sectionFilter }),
+
+      // ✅ Rack filter (FINAL FIX)
+      ...(rackFilter && { rack_id: rackFilter }),
     };
 
+    /* ---------- QUERY ---------- */
     const { rows: records, count: total } = await Record.findAndCountAll({
       where: whereClause,
       include: [
@@ -212,46 +220,16 @@ exports.getRecords = async (req, res) => {
       offset,
     });
 
-    const enhanced = await Promise.all(
-      records.map(async (r) => {
-        let prevSection = null,
-          prevSub = null,
-          prevRack = null;
-
-        if (r.previous_section_id) {
-          const s = await Section.findByPk(r.previous_section_id);
-          prevSection = s ? s.name : null;
-        }
-        if (r.previous_subcategory_id) {
-          const sb = await Subcategory.findByPk(r.previous_subcategory_id);
-          prevSub = sb ? sb.name : null;
-        }
-        if (r.previous_rack_id) {
-          const rk = await Rack.findByPk(r.previous_rack_id);
-          prevRack = rk ? rk.name : null;
-        }
-
-        return {
-          ...r.toJSON(),
-          previous_location: {
-            section_name: prevSection,
-            subcategory_name: prevSub,
-            rack_name: prevRack,
-          },
-        };
-      })
-    );
-
+    /* ---------- RESPONSE ---------- */
     res.json({
-      total,
+      data: records,
       page,
-      limit,
       totalPages: Math.ceil(total / limit),
-      data: enhanced,
+      total,
     });
   } catch (err) {
     console.error("❌ getRecords error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Failed to fetch records" });
   }
 };
 // ================== LOOKUP RECORDS (Topbar global search) ==================

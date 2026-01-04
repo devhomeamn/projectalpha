@@ -92,6 +92,15 @@
   min-width: 200px;
 }
 
+.toolbar select#rackFilter {
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-300);
+  background: var(--bg);
+  font-size: 15px;
+  min-width: 150px;
+}
+
 #exportBtn, .btn-save {
   padding: 13px 24px;
   border-radius: 999px;
