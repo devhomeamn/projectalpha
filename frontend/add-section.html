@@ -29,15 +29,38 @@
       <section class="content section-page">
 
         <!-- Page Header -->
-        <header class="page-header">
-          <h2 class="page-title">Add New Section</h2>
-          <p class="subtext">Manage Sections, Subcategories, Racks & Central Racks.</p>
-        </header>
+             <div class="page-headerformaintitle">
+          <div class="header-content">
+            <div class="header-main">
+                 <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">dashboard_2_edit</span>
+                Add Section and Categories
+              </h1>
+              <p class="header-subtitle">সেকশন,ক্যাটাগরি,র‍্যাক এবং শেলফ যুক্ত বা পরিমার্জন করণ </p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
+        </div>
+
 
         <div class="section-grid">
 
           <!-- LEFT: FORMS -->
           <div class="left-col">
+            <header class="page-header compact-head">
+              <h3 class="section-title">Add Section</h3>
+            </header>
 
             <!-- ADD SECTION -->
             <form id="sectionForm" class="form-card">

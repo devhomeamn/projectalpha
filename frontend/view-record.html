@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+
+
+  
   <title>View Records</title>
    <link rel="icon" href="images/site-icon.ico">
   <link rel="stylesheet" href="css/layout.css">
@@ -49,10 +52,29 @@
       <div id="topbar"></div>
 
       <section class="content">
-        <header class="page-header">
-          <h2>View Records</h2>
-          <p>Manage, edit, move, or delete records.</p>
-        </header>
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-main">
+                 <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">visibility</span>
+                View Records
+              </h1>
+              <p class="header-subtitle">এন্ট্রি করা রেকর্ডসমূহের তালিকা</p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
+        </div>
 
         <!-- Toolbar -->
 <div class="toolbar">
