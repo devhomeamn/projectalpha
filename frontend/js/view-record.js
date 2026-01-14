@@ -15,6 +15,42 @@ let pageSize = 10;
 
 let currentUser = localStorage.getItem("username") || "Unknown User";
 let lastViewedRecordForPrint = null;
+/* ================== AUTH HELPER (copy from add-record.js) ================== */
+function getToken() {
+  return localStorage.getItem("token") || "";
+}
+
+function redirectLogin() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401) {
+    showToast("Session expired. Please login again.", "error");
+    setTimeout(redirectLogin, 700);
+    throw new Error("Unauthorized");
+  }
+  if (res.status === 403) {
+    showToast("Access denied.", "error");
+    throw new Error("Forbidden");
+  }
+  return res;
+}
+
+
+
+
 
 /* ================== TOAST ================== */
 function showToast(message, type = "success") {
@@ -82,56 +118,115 @@ async function fetchJson(url, opts = {}) {
 
 /* ================== LOAD CONFIG ================== */
 async function loadConfig() {
-  // topbar search bringing
   try {
-    const params = new URLSearchParams(window.location.search);
-    const qParam = (params.get("q") || "").trim();
-    const searchEl = document.getElementById("searchInput");
-    if (qParam && searchEl) searchEl.value = qParam;
-  } catch {}
-
-  try {
-    const res = await fetch("/api/config");
-    const ct = res.headers.get("content-type") || "";
-    const data = ct.includes("application/json") ? await res.json() : {};
+    const data = await fetch("/api/config").then(r => r.json());
     API_BASE = normalizeApiBase(data.apiBase);
     console.log("API Base loaded:", API_BASE);
-  } catch {
-    API_BASE = normalizeApiBase(null);
-  }
 
-  await Promise.all([loadSections(), loadCentralRacks()]);
-  await fetchRecords(1);
+    await Promise.all([
+      loadSections(),      // already exists
+      loadCentralRacks(),  // 👉 এটা নতুন
+    ]);
+
+    await fetchRecords(1);
+  } catch (err) {
+    console.error("Config load error:", err);
+    API_BASE = normalizeApiBase(null);
+
+    await Promise.all([
+      loadSections(),
+      loadCentralRacks(),
+    ]);
+
+    await fetchRecords(1);
+  }
 }
 
-/* ================== CENTRAL RACKS ================== */
+//load central racks
+
+/* =============== CENTRAL ROOM RACKS → MOVE TO CENTRAL MODAL =============== */
 async function loadCentralRacks() {
+  const singleSelect = document.getElementById("singleMoveRack"); // single move modal er select
+  const bulkSelect   = document.getElementById("bulkRackId");     // bulk move modal er select
+
+  if (!singleSelect && !bulkSelect) return;
+
+  // ১) প্রথমে loading text
+  [singleSelect, bulkSelect].forEach((sel) => {
+    if (!sel) return;
+    sel.innerHTML = "";
+    sel.disabled = true;
+    sel.add(new Option("Loading central racks...", ""));
+  });
+
   try {
-    const racks = await fetchJson(`${API_BASE}/sections/central/racks`, {
-      headers: { ...getAuthHeaders() },
-    });
+    // ২) সব section আনবো
+    const secRes = await authFetch(`${API_BASE}/sections`);
+    const sections = await secRes.json();
+    if (!Array.isArray(sections)) throw new Error("Invalid sections data");
 
-    const singleSelect = document.getElementById("singleMoveRack");
-    const bulkSelect = document.getElementById("bulkRackId");
-    [singleSelect, bulkSelect].forEach((sel) => sel && (sel.innerHTML = ""));
+    // ৩) Central Room নামের section খুঁজবো
+    const centralSection = sections.find(
+      (s) => (s.name || "").trim().toLowerCase() === "central room"
+    );
 
-    if (!Array.isArray(racks) || racks.length === 0) {
-      const opt = new Option("-- No racks found --", "");
-      if (singleSelect) singleSelect.add(opt);
-      if (bulkSelect) bulkSelect.add(new Option(opt.text, opt.value));
+    if (!centralSection) {
+      [singleSelect, bulkSelect].forEach((sel) => {
+        if (!sel) return;
+        sel.innerHTML = "";
+        sel.disabled = true;
+        sel.add(new Option("Central Room section পাওয়া যায়নি", ""));
+      });
+      console.warn("Central Room section পাওয়া যায়নি");
       return;
     }
 
-    racks.forEach((r) => {
-      const id = r.id ?? r.rack_id ?? "";
-      const name = r.name ?? r.rack_name ?? `Rack ${id}`;
-      if (singleSelect) singleSelect.add(new Option(name, id));
-      if (bulkSelect) bulkSelect.add(new Option(name, id));
+    // ৪) ওই section এর র্যাকগুলো আনবো
+    const rackRes = await authFetch(
+      `${API_BASE}/sections/racks/${centralSection.id}`
+    );
+    const racks = await rackRes.json();
+
+    console.log("Central Room racks for move:", racks);
+
+    [singleSelect, bulkSelect].forEach((sel) => {
+      if (!sel) return;
+      sel.innerHTML = "";
+      sel.disabled = false;
     });
+
+    if (!Array.isArray(racks) || racks.length === 0) {
+      const txt = "-- Central Room এ এখনও কোনো rack নেই --";
+      if (singleSelect) singleSelect.add(new Option(txt, ""));
+      if (bulkSelect)   bulkSelect.add(new Option(txt, ""));
+      return;
+    }
+
+    function fill(sel) {
+      if (!sel) return;
+      sel.add(new Option("Select Central Rack", ""));
+      racks.forEach((r) => {
+        const id   = r.id;
+        const name = r.name || `Rack ${r.id}`;
+        if (!id) return;
+        sel.add(new Option(name, id));
+      });
+    }
+
+    fill(singleSelect);
+    fill(bulkSelect);
   } catch (err) {
-    console.error("loadCentralRacks error:", err);
+    console.error("loadCentralRacks (central room) error:", err);
+    [singleSelect, bulkSelect].forEach((sel) => {
+      if (!sel) return;
+      sel.innerHTML = "";
+      sel.disabled = true;
+      sel.add(new Option("⚠ Central racks load failed", ""));
+    });
+    showToast("Central Room-er rack load করতে সমস্যা হচ্ছে", "error");
   }
 }
+
 
 /* ================== SECTIONS ================== */
 async function loadSections() {
@@ -218,12 +313,6 @@ async function loadRacksForSection(sectionId) {
 }
 
 /* ================== RACK-WISE A4 + QR BULK PRINT ================== */
-/*
-  - Section + Rack সিলেক্ট থাকতে হবে
-  - /records endpoint থেকে (section + rack filter দিয়ে) সব রেকর্ড আনে
-  - প্রতিটা রেকর্ডের জন্য startPrintFromView-এর মতো একই A4 + QR টেমপ্লেট
-  - ❌ আর page-break নয়, প্রত্যেকটার মাঝে 5px gap থাকবে
-*/
 async function printLabelsForCurrentRack() {
   // 1) আগে চেক করবো Section + Rack সিলেক্ট আছে কিনা
   if (!selectedSection || !selectedRack) {
@@ -234,7 +323,6 @@ async function printLabelsForCurrentRack() {
   let records = [];
 
   try {
-    // main listing API ব্যবহার করছি, যেন structure এক হয়
     const url =
       `${API_BASE}/records` +
       `?page=1` +
@@ -256,7 +344,6 @@ async function printLabelsForCurrentRack() {
     return;
   }
 
-  // 2) প্রতিটা record এর জন্য একই A4 + QR template বানাবো
   const pagesHtml = records
     .map((r) => {
       const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
@@ -294,7 +381,6 @@ Description: ${r.description || ""}
         "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
         encodeURIComponent(qrText);
 
-      // ❌ আর কোনো page-break div নাই, শুধু .a4 ব্লক ফেরত দিচ্ছি
       return `
         <div class="a4">
           <h1 class="title">SFC Air FRMS</h1>
@@ -345,7 +431,6 @@ Description: ${r.description || ""}
     })
     .join("");
 
-  // 3) iframe দিয়ে প্রিন্ট (page-break ছাড়া, প্রতি .a4-এর নিচে 5px gap)
   let frame = document.getElementById("printFrame");
   if (!frame) {
     frame = document.createElement("iframe");
@@ -372,7 +457,6 @@ Description: ${r.description || ""}
           @page { size: A4; margin: 12mm; }
           body{ font-family: Arial, sans-serif; color:#000; margin:0; }
 
-          /* 🔰 প্রতি ব্লকের মাঝে 5px gap + page-break-inside: avoid */
           .a4{
             width:100%;
             margin-bottom: 30px;
@@ -468,8 +552,6 @@ Description: ${r.description || ""}
     frame.contentWindow.print();
   };
 }
-
-
 
 /* ================== FETCH RECORDS ================== */
 async function fetchRecords(page = 1) {
@@ -690,7 +772,7 @@ function bindEditForm() {
 }
 
 /* ================== SINGLE MOVE ================== */
-function openSingleMove(rec) {
+async function openSingleMove(rec) {
   const isClosed = (rec.record_status || "ongoing").toLowerCase() === "closed";
   if (!isClosed) {
     showToast("⛔ Ongoing record কে Central এ move করা যাবে না। আগে Closed করুন।", "error");
@@ -706,13 +788,22 @@ function openSingleMove(rec) {
   const prevRack = rec.Rack?.name || rec.previous_rack_id || "-";
   document.getElementById("currentLocation").textContent = `${prevSection} → Rack ${prevRack}`;
 
+  // ⭐ modal খুললেই fresh central rack লোড করবো
+  await loadCentralRacks();
+
+  // তারপর auto-serial হিসাব
   computeSingleAutoSerial();
 }
+
 
 async function computeSingleAutoSerial() {
   const rackId = document.getElementById("singleMoveRack")?.value;
   const serialInput = document.getElementById("singleMoveSerial");
-  if (!rackId) return (serialInput.value = "");
+  if (!serialInput) return;
+  if (!rackId) {
+    serialInput.value = "";
+    return;
+  }
 
   try {
     const records = await fetchJson(`${API_BASE}/records/by-rack/${rackId}`, {
@@ -817,7 +908,11 @@ function openBulkMove() {
 async function computeBulkAutoSerial() {
   const rackId = document.getElementById("bulkRackId")?.value;
   const serialInput = document.getElementById("bulkStartSerial");
-  if (!rackId) return (serialInput.value = "");
+  if (!serialInput) return;
+  if (!rackId) {
+    serialInput.value = "";
+    return;
+  }
 
   try {
     const records = await fetchJson(`${API_BASE}/records/by-rack/${rackId}`, {
@@ -1391,6 +1486,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEditForm();
   bindSingleMove();
   bindBulkMove();
+ 
 
   // ✅ Rack filter (works only when section selected)
   const rackSel = document.getElementById("rackFilter");

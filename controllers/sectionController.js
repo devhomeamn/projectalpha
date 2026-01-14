@@ -1,8 +1,9 @@
 const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
 const Rack = require("../models/rackModel");
+const { Op } = require("sequelize");   
 
-// ================== GET ALL SECTIONS ==================
+
 // ================== GET ALL SECTIONS ==================
 exports.getSections = async (req, res) => {
   try {
@@ -84,6 +85,7 @@ exports.addRack = async (req, res) => {
       section_id: sectionId,
       name,
       description,
+       is_central: !!centralRoom, 
     });
 
     res.json({
@@ -113,23 +115,34 @@ exports.getRacksBySection = async (req, res) => {
   }
 };
 
-// ================== GET CENTRAL ROOM RACKS ==================
+
+
+// ================== GET ONLY CENTRAL ROOM RACKS ==================
 exports.getCentralRacks = async (req, res) => {
   try {
-    const section = await Section.findOne({ where: { name: "Central Room" } });
-    if (!section)
-      return res.json([]);
+    // 1) "Central Room" নামের section খুঁজি
+    const centralSection = await Section.findOne({
+      where: { name: "Central Room" },
+    });
 
+    // যদি একদমই না থাকে, তাহলে খালি array ফেরত দেই
+    if (!centralSection) {
+      return res.json([]);
+    }
+
+    // 2) এই Central Room section-এর নিচের সব rack বের করি
     const racks = await Rack.findAll({
-      where: { section_id: section.id },
+      where: { section_id: centralSection.id },
       order: [["name", "ASC"]],
     });
+
     res.json(racks);
   } catch (err) {
     console.error("❌ getCentralRacks error:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
 // ================== DELETE SECTION (SAFE) ==================
 exports.deleteSection = async (req, res) => {
   try {
