@@ -644,12 +644,12 @@ Description: ${safeText(record.description || "")}
         padding:14px;
         text-align:center;
       }
-      .qrTitle{ font-size:16px; font-weight:900; margin-bottom:10px; }
+      .qrTitle{ font-size:16px; font-weight:800; margin-bottom:10px; }
       .qrBox img{ width:190px; height:190px; display:block; margin:0 auto; }
       .qrFallback{
         width:190px; height:190px; border:2px dashed #000;
         display:flex; align-items:center; justify-content:center;
-        font-size:18px; font-weight:900; margin:0 auto;
+        font-size:18px; font-weight:800; margin:0 auto;
       }
 
       .card{
@@ -679,7 +679,7 @@ Description: ${safeText(record.description || "")}
         align-items:baseline;
         margin-bottom: 10px;
       }
-      .k{ font-weight:900; font-size:14px; }
+      .k{ font-weight:800; font-size:14px; }
       .v{ font-weight:800; font-size:14px; text-align:center; word-break: break-word; }
       .infoRight .v{ text-align:center; }
       .dash{ font-weight:900; }
@@ -691,10 +691,10 @@ Description: ${safeText(record.description || "")}
 
       <div class="grid">
         <div class="secBlock">
-          <div class="secLabel">Section</div>
+          <div class="secLabel">Section:</div>
           <div class="secVal">${sectionName || "-"}</div>
 
-          <div class="secLabel">Subcategory</div>
+          <div class="secLabel">Subcategory:</div>
           <div class="secVal">${subName || "-"}</div>
         </div>
 
@@ -706,28 +706,28 @@ Description: ${safeText(record.description || "")}
         </div>
 
         <div class="card rackCard">
-          <div class="cardLabel">Rack No.</div>
+          <div class="cardLabel">Rack No:</div>
           <div class="cardValue">${rackNo || "-"}</div>
         </div>
 
         <div class="card serialCard">
-          <div class="cardLabel">Serial No.</div>
+          <div class="cardLabel">Serial No:</div>
           <div class="cardValue">${serialNo || "-"}</div>
         </div>
       </div>
 
       <div class="info">
         <div class="infoLeft">
-          <div class="infoRow"><div class="k">File Name</div><div class="v">${fileName || "-"}</div></div>
-          <div class="infoRow"><div class="k">BD No</div><div class="v">${bdNo || "-"}</div></div>
+          <div class="infoRow"><div class="k">File Name:</div><div class="v">${fileName || "-"}</div></div>
+          <div class="infoRow"><div class="k">BD No:</div><div class="v">${bdNo || "-"}</div></div>
           ${allocateTable ? `<div class="infoRow"><div class="k">Allocate Table</div><div class="v">${allocateTable}</div></div>` : ""}
-          <div class="infoRow"><div class="k">Opening Date</div><div class="v">${openingDate || "-"}</div></div>
+          <div class="infoRow"><div class="k">Opening Date:</div><div class="v">${openingDate || "-"}</div></div>
         </div>
 
         <div class="infoRight">
-          <div class="infoRow"><div class="k">Status</div><div class="v">${statusText}</div></div>
-          <div class="infoRow"><div class="k">Location</div><div class="v">${locationText}</div></div>
-          <div class="infoRow"><div class="k">Closing Date</div><div class="v">${closingDate || '<span class="dash">-</span>'}</div></div>
+          <div class="infoRow"><div class="k">Status:</div><div class="v">${statusText}</div></div>
+          <div class="infoRow"><div class="k">Location:</div><div class="v">${locationText}</div></div>
+          <div class="infoRow"><div class="k">Closing Date:</div><div class="v">${closingDate || '<span class="dash">-</span>'}</div></div>
         </div>
       </div>
     </div>

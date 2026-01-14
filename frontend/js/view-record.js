@@ -217,6 +217,260 @@ async function loadRacksForSection(sectionId) {
   });
 }
 
+/* ================== RACK-WISE A4 + QR BULK PRINT ================== */
+/*
+  - Section + Rack সিলেক্ট থাকতে হবে
+  - /records endpoint থেকে (section + rack filter দিয়ে) সব রেকর্ড আনে
+  - প্রতিটা রেকর্ডের জন্য startPrintFromView-এর মতো একই A4 + QR টেমপ্লেট
+  - ❌ আর page-break নয়, প্রত্যেকটার মাঝে 5px gap থাকবে
+*/
+async function printLabelsForCurrentRack() {
+  // 1) আগে চেক করবো Section + Rack সিলেক্ট আছে কিনা
+  if (!selectedSection || !selectedRack) {
+    showToast("⚠️ আগে Section এবং Rack নির্বাচন করুন", "warn");
+    return;
+  }
+
+  let records = [];
+
+  try {
+    // main listing API ব্যবহার করছি, যেন structure এক হয়
+    const url =
+      `${API_BASE}/records` +
+      `?page=1` +
+      `&limit=1000` +
+      `&q=` +
+      `&section=${encodeURIComponent(selectedSection)}` +
+      `&rack=${encodeURIComponent(selectedRack)}`;
+
+    const data = await fetchJson(url, { headers: { ...getAuthHeaders() } });
+    records = Array.isArray(data.data) ? data.data : [];
+  } catch (err) {
+    console.error("printLabelsForCurrentRack error:", err);
+    showToast("❌ Rack data আনতে সমস্যা হয়েছে", "error");
+    return;
+  }
+
+  if (!Array.isArray(records) || records.length === 0) {
+    showToast("⚠️ এই Rack এ কোনো record পাওয়া যায়নি", "warn");
+    return;
+  }
+
+  // 2) প্রতিটা record এর জন্য একই A4 + QR template বানাবো
+  const pagesHtml = records
+    .map((r) => {
+      const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
+
+      const currentStatus = (r.record_status || "ongoing").toLowerCase();
+      const statusText = currentStatus === "closed" ? "Closed" : "Ongoing";
+      const locationText = r.status === "central" ? "In Central" : "In Section";
+
+      const sectionName = r.Section?.name || "-";
+      const subName = r.Subcategory?.name || "-";
+      const rackNo = r.Rack?.name || "-";
+      const serialNo = r.serial_no ?? "-";
+      const bdNo = r.bd_no || "-";
+      const fileName = r.file_name || "-";
+      const openingDate = r.opening_date || "-";
+      const closingDate = r.closing_date || "-";
+
+      const qrText = `
+SFC Air FRMS
+File Name: ${fileName}
+BD No: ${bdNo}
+Section: ${sectionName}
+Subcategory: ${subName}
+Rack No: ${rackNo}
+Serial No: ${serialNo}
+Status: ${statusText}
+Location: ${locationText}
+Opening Date: ${openingDate}
+Closing Date: ${closingDate}
+Created At: ${createdAt}
+Description: ${r.description || ""}
+`.trim();
+
+      const qrUrl =
+        "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
+        encodeURIComponent(qrText);
+
+      // ❌ আর কোনো page-break div নাই, শুধু .a4 ব্লক ফেরত দিচ্ছি
+      return `
+        <div class="a4">
+          <h1 class="title">SFC Air FRMS</h1>
+          <div class="subtitle">File & Record Management System</div>
+
+          <div class="grid">
+            <div class="secBlock">
+              <div class="secLabel">Section :</div>
+              <div class="secVal">${sectionName}</div>
+
+              <div class="secLabel">Subcategory:</div>
+              <div class="secVal">${subName}</div>
+            </div>
+
+            <div class="qrBox">
+              <div class="qrTitle">QR CODE</div>
+              <img src="${qrUrl}" alt="QR"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="qrFallback" style="display:none;">QR</div>
+            </div>
+
+            <div class="card rackCard">
+              <div class="cardLabel">Rack No.</div>
+              <div class="cardValue">${rackNo}</div>
+            </div>
+
+            <div class="card serialCard">
+              <div class="cardLabel">Serial No.</div>
+              <div class="cardValue">${serialNo}</div>
+            </div>
+          </div>
+
+          <div class="info">
+            <div class="infoLeft">
+              <div class="infoRow"><div class="k">File Name :</div><div class="v">${fileName}</div></div>
+              <div class="infoRow"><div class="k">File/BD No :</div><div class="v">${bdNo}</div></div>
+              <div class="infoRow"><div class="k">Opening Date :</div><div class="v">${openingDate}</div></div>
+            </div>
+
+            <div class="infoRight">
+              <div class="infoRow"><div class="k">Status :</div><div class="v">${statusText}</div></div>
+              <div class="infoRow"><div class="k">Location :</div><div class="v">${locationText}</div></div>
+              <div class="infoRow"><div class="k">Closing Date :</div><div class="v">${closingDate || "-"}</div></div>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  // 3) iframe দিয়ে প্রিন্ট (page-break ছাড়া, প্রতি .a4-এর নিচে 5px gap)
+  let frame = document.getElementById("printFrame");
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.id = "printFrame";
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    frame.setAttribute("aria-hidden", "true");
+    document.body.appendChild(frame);
+  }
+
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Rack Records Print</title>
+        <style>
+          @page { size: A4; margin: 12mm; }
+          body{ font-family: Arial, sans-serif; color:#000; margin:0; }
+
+          /* 🔰 প্রতি ব্লকের মাঝে 5px gap + page-break-inside: avoid */
+          .a4{
+            width:100%;
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+          }
+
+          .title{
+            text-align:center;
+            font-weight:900;
+            font-size:30px;
+            margin:0;
+            letter-spacing:.5px;
+          }
+          .subtitle{
+            text-align:center;
+            font-size:13px;
+            opacity:.85;
+            margin-top:4px;
+          }
+
+          .grid{
+            margin-top:20px;
+            display:grid;
+            grid-template-columns: 1fr 1fr 240px;
+            column-gap: 34px;
+            row-gap: 22px;
+            align-items:start;
+          }
+
+          .secBlock{
+            grid-column: 1 / 3;
+            display:grid;
+            grid-template-columns: 160px 1fr;
+            row-gap: 12px;
+            column-gap: 20px;
+            padding-top: 6px;
+          }
+          .secLabel{ font-weight:900; font-size:22px; }
+          .secVal{ font-weight:900; font-size:22px; letter-spacing:.4px; }
+
+          .qrBox{
+            grid-column: 3 / 4;
+            border:2px solid #000;
+            border-radius:14px;
+            padding:14px;
+            text-align:center;
+          }
+          .qrTitle{ font-size:16px; font-weight:900; margin-bottom:10px; }
+          .qrBox img{ width:190px; height:190px; display:block; margin:0 auto; }
+          .qrFallback{
+            width:190px; height:190px; border:2px dashed #000;
+            display:flex; align-items:center; justify-content:center;
+            font-size:18px; font-weight:900; margin:0 auto;
+          }
+
+          .card{
+            border:2px solid #000;
+            border-radius:12px;
+            padding:12px 14px;
+            width: 220px;
+          }
+          .cardLabel{ font-size:12px; font-weight:800; opacity:.85; margin-bottom:8px; }
+          .cardValue{ font-size:44px; font-weight:900; line-height:1; }
+
+          .rackCard{ grid-column: 1 / 2; margin-top: -160px; }
+          .serialCard{ grid-column: 2 / 3; margin-top: -160px; }
+
+          .info{
+            margin-top: 34px;
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 60px;
+            row-gap: 12px;
+          }
+          .infoRow{
+            display:grid;
+            grid-template-columns: 140px 1fr;
+            column-gap: 14px;
+            align-items:baseline;
+            margin-bottom: 10px;
+          }
+          .k{ font-weight:900; font-size:14px; }
+          .v{ font-weight:800; font-size:14px; text-align:center; word-break: break-word; }
+        </style>
+      </head>
+      <body>${pagesHtml}</body>
+    </html>
+  `);
+  doc.close();
+
+  frame.onload = () => {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  };
+}
+
+
+
 /* ================== FETCH RECORDS ================== */
 async function fetchRecords(page = 1) {
   try {
@@ -225,7 +479,9 @@ async function fetchRecords(page = 1) {
     const rackParam = selectedRack ? `&rack=${selectedRack}` : "";
 
     const data = await fetchJson(
-      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}${rackParam}`,
+      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(
+        q
+      )}${sectionParam}${rackParam}`,
       { headers: { ...getAuthHeaders() } }
     );
 
@@ -707,7 +963,7 @@ function showDetails(rec) {
   modal.style.display = "flex";
 }
 
-/* ================== PRINT (View) ================== */
+/* ================== PRINT (View – Single) ================== */
 function startPrintFromView() {
   if (!lastViewedRecordForPrint) {
     alert("No record selected for print");
@@ -1153,6 +1409,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("printFromViewBtn")
     ?.addEventListener("click", startPrintFromView);
+
+  document
+    .getElementById("printLabelsBtn")
+    ?.addEventListener("click", printLabelsForCurrentRack);
 
   loadConfig();
 });
