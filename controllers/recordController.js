@@ -383,22 +383,39 @@ exports.moveToCentral = async (req, res) => {
 };
 
 // ================== GET CENTRAL RECORDS ==================
+// ================== GET CENTRAL RECORDS ==================
+// ================== GET CENTRAL RECORDS ==================
 exports.getCentralRecords = async (req, res) => {
   try {
-    const q = req.query.q || "";
+    const qRaw = req.query.q || "";
+    const q = qRaw.toString().trim();
+
+    // ১) আগে Central Room section টা বের করি
+    const centralSection = await Section.findOne({
+      where: { name: "Central Room" },
+    });
+
+    if (!centralSection) {
+      // একদম safe fallback – Central Room নাই মানে central records নাই
+      return res.json([]);
+    }
+
+    // ২) মূল where clause – এখন থেকে section_id দিয়ে ধরব
+    const whereClause = {
+      section_id: centralSection.id,      // 🔵 central মানে এখন এই section
+
+      ...(q && {
+        [Op.or]: [
+          { file_name:   { [Op.like]: `%${q}%` } },
+          { bd_no:       { [Op.like]: `%${q}%` } },
+          { description: { [Op.like]: `%${q}%` } },
+          { moved_by:    { [Op.like]: `%${q}%` } },
+        ],
+      }),
+    };
 
     const records = await Record.findAll({
-      where: {
-        status: "central",
-        ...(q && {
-          [Op.or]: [
-            { file_name: { [Op.like]: `%${q}%` } },
-            { bd_no: { [Op.like]: `%${q}%` } },
-            { description: { [Op.like]: `%${q}%` } },
-            { moved_by: { [Op.like]: `%${q}%` } },
-          ],
-        }),
-      },
+      where: whereClause,
       include: [
         { model: Section, attributes: ["id", "name"] },
         { model: Subcategory, attributes: ["id", "name"] },
@@ -407,6 +424,7 @@ exports.getCentralRecords = async (req, res) => {
       order: [["updatedAt", "DESC"]],
     });
 
+    // ৩) আগের মতোই previous_location attach করে পাঠाई
     const enhanced = await Promise.all(
       records.map(async (r) => {
         let prevSection = null,

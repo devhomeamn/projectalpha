@@ -16,6 +16,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const paginationEl = document.getElementById("pagination");
   const pageSizeSelect = document.getElementById("pageSizeSelect");
 
+  /* ================== AUTH HELPERS ================== */
+
+  function getToken() {
+    return localStorage.getItem("token") || "";
+  }
+
+  function redirectLogin() {
+    try {
+      localStorage.clear();
+    } catch (e) {
+      console.warn("Failed to clear storage:", e);
+    }
+    window.location.href = "login.html";
+  }
+
+  async function authFetch(url, options = {}) {
+    const token = getToken();
+    const headers = { ...(options.headers || {}) };
+
+    // Default JSON content-type if body is not FormData
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = headers["Content-Type"] || "application/json";
+    }
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(url, { ...options, headers });
+
+    if (res.status === 401) {
+      alert("Session expired. Please login again.");
+      setTimeout(redirectLogin, 700);
+      throw new Error("Unauthorized");
+    }
+
+    if (res.status === 403) {
+      alert("Access denied.");
+      throw new Error("Forbidden");
+    }
+
+    return res;
+  }
+
+  /* ================== QUERY PARAM ================== */
+
   function getQueryParam() {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -31,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (qParam && searchInput) searchInput.value = qParam;
 
     try {
-      const res = await fetch("/api/config");
+      const res = await authFetch("/api/config");
       const data = await res.json();
 
       API_BASE = data.apiBase
@@ -44,6 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Config load failed:", err);
       API_BASE = `${window.location.origin}/api`;
+      // even if config fails, try fetching (may still work locally)
       fetchCentralRecords(qParam);
     }
   }
@@ -52,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function fetchCentralRecords(searchQuery = "") {
     try {
       const url = `${API_BASE}/records/central?q=${encodeURIComponent(searchQuery)}`;
-      const res = await fetch(url);
+      const res = await authFetch(url);
       const data = await res.json();
 
       allCentralRecords = Array.isArray(data) ? data : [];
@@ -143,7 +190,17 @@ document.addEventListener("DOMContentLoaded", () => {
     start = Math.max(1, end - windowSize + 1);
 
     if (start > 1) {
-      paginationEl.appendChild(makeBtn("1", false, () => { currentPage = 1; render(); }, currentPage === 1));
+      paginationEl.appendChild(
+        makeBtn(
+          "1",
+          false,
+          () => {
+            currentPage = 1;
+            render();
+          },
+          currentPage === 1
+        )
+      );
       if (start > 2) {
         const dots = document.createElement("span");
         dots.textContent = "…";
@@ -156,10 +213,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     for (let p = start; p <= end; p++) {
       paginationEl.appendChild(
-        makeBtn(String(p), false, () => {
-          currentPage = p;
-          render();
-        }, p === currentPage)
+        makeBtn(
+          String(p),
+          false,
+          () => {
+            currentPage = p;
+            render();
+          },
+          p === currentPage
+        )
       );
     }
 
@@ -172,7 +234,17 @@ document.addEventListener("DOMContentLoaded", () => {
         dots.style.fontWeight = "900";
         paginationEl.appendChild(dots);
       }
-      paginationEl.appendChild(makeBtn(String(totalPages), false, () => { currentPage = totalPages; render(); }, currentPage === totalPages));
+      paginationEl.appendChild(
+        makeBtn(
+          String(totalPages),
+          false,
+          () => {
+            currentPage = totalPages;
+            render();
+          },
+          currentPage === totalPages
+        )
+      );
     }
 
     paginationEl.appendChild(
@@ -378,7 +450,9 @@ document.addEventListener("DOMContentLoaded", () => {
   window.closeModal = closeModal;
   window.exportToCSV = exportToCSV;
 
-  document.querySelector("#recordModal .close-btn")?.addEventListener("click", closeModal);
+  document
+    .querySelector("#recordModal .close-btn")
+    ?.addEventListener("click", closeModal);
 
   window.addEventListener("click", (e) => {
     const modal = document.getElementById("recordModal");
