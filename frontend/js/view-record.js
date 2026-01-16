@@ -142,6 +142,29 @@ async function loadConfig() {
   }
 }
 
+
+//notif to filter ongoing rec for 
+
+function getRecordStatusParam() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("record_status") || "").trim().toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+
+function getUrlParam(name) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get(name) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+
 //load central racks
 
 /* =============== CENTRAL ROOM RACKS → MOVE TO CENTRAL MODAL =============== */
@@ -560,12 +583,21 @@ async function fetchRecords(page = 1) {
     const sectionParam = selectedSection ? `&section=${selectedSection}` : "";
     const rackParam = selectedRack ? `&rack=${selectedRack}` : "";
 
+    const rsRaw = getUrlParam("record_status").toLowerCase();
+    const allowed = ["ongoing", "closed"];
+    const safeRS = allowed.includes(rsRaw) ? rsRaw : "";
+
+    const mine = getUrlParam("mine") === "1" ? "1" : "";
+
+    const recordStatusParam = safeRS ? `&record_status=${encodeURIComponent(safeRS)}` : "";
+    const mineParam = mine ? `&mine=1` : "";
+
+
     const data = await fetchJson(
-      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(
-        q
-      )}${sectionParam}${rackParam}`,
+      `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}${rackParam}${recordStatusParam}${mineParam}`,
       { headers: { ...getAuthHeaders() } }
     );
+
 
     allRecords = data.data || [];
     currentPage = data.page || 1;

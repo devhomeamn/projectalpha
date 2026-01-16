@@ -182,12 +182,23 @@ exports.getRecords = async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
     const sectionFilter = req.query.section || "";
-    const rackFilter = req.query.rack || ""; // ✅ NEW
+    const rackFilter = req.query.rack || "";
+
+    // ✅ NEW
+    const recordStatusFilter = (req.query.record_status || "").toString().trim().toLowerCase();
+    const mine = (req.query.mine || "").toString().trim(); // "1" হলে apply
+
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const offset = (page - 1) * limit;
 
-    /* ---------- WHERE CLAUSE ---------- */
+    // ✅ record_status allow-list
+    const allowedRS = ["ongoing", "closed"];
+    const rs = allowedRS.includes(recordStatusFilter) ? recordStatusFilter : "";
+
+    // ✅ mine actor (same as addRecord)
+    const actor = getActor(req, "");
+
     const whereClause = {
       ...(q && {
         [Op.or]: [
@@ -200,14 +211,16 @@ exports.getRecords = async (req, res) => {
         ],
       }),
 
-      // ✅ Section filter
       ...(sectionFilter && { section_id: sectionFilter }),
-
-      // ✅ Rack filter (FINAL FIX)
       ...(rackFilter && { rack_id: rackFilter }),
+
+      // ✅ NEW: status filter
+      ...(rs && { record_status: rs }),
+
+      // ✅ NEW: only my records
+      ...(mine === "1" && actor && { added_by: actor }),
     };
 
-    /* ---------- QUERY ---------- */
     const { rows: records, count: total } = await Record.findAndCountAll({
       where: whereClause,
       include: [
@@ -220,7 +233,6 @@ exports.getRecords = async (req, res) => {
       offset,
     });
 
-    /* ---------- RESPONSE ---------- */
     res.json({
       data: records,
       page,
@@ -232,6 +244,8 @@ exports.getRecords = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch records" });
   }
 };
+
+
 // ================== LOOKUP RECORDS (Topbar global search) ==================
 // উদ্দেশ্য: BD No বা File Name দিয়ে দ্রুত record টা কোথায় আছে (Section/Central) দেখানো
 // Returns: up to 8 matches (most recently updated first)

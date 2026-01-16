@@ -22,9 +22,36 @@
   <span class="material-symbols-rounded">search</span>
 </button>
 
-    <button class="topbar-icon" title="Notifications" type="button">
-      <span class="material-symbols-rounded">notifications</span>
-    </button>
+   <!-- ✅ Notification Dropdown -->
+<div class="notif-dropdown" id="notifDropdownWrap">
+  <button class="topbar-icon notif-btn" id="notifBtn" title="Notifications" type="button" aria-expanded="false">
+    <span class="material-symbols-rounded">notifications</span>
+    <span class="notif-badge" id="notifBadge" aria-label="Ongoing records">0</span>
+  </button>
+
+  <div class="notif-menu" id="notifMenu" aria-hidden="true">
+    <div class="notif-head">
+      <div class="nh-title">Notifications</div>
+      <div class="nh-pill" id="notifOngoingPill">0 Ongoing</div>
+    </div>
+
+    <div class="notif-body" id="notifBody">
+      <div class="notif-empty">No notifications.</div>
+    </div>
+
+    <div class="notif-foot">
+      <a class="notif-link" href="view-record.html">
+        <span class="material-symbols-rounded">visibility</span>
+        View Records
+      </a>
+      <a class="notif-link primary" href="profile.html">
+        <span class="material-symbols-rounded">person</span>
+        My Profile
+      </a>
+    </div>
+  </div>
+</div>
+
 
   
     <!-- ✅ Profile Dropdown -->

@@ -416,6 +416,173 @@ async function lookup(value) {
       });
     }
 
+
+
+
+  /* ------------------------------
+        Notifications (Dropdown)
+        Uses: /api/dashboard/my-stats
+  ------------------------------ */
+  let __myStatsCache = null;
+
+  async function fetchMyStats() {
+    const jwt = localStorage.getItem("token") || "";
+    const res = await fetch("/api/dashboard/my-stats", {
+      headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
+    });
+
+    if (res.status === 401) {
+      localStorage.clear();
+      window.location.href = "login.html";
+      return null;
+    }
+
+    return await res.json().catch(() => null);
+  }
+
+  function updateNotifBadge(ongoing) {
+    const badge = document.getElementById("notifBadge");
+    const btn = document.getElementById("notifBtn");
+    if (!badge || !btn) return;
+
+    const n = Number(ongoing ?? 0);
+    if (n > 0) {
+      badge.style.display = "inline-flex";
+      badge.textContent = n > 99 ? "99+" : String(n);
+      btn.title = `Ongoing Records: ${n}`;
+    } else {
+      badge.style.display = "none";
+      badge.textContent = "0";
+      btn.title = "Notifications";
+    }
+  }
+
+  function renderNotifDropdown(stats) {
+    const pill = document.getElementById("notifOngoingPill");
+    const body = document.getElementById("notifBody");
+    if (!pill || !body) return;
+
+    const ongoing = Number(stats?.ongoing ?? 0);
+    pill.textContent = `${ongoing} Ongoing`;
+
+    const recent = Array.isArray(stats?.recent) ? stats.recent : [];
+
+    let html = "";
+
+    // ✅ Clickable ongoing summary card
+    html += `
+      <div class="notif-item is-clickable" data-go="ongoing" title="Click to view ongoing records">
+        <div class="ni-icon"><span class="material-symbols-rounded">task_alt</span></div>
+        <div class="ni-main">
+          <div class="ni-title">My Ongoing Records</div>
+          <div class="ni-sub">You have ${ongoing} ongoing record(s). Click to view.</div>
+          <div class="ni-time">Open filtered list</div>
+        </div>
+      </div>
+    `;
+
+    if (recent.length === 0) {
+      html += `<div class="notif-empty">No recent activity.</div>`;
+      body.innerHTML = html;
+      return;
+    }
+
+    recent.forEach((r) => {
+      const title = r.action === "Moved" ? "Moved a record" : "Added a record";
+      const sub = `${r.file_name || "—"} • BD ${r.bd_no || "—"}`;
+      const when = r.when || "";
+
+      html += `
+        <div class="notif-item">
+          <div class="ni-icon"><span class="material-symbols-rounded">history</span></div>
+          <div class="ni-main">
+            <div class="ni-title">${title}</div>
+            <div class="ni-sub">${sub}</div>
+            <div class="ni-time">${when}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    body.innerHTML = html;
+  }
+
+  async function refreshNotificationsUI() {
+    try {
+      const stats = await fetchMyStats();
+      if (!stats) return;
+
+      __myStatsCache = stats;
+      updateNotifBadge(stats.ongoing);
+      renderNotifDropdown(stats);
+    } catch (e) {
+      console.warn("Notifications refresh failed:", e);
+    }
+  }
+
+
+
+
+  // 2nd portion for notif dropdown
+    (function initNotifDropdown() {
+    const wrap = document.getElementById("notifDropdownWrap");
+    const btn = document.getElementById("notifBtn");
+    const menu = document.getElementById("notifMenu");
+
+    if (!wrap || !btn || !menu) return;
+
+    function close() {
+      wrap.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+      menu.setAttribute("aria-hidden", "true");
+    }
+
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+
+      // close profile dropdown if open
+      document.querySelector(".user-dropdown")?.classList.remove("open");
+
+      const isOpen = wrap.classList.toggle("open");
+      btn.setAttribute("aria-expanded", String(isOpen));
+      menu.setAttribute("aria-hidden", String(!isOpen));
+
+      // when opening, refresh content instantly
+      if (isOpen) {
+        await refreshNotificationsUI();
+      }
+    });
+
+    // ✅ Handle clicks inside menu (ongoing -> redirect)
+    menu.addEventListener("click", (e) => {
+      const ongoingCard = e.target.closest(".notif-item[data-go='ongoing']");
+      if (ongoingCard) {
+        // close dropdown then redirect
+        close();
+        window.location.href = "view-record.html?record_status=ongoing&mine=1";
+
+        return;
+      }
+
+      // other clicks: don't close menu
+      e.stopPropagation();
+    });
+
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+    });
+  })();
+
+
+
+    // initial + auto refresh every 60s
+  refreshNotificationsUI();
+  setInterval(refreshNotificationsUI, 60000);
+
+
+
+
     // -------- Mobile overlay search (icon tap) --------
     function openMobileOverlay() {
       if (document.querySelector(".msearch-overlay")) return;
