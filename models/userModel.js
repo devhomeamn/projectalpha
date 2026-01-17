@@ -30,6 +30,11 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('Admin', 'Master', 'General'),
     defaultValue: 'General',
   },
+  // ✅ Assigned section for General users (null for Admin/Master)
+  section_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
   status: {
     type: DataTypes.ENUM('pending', 'approved', 'rejected'),
     defaultValue: 'pending', // ✅ new field for approval

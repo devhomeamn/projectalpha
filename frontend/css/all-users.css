@@ -158,7 +158,49 @@
 
 #usersTable tbody tr:hover {
   background: #f9fafb;
+  cursor: default;
+}
+
+/* Role badges */
+.role-badge{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+
+.role-admin{ background: rgba(37,99,235,0.14); color: #1d4ed8; }
+.role-master{ background: rgba(16,185,129,0.14); color: #047857; }
+.role-general{ background: rgba(107,114,128,0.14); color: #374151; }
+
+/* Edit button */
+.btn-edit{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s ease;
+}
+
+.btn-edit:hover{
+  background: #f3f4f6;
+  transform: translateY(-1px);
+}
+
+.btn-edit .material-symbols-rounded{
+  font-size: 20px;
+  color: #2563eb;
 }
 
 /* Status badges */
@@ -222,4 +264,147 @@
     font-size: 13px;
     padding: 10px 12px;
   }
+}
+
+/* ===========================================
+   ACCESS MODAL (Role + Section Assignment)
+=========================================== */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  z-index: 800;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  position: relative;
+  animation: auFadeUp 0.22s ease-out;
+}
+
+@keyframes auFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-header .user-info .u-name {
+  font-weight: 800;
+  font-size: 16px;
+  color: #111827;
+}
+
+.modal-header .user-info .u-sub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: #e5e7eb;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.close-btn:hover { background: #d1d5db; }
+
+.modal-body {
+  padding: 16px 20px 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.form-group select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+.form-group .hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.btn-ghost {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-ghost:hover { background: #f3f4f6; }
+
+.btn-primary {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.btn-primary:hover { background: #1d4ed8; }
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
 }

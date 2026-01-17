@@ -39,6 +39,7 @@ function fillUserCardFromLocal() {
   const email = localStorage.getItem("email") || "--";
   const serviceid = localStorage.getItem("serviceid") || "--";
   const username = localStorage.getItem("username") || "--";
+  const sectionId = localStorage.getItem("section_id") || "";
 
   setText("pNameText", name);
   setText("pRoleText", role);
@@ -46,9 +47,46 @@ function fillUserCardFromLocal() {
   setText("pServiceIdText", serviceid);
   setText("pUsernameText", username);
 
+  // Assigned section (fallback text; name will be resolved from API below)
+  const roleLower = String(role || "").toLowerCase();
+  if (roleLower === "admin" || roleLower === "master") {
+    setText("pSectionText", "All Sections");
+  } else if (sectionId) {
+    setText("pSectionText", `Section #${sectionId}`);
+  } else {
+    setText("pSectionText", "Not assigned");
+  }
+
   const seed = encodeURIComponent(email !== "--" ? email : username);
   const av = document.getElementById("pAvatar");
   if (av) av.src = `https://robohash.org/${seed}.png?size=140x140`;
+}
+
+// Resolve section name for General users (and anyone who has a section_id)
+async function loadAssignedSectionName() {
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+  const sectionId = (localStorage.getItem("section_id") || "").trim();
+  if (!sectionId) return;
+
+  // Admin/Master are not restricted to a single section
+  if (role === "admin" || role === "master") return;
+
+  try {
+    // Using /api/sections list to map id -> name
+    const sections = await apiFetchJson("/api/sections");
+    const found = Array.isArray(sections)
+      ? sections.find(s => String(s.id) === String(sectionId))
+      : null;
+
+    if (found?.name) {
+      setText("pSectionText", found.name);
+    } else {
+      setText("pSectionText", `Section #${sectionId}`);
+    }
+  } catch (err) {
+    console.warn("Assigned section name load failed:", err);
+    // keep fallback
+  }
 }
 
 function renderRecent(recent) {
@@ -238,6 +276,7 @@ function updateDateTime() {
 
 document.addEventListener("DOMContentLoaded", () => {
   fillUserCardFromLocal();
+  loadAssignedSectionName();
   
   // Initialize charts first
   initCharts();
@@ -251,6 +290,7 @@ setInterval(updateDateTime, 60000);
   // Refresh button
   document.getElementById("btnRefresh")?.addEventListener("click", () => {
     fillUserCardFromLocal();
+    loadAssignedSectionName();
     loadMyStats();
   });
 });

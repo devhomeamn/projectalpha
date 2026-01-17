@@ -7,7 +7,18 @@ const { Op } = require("sequelize");
 // ================== GET ALL SECTIONS ==================
 exports.getSections = async (req, res) => {
   try {
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+
+    // ✅ General users should only see their assigned section
+    const where = {};
+    if (role === "general") {
+      if (!userSectionId) return res.json([]);
+      where.id = userSectionId;
+    }
+
     const sections = await Section.findAll({
+      where,
       include: [
         { model: Subcategory },   // subcategories
         { model: Rack },          // ✅ racks under section
@@ -104,6 +115,17 @@ exports.addRack = async (req, res) => {
 exports.getRacksBySection = async (req, res) => {
   try {
     const { sectionId } = req.params;
+
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+
+    // ✅ General users can only query racks of their assigned section
+    if (role === "general") {
+      if (!userSectionId || String(userSectionId) !== String(sectionId)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+
     const racks = await Rack.findAll({
       where: { section_id: sectionId },
       order: [["name", "ASC"]],

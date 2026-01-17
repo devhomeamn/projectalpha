@@ -5,7 +5,7 @@ const { Op } = require('sequelize');
 
 // ✅ Register (new user = pending)
 exports.register = async (req, res) => {
-  const { name, serviceid, email, username, password, role } = req.body;
+  const { name, serviceid, email, username, password } = req.body;
   try {
     const existingUser = await User.findOne({
       where: {
@@ -30,7 +30,9 @@ exports.register = async (req, res) => {
       serviceid,
       email,
       password: hashedPassword,
-      role,
+      // ✅ Security: role is always General on self-register
+      role: 'General',
+      section_id: null,
       status: 'pending', // 👈 pending by default
     });
 
@@ -68,6 +70,7 @@ exports.login = async (req, res) => {
       {
         id: user.id,
         role: user.role,
+        section_id: user.section_id,
         username: user.username,
         name: user.name,
         email: user.email,
@@ -87,6 +90,7 @@ exports.login = async (req, res) => {
     serviceid: user.serviceid,
     email: user.email,
     role: user.role,
+    section_id: user.section_id,
     status: user.status,
 },
     });
@@ -131,12 +135,63 @@ exports.rejectUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
-      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'status', 'createdAt'],
+      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'section_id', 'status', 'createdAt'],
       order: [['createdAt', 'DESC']]
     });
     res.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
+// ✅ Admin: update user access (role + section assignment)
+exports.updateUserAccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const roleRaw = (req.body.role || '').toString().trim();
+    const sectionRaw = req.body.section_id;
+
+    const allowedRoles = ['Admin', 'Master', 'General'];
+    if (!allowedRoles.includes(roleRaw)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    // section_id: null/empty allowed for Admin/Master; required for General
+    let section_id = null;
+    if (sectionRaw !== null && sectionRaw !== undefined && `${sectionRaw}`.trim() !== '') {
+      const n = parseInt(sectionRaw, 10);
+      if (!Number.isFinite(n) || n <= 0) {
+        return res.status(400).json({ error: 'Invalid section_id' });
+      }
+      section_id = n;
+    }
+
+    if (roleRaw === 'General' && !section_id) {
+      return res.status(400).json({ error: 'General user must have a section assigned' });
+    }
+
+    // For Admin/Master, force section_id null
+    if (roleRaw !== 'General') {
+      section_id = null;
+    }
+
+    const [updated] = await User.update(
+      { role: roleRaw, section_id },
+      { where: { id } }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = await User.findByPk(id, {
+      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'section_id', 'status', 'createdAt'],
+    });
+
+    res.json({ message: '✅ User access updated', user });
+  } catch (err) {
+    console.error('updateUserAccess error:', err);
+    res.status(500).json({ error: 'Failed to update user access' });
   }
 };

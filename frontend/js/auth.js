@@ -71,6 +71,57 @@ function showToast(message, type = 'info', duration = 5000) {
   }, duration);
 }
 
+/* ================== TOKEN HELPERS ================== */
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return {};
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return {};
+  }
+}
+
+function persistUserSession(data) {
+  // ✅ Token
+  if (data?.token) localStorage.setItem('token', data.token);
+
+  // ✅ User fields from response
+  const u = data?.user || {};
+  if (u.role !== undefined) localStorage.setItem('role', u.role || '');
+  if (u.username !== undefined) localStorage.setItem('username', u.username || '');
+  if (u.name !== undefined) localStorage.setItem('name', u.name || '');
+  if (u.email !== undefined) localStorage.setItem('email', u.email || '');
+  if (u.serviceid !== undefined) localStorage.setItem('serviceid', String(u.serviceid ?? ''));
+
+  // ✅ NEW: section_id save (important for General profile assigned section)
+  if (u.section_id !== undefined && u.section_id !== null) {
+    localStorage.setItem('section_id', String(u.section_id));
+  } else {
+    // keep existing if any
+    if (!localStorage.getItem('section_id')) localStorage.setItem('section_id', '');
+  }
+
+  // ✅ Fallback: decode token if section_id/role missing in response
+  const token = localStorage.getItem('token') || '';
+  if (token) {
+    const p = decodeJwtPayload(token);
+
+    // role fallback
+    if (!localStorage.getItem('role') && p.role) {
+      localStorage.setItem('role', String(p.role));
+    }
+
+    // section_id fallback (support both keys)
+    const sid = p.section_id ?? p.sectionId;
+    if ((!localStorage.getItem('section_id') || localStorage.getItem('section_id') === '') && sid != null) {
+      localStorage.setItem('section_id', String(sid));
+    }
+  }
+}
+
 // --------------------
 // Form handlers
 // --------------------
@@ -96,23 +147,17 @@ function initForms() {
         if (res.ok) {
           showToast('Login Successful!', 'success');
 
-          // ✅ store everything needed for topbar dropdown
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('role', data.user.role);
-          localStorage.setItem('username', data.user.username);
-          localStorage.setItem('name', data.user.name);
+          // ✅ store everything needed for topbar dropdown + profile section
+          persistUserSession(data);
 
-          // ✅ NEW: email + serviceid saved (from DB via login response)
-          localStorage.setItem('email', data.user.email || '');
-          localStorage.setItem('serviceid', String(data.user.serviceid ?? ''));
-
-          const role = (data.user.role || "").toLowerCase();
+          const role = (data?.user?.role || localStorage.getItem('role') || "").toLowerCase();
 
           setTimeout(() => {
+            // (আপনার আগের redirect logic same রাখা হলো)
             window.location.href =
-              (role === "admin" || role === "general")
+              (role === "admin" || role === "general" || role === "master")
                 ? "dashboard.html"
-                : "dashboard-user.html";
+                : "dashboard.html";
           }, 1000);
         } else {
           showToast(data.error || 'Login Failed', 'error');
@@ -135,13 +180,13 @@ function initForms() {
       const email = emailEl ? emailEl.value.trim() : '';
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
-      const role = document.getElementById('role').value;
 
       try {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, serviceid, email, username, password, role }),
+          // ✅ Self-registration always creates General user (Admin can change later)
+          body: JSON.stringify({ name, serviceid, email, username, password }),
         });
 
         const data = await res.json();

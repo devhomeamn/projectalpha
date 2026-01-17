@@ -95,6 +95,18 @@ exports.addRecord = async (req, res) => {
     subcategory_id = parseInt(subcategory_id, 10);
     rack_id = parseInt(rack_id, 10);
 
+    // ✅ Role scope: General users can only add to their assigned section
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+    if (role === "general") {
+      if (!userSectionId) {
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      if (String(section_id) !== String(userSectionId)) {
+        return res.status(403).json({ error: "You can only add records in your assigned section" });
+      }
+    }
+
     // ✅ Section-based rule: OP-1/OP-2 => allocate_table required
     const sec = await Section.findByPk(section_id);
     const secName = (sec?.name || "").toLowerCase();
@@ -178,14 +190,23 @@ exports.addRecord = async (req, res) => {
 };
 
 // ================== GET ALL RECORDS (with pagination + filter + rack search) ==================
+// ================== GET ALL RECORDS (with pagination + filter + rack search) ==================
 exports.getRecords = async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
     const sectionFilter = req.query.section || "";
     const rackFilter = req.query.rack || "";
 
-    // ✅ NEW
-    const recordStatusFilter = (req.query.record_status || "").toString().trim().toLowerCase();
+    // ✅ Role scope (declare ONCE)
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+
+    // ✅ Filters
+    const recordStatusFilter = (req.query.record_status || "")
+      .toString()
+      .trim()
+      .toLowerCase();
+
     const mine = (req.query.mine || "").toString().trim(); // "1" হলে apply
 
     const page = parseInt(req.query.page, 10) || 1;
@@ -199,6 +220,7 @@ exports.getRecords = async (req, res) => {
     // ✅ mine actor (same as addRecord)
     const actor = getActor(req, "");
 
+    // ✅ Base where clause
     const whereClause = {
       ...(q && {
         [Op.or]: [
@@ -211,15 +233,27 @@ exports.getRecords = async (req, res) => {
         ],
       }),
 
-      ...(sectionFilter && { section_id: sectionFilter }),
       ...(rackFilter && { rack_id: rackFilter }),
 
-      // ✅ NEW: status filter
+      // ✅ status filter
       ...(rs && { record_status: rs }),
 
-      // ✅ NEW: only my records
+      // ✅ only my records
       ...(mine === "1" && actor && { added_by: actor }),
     };
+
+    // ✅ Section filter logic
+    if (role === "general") {
+      // General: only own assigned section + not central
+      if (!userSectionId) {
+        return res.json({ data: [], page, totalPages: 1, total: 0 });
+      }
+      whereClause.section_id = userSectionId;
+      whereClause.status = { [Op.ne]: "central" };
+    } else {
+      // Admin/Master: optional section filter
+      if (sectionFilter) whereClause.section_id = sectionFilter;
+    }
 
     const { rows: records, count: total } = await Record.findAndCountAll({
       where: whereClause,
@@ -255,12 +289,23 @@ exports.lookupRecords = async (req, res) => {
     const q = qRaw.toString().trim();
     if (!q) return res.json([]);
 
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+
+    const extraWhere = {};
+    if (role === "general") {
+      if (!userSectionId) return res.json([]);
+      extraWhere.section_id = userSectionId;
+      extraWhere.status = { [Op.ne]: "central" };
+    }
+
     const matches = await Record.findAll({
       where: {
         [Op.or]: [
           { bd_no: { [Op.like]: `%${q}%` } },
           { file_name: { [Op.like]: `%${q}%` } },
         ],
+        ...extraWhere,
       },
       include: [
         { model: Section, attributes: ["id", "name"] },
@@ -337,6 +382,21 @@ exports.moveToCentral = async (req, res) => {
     });
 
     if (!record) return res.status(404).json({ error: "Record not found" });
+
+    // ✅ Role scope: General users are not allowed to move to Central (route already blocks, extra safety)
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+    if (role === "general") {
+      if (!userSectionId) {
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      if (String(record.section_id) !== String(userSectionId)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (String(record.status).toLowerCase() === "central") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
     if (record.status === "central")
       return res.status(400).json({ error: "Already moved to central" });
     if (!newRackId)
@@ -563,6 +623,25 @@ exports.updateRecord = async (req, res) => {
     const record = await Record.findByPk(id);
     if (!record) return res.status(404).json({ error: "Record not found" });
 
+    // ✅ Role scope: General users can only edit records in their assigned section (and not central)
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+    if (role === "general") {
+      if (!userSectionId) {
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      if (String(record.section_id) !== String(userSectionId)) {
+        return res.status(403).json({ error: "You can only edit records from your assigned section" });
+      }
+      if (String(record.status).toLowerCase() === "central") {
+        return res.status(403).json({ error: "Central records cannot be edited by General users" });
+      }
+      // prevent changing section via request
+      if (section_id && String(section_id) !== String(userSectionId)) {
+        return res.status(403).json({ error: "You cannot change section" });
+      }
+    }
+
     // ✅ effective values (request না দিলে existing value ধরে নাও)
     const newBd = bd_no ?? record.bd_no;
     const newSub = parseInt(subcategory_id ?? record.subcategory_id, 10);
@@ -667,6 +746,21 @@ exports.getRecordForPrint = async (req, res) => {
 
     if (!record) return res.status(404).json({ error: "Record not found" });
 
+    // ✅ Role scope: General users can only print records from their assigned section (non-central)
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+    if (role === "general") {
+      if (!userSectionId) {
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      if (String(record.section_id) !== String(userSectionId)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (String(record.status).toLowerCase() === "central") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+
     return res.json({ record });
   } catch (err) {
     console.error("❌ getRecordForPrint error:", err);
@@ -688,6 +782,21 @@ exports.updateWorkflowStatus = async (req, res) => {
 
     const record = await Record.findByPk(id);
     if (!record) return res.status(404).json({ error: "Record not found" });
+
+    // ✅ Role scope: General users can only update workflow for their assigned section records (non-central)
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
+    if (role === "general") {
+      if (!userSectionId) {
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      if (String(record.section_id) !== String(userSectionId)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (String(record.status).toLowerCase() === "central") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
 
     if (record_status === "closed") {
       if (!closing_date) {

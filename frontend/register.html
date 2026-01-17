@@ -72,20 +72,12 @@
                 </div>
             </div>
 
-            <div class="input-box">
-    <div class="icon-field">
-        <span class="field-icon"><i class="fa-solid fa-user-gear"></i></span>
-        
-        <select id="role" class="modern-select" required>
-            <option value="" disabled selected hidden></option>
-            <option value="General">General User</option>
-            <option value="Master">Master</option>
-            <option value="Admin">Admin</option>
-        </select>
-        
-        <label for="role">Select Role</label>
-    </div>
-</div>
+            <!-- Role is fixed on self-registration (default: General) -->
+            <div class="input-box" style="margin-top: -2px;">
+              <div style="font-size:13px;font-weight:700;color:#6b7280;padding:6px 2px;">
+                ✅ Registered users will be created as <strong>General</strong> by default (Admin can change later).
+              </div>
+            </div>
             <div class="input-box">
                 <button type="submit" class="pill-btn">Register</button>
             </div>

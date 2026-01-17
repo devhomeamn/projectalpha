@@ -37,6 +37,14 @@ router.get(
   authController.getAllUsers
 );
 
+// ✅ Admin: update user access (role + section assignment)
+router.patch(
+  '/users/:id/access',
+  requireAuth,
+  requireRole('admin'),
+  authController.updateUserAccess
+);
+
 // 🔎 JWT-verified user info (for frontend guard)
 router.get('/me', requireAuth, (req, res) => {
   // req.user আসে jwt.verify() থেকে

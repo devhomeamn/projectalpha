@@ -22,7 +22,7 @@ console.log('✅ sectionRoutes.js loaded');
 router.get('/', requireAuth, getSections);
 router.get('/racks/:sectionId', requireAuth, getRacksBySection);
 router.get('/:sectionId/racks', requireAuth, getRacksBySection);
-router.get('/central/racks', requireAuth, getCentralRacks);
+router.get('/central/racks', requireAuth, requireRole('admin','master'), getCentralRacks);
 
 // =========================
 // Write (Admin only)
