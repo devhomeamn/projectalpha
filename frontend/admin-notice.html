@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Notice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="images/site-icon.ico">
+
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/admin-notice.css">
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+
+<div id="overlay" class="overlay"></div>
+
+<div class="dashboard-container">
+  <div id="sidebar"></div>
+
+  <main class="main-content">
+    <div id="topbar"></div>
+
+    <section class="content">
+
+      <!-- ✅ SAME header style as reports -->
+      <div class="page-header">
+        <div class="header-content">
+          <div class="header-main">
+            <h1 class="header-title">
+              <span class="material-symbols-rounded header-icon">campaign</span>
+              Admin Notice
+            </h1>
+            <p class="header-subtitle">সব user-এর জন্য login-এর পরে popup notice সেট করুন</p>
+          </div>
+
+          <div class="header-meta">
+            <div class="meta-item">
+              <span class="material-symbols-rounded">calendar_today</span>
+              <span id="currentDate">Loading...</span>
+            </div>
+            <div class="meta-item">
+              <span class="material-symbols-rounded">schedule</span>
+              <span id="currentTime">Loading...</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-wave"></div>
+      </div>
+
+      <!-- ✅ card container -->
+      <div class="notice-grid">
+
+        <div class="notice-card">
+          <div class="notice-card-head">
+            <div class="notice-card-title">
+              <span class="material-symbols-rounded">edit</span>
+              Create / Update Notice
+            </div>
+
+            <div class="pill" id="activePill">—</div>
+          </div>
+
+          <form id="noticeForm" class="form">
+            <div class="grid">
+              <label class="field">
+                <span class="label">Title</span>
+                <input id="title" type="text" maxlength="200" placeholder="e.g., Maintenance Notice" required>
+              </label>
+
+              <label class="field">
+                <span class="label">Type</span>
+                <select id="type">
+                  <option value="info">Info</option>
+                  <option value="warn">Warn</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="label">Message</span>
+              <textarea id="message" rows="7" placeholder="Write the notice message…" required></textarea>
+            </label>
+
+            <div class="grid">
+              <label class="field field-inline">
+                <input id="is_active" type="checkbox" checked>
+                <span class="label">Active (show popup)</span>
+              </label>
+
+              <label class="field">
+                <span class="label">Updated By</span>
+                <input id="updated_by" type="text" placeholder="Admin name">
+              </label>
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn danger" id="btnDeactivate">
+                <span class="material-symbols-rounded">cancel</span>
+                Deactivate
+              </button>
+
+              <button type="button" class="btn" id="btnTest">
+                <span class="material-symbols-rounded">visibility</span>
+                Test popup now
+              </button>
+
+              <button type="submit" class="btn primary" id="btnSave">
+                <span class="material-symbols-rounded">save</span>
+                Save Notice
+              </button>
+            </div>
+
+            <div class="hint" id="hintText"></div>
+          </form>
+        </div>
+
+        <div class="notice-card">
+          <div class="notice-card-head">
+            <div class="notice-card-title">
+              <span class="material-symbols-rounded">preview</span>
+              Active Notice Preview
+            </div>
+
+            <button class="btn" id="btnRefresh" type="button">
+              <span class="material-symbols-rounded">refresh</span>
+              Refresh
+            </button>
+          </div>
+
+          <div class="preview" id="previewBox">
+            <div class="preview-empty">No active notice found.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<!-- ✅ same layout init as reports -->
+<script type="module">
+  import { initLayout } from "./js/layout.js";
+  initLayout("admin-notice.html");
+</script>
+
+<!-- ✅ notice.js must be loaded so "Test popup now" can call it -->
+<script src="js/notice.js"></script>
+<script src="js/admin-notice.js"></script>
+
+</body>
+</html>

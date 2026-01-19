@@ -22,6 +22,8 @@ const sectionRoutes = require('./routes/sectionRoutes');
 const recordRoutes = require('./routes/recordRoutes');
 const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use("/api/reports", require("./routes/reportsRoutes"));
+app.use("/api/notices", require("./routes/noticeRoutes"));
+
 
 
 
@@ -33,6 +35,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/records', recordRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+
+
 
 
 

@@ -50,6 +50,7 @@ export async function initLayout(activePage) {
     { name: "Approve User",   icon: "verified_user", roles: ["Admin"],                      link: "approve-user.html" },
     { name: "All Users",      icon: "group",         roles: ["Admin"],                      link: "all-users.html" },
     { name: "Reports",        icon: "bar_chart",     roles: ["Admin", "Master", "General"], link: "reports.html" },
+    { name: "Admin Notice", icon: "campaign", roles: ["Admin"], link: "admin-notice.html" },
     { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" }
   ];
 
