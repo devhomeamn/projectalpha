@@ -160,7 +160,7 @@ function validateFileName() {
     setMsg(msg, "File Name must be 3-100 characters", false);
     return false;
   }
-  if (!/^[A-Za-z0-9\s\-_()]+$/.test(value)) {
+  if (!/^[A-Za-z0-9\s\-_().]+$/.test(value)) {
     setMsg(msg, "Only letters, numbers, space, -, _, (, ) allowed", false);
     return false;
   }

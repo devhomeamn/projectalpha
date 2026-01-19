@@ -48,27 +48,53 @@
         </div>
 
 
-      <div class="report-grid">
-        <button class="report-card" onclick="openReport('section')">
-          📌 Section Wise Records
-        </button>
+     <div class="report-grid">
+  <button class="report-card" onclick="openReport('section')">
+    <span class="report-card__icon material-symbols-rounded">format_list_bulleted</span>
+    <span class="report-card__content">
+      <span class="report-card__title">Section Wise Records</span>
+      <span class="report-card__sub">সেকশন অনুযায়ী রেকর্ড</span>
+    </span>
+    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
+  </button>
 
-        <button class="report-card" onclick="openReport('central')">
-          🏢 Central Records
-        </button>
+  <button class="report-card" onclick="openReport('central')">
+    <span class="report-card__icon material-symbols-rounded">domain</span>
+    <span class="report-card__content">
+      <span class="report-card__title">Central Records</span>
+      <span class="report-card__sub">সেন্ট্রাল রুমের রেকর্ড</span>
+    </span>
+    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
+  </button>
 
-        <button class="report-card" onclick="openReport('movement')">
-          🚚 Movement History
-        </button>
+  <button class="report-card" onclick="openReport('movement')">
+    <span class="report-card__icon material-symbols-rounded">local_shipping</span>
+    <span class="report-card__content">
+      <span class="report-card__title">Movement History</span>
+      <span class="report-card__sub">মুভমেন্ট ট্র্যাকিং</span>
+    </span>
+    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
+  </button>
 
-        <button class="report-card" onclick="openReport('user')">
-          👤 User Activity
-        </button>
+  <button class="report-card" onclick="openReport('user')">
+    <span class="report-card__icon material-symbols-rounded">person</span>
+    <span class="report-card__content">
+      <span class="report-card__title">User Activity</span>
+      <span class="report-card__sub">ইউজার অনুযায়ী কার্যক্রম</span>
+    </span>
+    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
+  </button>
 
-        <button class="report-card" onclick="openReport('monthly')">
-          📅 Monthly Summary
-        </button>
-      </div>
+  <button class="report-card" onclick="openReport('monthly')">
+    <span class="report-card__icon material-symbols-rounded">calendar_month</span>
+    <span class="report-card__content">
+      <span class="report-card__title">Monthly Summary</span>
+      <span class="report-card__sub">মাসভিত্তিক সারাংশ</span>
+    </span>
+    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
+  </button>
+</div>
+
 
       <!-- hidden report container for pdf -->
       <div id="reportArea" class="report-area" style="display:none;"></div>

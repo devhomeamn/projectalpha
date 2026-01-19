@@ -102,7 +102,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await authFetch(url);
       const data = await res.json();
 
-      allCentralRecords = Array.isArray(data) ? data : [];
+      
+      allCentralRecords = Array.isArray(data)
+  ? data
+  : Array.isArray(data?.data)
+  ? data.data
+  : [];
+
       currentPage = 1; // ✅ reset page on new fetch/search
       render();
     } catch (err) {

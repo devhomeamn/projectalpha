@@ -1510,6 +1510,15 @@ function exportToCSV() {
 
 window.exportToCSV = exportToCSV;
 
+// ✅ Apply search from URL (?q=...)
+const urlQ = getUrlParam("q");
+if (urlQ) {
+  const input = document.getElementById("searchInput");
+  if (input) input.value = urlQ;
+}
+
+
+
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
   bindSearch();

@@ -41,7 +41,9 @@ router.get("/", requireAuth, requireRole("admin","master","general"), getRecords
 router.put("/move/:id", requireAuth, requireRole("admin","master"), moveToCentral);
 
 // 🏢 Get all central records
-router.get("/central", requireAuth, requireRole("admin","master"), getCentralRecords);
+
+router.get("/central", requireAuth, requireRole("admin","master","general"), getCentralRecords);
+
 
 // 📦 Bulk move records to central
 router.post("/bulk-move", requireAuth, requireRole("admin","master"), bulkMoveRecords);

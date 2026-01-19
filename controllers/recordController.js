@@ -190,37 +190,32 @@ exports.addRecord = async (req, res) => {
 };
 
 // ================== GET ALL RECORDS (with pagination + filter + rack search) ==================
-// ================== GET ALL RECORDS (with pagination + filter + rack search) ==================
 exports.getRecords = async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
     const sectionFilter = req.query.section || "";
     const rackFilter = req.query.rack || "";
 
-    // ✅ Role scope (declare ONCE)
     const role = (req.user?.role || "").toLowerCase();
     const userSectionId = req.user?.section_id;
 
-    // ✅ Filters
     const recordStatusFilter = (req.query.record_status || "")
       .toString()
       .trim()
       .toLowerCase();
 
-    const mine = (req.query.mine || "").toString().trim(); // "1" হলে apply
+    const mine = (req.query.mine || "").toString().trim();
 
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const offset = (page - 1) * limit;
 
-    // ✅ record_status allow-list
     const allowedRS = ["ongoing", "closed"];
     const rs = allowedRS.includes(recordStatusFilter) ? recordStatusFilter : "";
 
-    // ✅ mine actor (same as addRecord)
     const actor = getActor(req, "");
 
-    // ✅ Base where clause
+    /* ---------- BASE WHERE ---------- */
     const whereClause = {
       ...(q && {
         [Op.or]: [
@@ -234,25 +229,33 @@ exports.getRecords = async (req, res) => {
       }),
 
       ...(rackFilter && { rack_id: rackFilter }),
-
-      // ✅ status filter
       ...(rs && { record_status: rs }),
-
-      // ✅ only my records
       ...(mine === "1" && actor && { added_by: actor }),
     };
 
-    // ✅ Section filter logic
+    /* ---------- ROLE LOGIC ---------- */
     if (role === "general") {
-      // General: only own assigned section + not central
       if (!userSectionId) {
         return res.json({ data: [], page, totalPages: 1, total: 0 });
       }
-      whereClause.section_id = userSectionId;
-      whereClause.status = { [Op.ne]: "central" };
+
+      // ✅ assigned section + own-section-origin central
+      whereClause[Op.and] = [
+        {
+          [Op.or]: [
+            { section_id: userSectionId }, // normal
+            {
+              status: "central",
+              previous_section_id: userSectionId, // moved to central
+            },
+          ],
+        },
+      ];
     } else {
-      // Admin/Master: optional section filter
-      if (sectionFilter) whereClause.section_id = sectionFilter;
+      // Admin / Master
+      if (sectionFilter) {
+        whereClause.section_id = sectionFilter;
+      }
     }
 
     const { rows: records, count: total } = await Record.findAndCountAll({
@@ -280,6 +283,7 @@ exports.getRecords = async (req, res) => {
 };
 
 
+
 // ================== LOOKUP RECORDS (Topbar global search) ==================
 // উদ্দেশ্য: BD No বা File Name দিয়ে দ্রুত record টা কোথায় আছে (Section/Central) দেখানো
 // Returns: up to 8 matches (most recently updated first)
@@ -292,20 +296,37 @@ exports.lookupRecords = async (req, res) => {
     const role = (req.user?.role || "").toLowerCase();
     const userSectionId = req.user?.section_id;
 
-    const extraWhere = {};
+    const searchWhere = {
+      [Op.or]: [
+        { bd_no: { [Op.like]: `%${q}%` } },
+        { file_name: { [Op.like]: `%${q}%` } },
+      ],
+    };
+
+    let accessWhere = {};
     if (role === "general") {
       if (!userSectionId) return res.json([]);
-      extraWhere.section_id = userSectionId;
-      extraWhere.status = { [Op.ne]: "central" };
+
+      accessWhere = {
+        [Op.or]: [
+          // ✅ own section normal records (exclude central)
+          {
+            section_id: userSectionId,
+            status: { [Op.ne]: "central" },
+          },
+          // ✅ central records only if originated from own section
+          {
+            status: "central",
+            previous_section_id: userSectionId,
+          },
+        ],
+      };
     }
 
     const matches = await Record.findAll({
       where: {
-        [Op.or]: [
-          { bd_no: { [Op.like]: `%${q}%` } },
-          { file_name: { [Op.like]: `%${q}%` } },
-        ],
-        ...extraWhere,
+        ...searchWhere,
+        ...accessWhere,
       },
       include: [
         { model: Section, attributes: ["id", "name"] },
@@ -316,51 +337,77 @@ exports.lookupRecords = async (req, res) => {
       limit: 8,
     });
 
-    const enhanced = await Promise.all(
-      matches.map(async (r) => {
-        let prevSection = null,
-          prevSub = null,
-          prevRack = null;
+    // ✅ Batch fetch previous location names (no N+1)
+    const prevSectionIds = [
+      ...new Set(matches.map((r) => r.previous_section_id).filter(Boolean)),
+    ];
+    const prevSubIds = [
+      ...new Set(matches.map((r) => r.previous_subcategory_id).filter(Boolean)),
+    ];
+    const prevRackIds = [
+      ...new Set(matches.map((r) => r.previous_rack_id).filter(Boolean)),
+    ];
 
-        if (r.previous_section_id) {
-          const s = await Section.findByPk(r.previous_section_id);
-          prevSection = s ? s.name : null;
-        }
-        if (r.previous_subcategory_id) {
-          const sb = await Subcategory.findByPk(r.previous_subcategory_id);
-          prevSub = sb ? sb.name : null;
-        }
-        if (r.previous_rack_id) {
-          const rk = await Rack.findByPk(r.previous_rack_id);
-          prevRack = rk ? rk.name : null;
-        }
+    const [prevSections, prevSubs, prevRacks] = await Promise.all([
+      prevSectionIds.length
+        ? Section.findAll({
+            where: { id: prevSectionIds },
+            attributes: ["id", "name"],
+          })
+        : [],
+      prevSubIds.length
+        ? Subcategory.findAll({
+            where: { id: prevSubIds },
+            attributes: ["id", "name"],
+          })
+        : [],
+      prevRackIds.length
+        ? Rack.findAll({
+            where: { id: prevRackIds },
+            attributes: ["id", "name"],
+          })
+        : [],
+    ]);
 
-        return {
-          id: r.id,
-          bd_no: r.bd_no,
-          file_name: r.file_name,
-          record_status: r.record_status,
-          status: r.status, // 'active' | 'central'
-          serial_no: r.serial_no,
-          section: r.Section ? { id: r.Section.id, name: r.Section.name } : null,
-          subcategory: r.Subcategory
-            ? { id: r.Subcategory.id, name: r.Subcategory.name }
-            : null,
-          rack: r.Rack ? { id: r.Rack.id, name: r.Rack.name } : null,
-          previous_location: {
-            section_name: prevSection,
-            subcategory_name: prevSub,
-            rack_name: prevRack,
-          },
-          updatedAt: r.updatedAt,
-        };
-      })
-    );
+    const secMap = new Map(prevSections.map((s) => [s.id, s.name]));
+    const subMap = new Map(prevSubs.map((s) => [s.id, s.name]));
+    const rackMap = new Map(prevRacks.map((r) => [r.id, r.name]));
 
-    res.json(enhanced);
+    const enhanced = matches.map((r) => {
+      const prevLoc =
+        r.previous_section_id || r.previous_subcategory_id || r.previous_rack_id
+          ? {
+              section_name: secMap.get(r.previous_section_id) || null,
+              subcategory_name: subMap.get(r.previous_subcategory_id) || null,
+              rack_name: rackMap.get(r.previous_rack_id) || null,
+            }
+          : {
+              section_name: null,
+              subcategory_name: null,
+              rack_name: null,
+            };
+
+      return {
+        id: r.id,
+        bd_no: r.bd_no,
+        file_name: r.file_name,
+        record_status: r.record_status,
+        status: r.status, // 'active' | 'central'
+        serial_no: r.serial_no,
+        section: r.Section ? { id: r.Section.id, name: r.Section.name } : null,
+        subcategory: r.Subcategory
+          ? { id: r.Subcategory.id, name: r.Subcategory.name }
+          : null,
+        rack: r.Rack ? { id: r.Rack.id, name: r.Rack.name } : null,
+        previous_location: prevLoc,
+        updatedAt: r.updatedAt,
+      };
+    });
+
+    return res.json(enhanced);
   } catch (err) {
     console.error("❌ lookupRecords error:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -456,37 +503,33 @@ exports.moveToCentral = async (req, res) => {
   }
 };
 
-// ================== GET CENTRAL RECORDS ==================
-// ================== GET CENTRAL RECORDS ==================
+
 // ================== GET CENTRAL RECORDS ==================
 exports.getCentralRecords = async (req, res) => {
   try {
-    const qRaw = req.query.q || "";
-    const q = qRaw.toString().trim();
+    const role = (req.user?.role || "").toLowerCase();
+    const userSectionId = req.user?.section_id;
 
-    // ১) আগে Central Room section টা বের করি
-    const centralSection = await Section.findOne({
-      where: { name: "Central Room" },
-    });
+    const q = (req.query.q || "").trim();
 
-    if (!centralSection) {
-      // একদম safe fallback – Central Room নাই মানে central records নাই
-      return res.json([]);
-    }
-
-    // ২) মূল where clause – এখন থেকে section_id দিয়ে ধরব
     const whereClause = {
-      section_id: centralSection.id,      // 🔵 central মানে এখন এই section
-
+      status: "central",
       ...(q && {
         [Op.or]: [
-          { file_name:   { [Op.like]: `%${q}%` } },
-          { bd_no:       { [Op.like]: `%${q}%` } },
+          { file_name: { [Op.like]: `%${q}%` } },
+          { bd_no: { [Op.like]: `%${q}%` } },
           { description: { [Op.like]: `%${q}%` } },
-          { moved_by:    { [Op.like]: `%${q}%` } },
+          { moved_by: { [Op.like]: `%${q}%` } },
+          { serial_no: { [Op.like]: `%${q}%` } },
         ],
       }),
     };
+
+    if (role === "general") {
+      if (!userSectionId) return res.json({ data: [] });
+      // ✅ ONLY own section-origin central
+      whereClause.previous_section_id = userSectionId;
+    }
 
     const records = await Record.findAll({
       where: whereClause,
@@ -498,41 +541,40 @@ exports.getCentralRecords = async (req, res) => {
       order: [["updatedAt", "DESC"]],
     });
 
-    // ৩) আগের মতোই previous_location attach করে পাঠाई
-    const enhanced = await Promise.all(
-      records.map(async (r) => {
-        let prevSection = null,
-          prevSub = null,
-          prevRack = null;
+    // ✅ Attach previous location names for modal/UI
+    const prevSectionIds = [...new Set(records.map(r => r.previous_section_id).filter(Boolean))];
+    const prevSubIds     = [...new Set(records.map(r => r.previous_subcategory_id).filter(Boolean))];
+    const prevRackIds    = [...new Set(records.map(r => r.previous_rack_id).filter(Boolean))];
 
-        if (r.previous_section_id) {
-          const s = await Section.findByPk(r.previous_section_id);
-          prevSection = s ? s.name : null;
-        }
-        if (r.previous_subcategory_id) {
-          const sb = await Subcategory.findByPk(r.previous_subcategory_id);
-          prevSub = sb ? sb.name : null;
-        }
-        if (r.previous_rack_id) {
-          const rk = await Rack.findByPk(r.previous_rack_id);
-          prevRack = rk ? rk.name : null;
-        }
+    const [prevSections, prevSubs, prevRacks] = await Promise.all([
+      prevSectionIds.length
+        ? Section.findAll({ where: { id: prevSectionIds }, attributes: ["id", "name"] })
+        : [],
+      prevSubIds.length
+        ? Subcategory.findAll({ where: { id: prevSubIds }, attributes: ["id", "name"] })
+        : [],
+      prevRackIds.length
+        ? Rack.findAll({ where: { id: prevRackIds }, attributes: ["id", "name"] })
+        : [],
+    ]);
 
-        return {
-          ...r.toJSON(),
-          previous_location: {
-            section_name: prevSection,
-            subcategory_name: prevSub,
-            rack_name: prevRack,
-          },
-        };
-      })
-    );
+    const secMap  = new Map(prevSections.map(s => [s.id, s.name]));
+    const subMap  = new Map(prevSubs.map(s => [s.id, s.name]));
+    const rackMap = new Map(prevRacks.map(r => [r.id, r.name]));
 
-    res.json(enhanced);
+    const enriched = records.map(r => {
+      r.dataValues.previous_location = {
+        section_name:     secMap.get(r.previous_section_id) || "-",
+        subcategory_name: subMap.get(r.previous_subcategory_id) || "-",
+        rack_name:        rackMap.get(r.previous_rack_id) || "-",
+      };
+      return r;
+    });
+
+    return res.json({ data: enriched }); // ✅ only one response
   } catch (err) {
     console.error("❌ getCentralRecords error:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Failed to fetch central records" });
   }
 };
 
