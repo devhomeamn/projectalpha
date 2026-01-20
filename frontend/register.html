@@ -29,59 +29,113 @@
         <h2>Create Account</h2>
 
         <form id="registerForm">
-            <div class="input-box">
-                <div class="icon-field">
-                    <span class="field-icon"><i class="fa-solid fa-user"></i></span>
-                    <input type="text" id="name" placeholder=" " required>
-                    <label for="name">Full Name</label>
-                </div>
-            </div>
 
-            <div class="input-box">
-                <div class="icon-field">
-                    <span class="field-icon"><i class="fa-solid fa-id-badge"></i></span>
-                    <input type="text" id="serviceid" placeholder=" " required>
-                    <label for="serviceid">Service ID</label>
-                </div>
-            </div>
+  <div class="form-grid">
+    <div class="input-box">
+      <div class="icon-field">
+        <span class="field-icon"><i class="fa-solid fa-user"></i></span>
+        <input type="text" id="name" placeholder=" " required>
+        <label for="name">Full Name</label>
+      </div>
+    </div>
 
-            <div class="input-box">
-                <div class="icon-field">
-                    <span class="field-icon"><i class="fa-solid fa-envelope"></i></span>
-                    <input type="email" id="email" placeholder=" " required autocomplete="email">
-                    <label for="email">Email Address</label>
-                </div>
-            </div>
+    <div class="input-box">
+      <div class="icon-field">
+        <span class="field-icon"><i class="fa-solid fa-id-badge"></i></span>
+        
+        <input  type="text"  id="serviceid"  placeholder=" "  required  inputmode="numeric"  pattern="[0-9]+"  title="Only numbers allowed"
+/>
+<label for="serviceid">Service ID (numbers only)</label>
+        
+         </div>
+    </div>
 
-            <div class="input-box">
-                <div class="icon-field">
-                    <span class="field-icon"><i class="fa-solid fa-at"></i></span>
-                    <input type="text" id="username" placeholder=" " required autocomplete="username">
-                    <label for="username">Username</label>
-                </div>
-            </div>
 
-            <div class="input-box">
-                <div class="icon-field">
-                    <span class="field-icon"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" id="password" placeholder=" " required class="password-with-eye">
-                    <label for="password">Password</label>
-                    <button type="button" class="toggle-eye" data-target="password" aria-label="Toggle password visibility">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                </div>
-            </div>
+    
 
-            <!-- Role is fixed on self-registration (default: General) -->
-            <div class="input-box" style="margin-top: -2px;">
-              <div style="font-size:13px;font-weight:700;color:#6b7280;padding:6px 2px;">
-                Registered users will be created as <strong>General</strong> by default (Role can change later).
-              </div>
-            </div>
-            <div class="input-box">
-                <button type="submit" class="pill-btn">Register</button>
-            </div>
-        </form>
+    <div class="input-box">
+      <div class="icon-field">
+        <span class="field-icon"><i class="fa-solid fa-envelope"></i></span>
+        <input type="email" id="email" placeholder=" " required autocomplete="email">
+        <label for="email">Email Address</label>
+      </div>
+    </div>
+
+    <div class="input-box">
+      <div class="icon-field">
+        <span class="field-icon"><i class="fa-solid fa-at"></i></span>
+        <input
+  type="text"
+  id="username"
+  placeholder=" "
+  required
+  autocomplete="username"
+  pattern="^\S+$"
+  title="No spaces allowed"
+/>
+<label for="username">Username (no spaces)</label>
+      </div>
+    </div>
+
+   <!-- Password full width -->
+<div class="input-box span-2">
+  <div class="icon-field">
+    <span class="field-icon"><i class="fa-solid fa-lock"></i></span>
+    <input type="password" id="password" placeholder=" " required class="password-with-eye" minlength="6">
+    <label for="password">Password</label>
+    <button type="button" class="toggle-eye" data-target="password" aria-label="Toggle password visibility">
+      <i class="fa-solid fa-eye"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Confirm Password full width -->
+<!-- Confirm Password full width -->
+<div class="input-box span-2">
+  <div class="icon-field">
+    <span class="field-icon"><i class="fa-solid fa-lock"></i></span>
+
+    <input
+      type="password"
+      id="confirmPassword"
+      placeholder=" "
+      required
+      minlength="6"
+      class="password-with-eye"
+    >
+
+    <label for="confirmPassword">Confirm Password</label>
+
+    <!-- 👁 Eye toggle -->
+    <button
+      type="button"
+      class="toggle-eye"
+      data-target="confirmPassword"
+      aria-label="Toggle confirm password visibility"
+    >
+      <i class="fa-solid fa-eye"></i>
+    </button>
+  </div>
+</div>
+
+
+    <!-- Role note full width -->
+    <div class="input-box span-2" style="margin-top: -2px;">
+      <div style="font-size:13px;font-weight:700;color:#6b7280;padding:6px 2px;">
+        Registered users will be created as <strong>General</strong> by default (Role can change later).
+      </div>
+    </div>
+
+    <!-- Submit full width -->
+    <div class="input-box span-2">
+      <button type="submit" class="pill-btn" id="registerBtn">
+        <span class="btn-text">Register</span>
+      </button>
+    </div>
+  </div>
+
+</form>
+
 
         <p class="text-center">
             Already have an account? <a href="login.html">Login</a>

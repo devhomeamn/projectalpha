@@ -357,3 +357,50 @@ p a:hover {
   font-size: 15px;
   color: var(--text-light);
 }
+
+
+/* ==================== REGISTER GRID ==================== */
+.form-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px 16px;
+}
+
+.form-grid .input-box{
+  margin-bottom: 0; /* grid gap will handle spacing */
+}
+
+.form-grid .span-2{
+  grid-column: 1 / -1;
+}
+
+/* >= 640px হলে দুই কলাম */
+@media (min-width: 640px){
+  .wrapper{ max-width: 560px; } /* একটু বড় card */
+  .form-grid{
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ==================== BUTTON LOADING ==================== */
+.pill-btn.is-loading{
+  pointer-events: none;
+  opacity: 0.9;
+  transform: none !important;
+}
+
+.pill-btn .spinner{
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.45);
+  border-top-color: rgba(255,255,255,1);
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin{
+  to { transform: rotate(360deg); }
+}

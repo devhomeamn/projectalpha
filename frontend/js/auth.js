@@ -125,6 +125,26 @@ function persistUserSession(data) {
 // --------------------
 // Form handlers
 // --------------------
+function setRegisterLoading(isLoading) {
+  const btn = document.getElementById('registerBtn');
+  if (!btn) return;
+
+  btn.classList.toggle('is-loading', isLoading);
+  btn.disabled = isLoading;
+
+  // prefer span.btn-text, fallback to button itself
+  const textHost = btn.querySelector('.btn-text') || btn;
+
+  if (isLoading) {
+    textHost.innerHTML = `<span class="spinner"></span>Creating account...`;
+  } else {
+    // if already success-marked, don't overwrite
+    if (textHost.textContent.trim() !== 'Registered ✅') {
+      textHost.textContent = 'Register';
+    }
+  }
+}
+
 function initForms() {
   // Login Form
   const loginForm = document.getElementById('loginForm');
@@ -171,21 +191,71 @@ function initForms() {
   // Register Form
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
+    const serviceIdEl = document.getElementById('serviceid');
+    const usernameEl = document.getElementById('username');
+    const passEl = document.getElementById('password');
+    const confirmEl = document.getElementById('confirmPassword');
+
+    // Live sanitize: username থেকে spaces remove
+    if (usernameEl && !usernameEl.dataset.noSpaceBound) {
+      usernameEl.dataset.noSpaceBound = "1";
+      usernameEl.addEventListener('input', () => {
+        const cleaned = usernameEl.value.replace(/\s+/g, '');
+        if (cleaned !== usernameEl.value) usernameEl.value = cleaned;
+      });
+    }
+
+    // Live sanitize: service id থেকে non-digits remove
+    if (serviceIdEl && !serviceIdEl.dataset.onlyNumBound) {
+      serviceIdEl.dataset.onlyNumBound = "1";
+      serviceIdEl.addEventListener('input', () => {
+        const cleaned = serviceIdEl.value.replace(/\D+/g, '');
+        if (cleaned !== serviceIdEl.value) serviceIdEl.value = cleaned;
+      });
+    }
+
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const name = document.getElementById('name').value;
-      const serviceid = document.getElementById('serviceid').value;
+      const name = document.getElementById('name')?.value || '';
+      const serviceid = (serviceIdEl ? serviceIdEl.value : document.getElementById('serviceid')?.value || '').trim();
+
       const emailEl = document.getElementById('email');
       const email = emailEl ? emailEl.value.trim() : '';
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+
+      const usernameRaw = (usernameEl ? usernameEl.value : document.getElementById('username')?.value || '');
+      const username = (usernameRaw || '').trim();
+
+      const password = (passEl ? passEl.value : document.getElementById('password')?.value || '');
+      const confirmPassword = (confirmEl ? confirmEl.value : '');
+
+      // ✅ Validations (before loading)
+      if (/\s/.test(username)) {
+        showToast('Username must not contain spaces.', 'error');
+        return;
+      }
+
+      if (!/^\d+$/.test(serviceid)) {
+        showToast('Service ID must be numbers only.', 'error');
+        return;
+      }
+
+      if (!confirmEl) {
+        showToast('Confirm Password field not found. Please add it to register.html', 'error');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showToast('Password and Confirm Password do not match.', 'error');
+        return;
+      }
+
+      setRegisterLoading(true);
 
       try {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // ✅ Self-registration always creates General user (Admin can change later)
           body: JSON.stringify({ name, serviceid, email, username, password }),
         });
 
@@ -193,14 +263,27 @@ function initForms() {
 
         if (res.ok) {
           showToast('Registration Successful! Wait for admin approval.', 'success', 15000);
+
+          const btn = document.getElementById('registerBtn');
+          if (btn) {
+            btn.disabled = true;
+            btn.classList.remove('is-loading');
+
+            // IMPORTANT: innerHTML replace করবো না, span.btn-text structure intact রাখবো
+            const textHost = btn.querySelector('.btn-text') || btn;
+            textHost.textContent = 'Registered ✅';
+          }
+
           setTimeout(() => {
             window.location.href = 'login.html';
           }, 15000);
         } else {
           showToast(data.error || 'Registration Failed', 'error');
+          setRegisterLoading(false);
         }
       } catch (err) {
         showToast('Network error. Please try again.', 'error');
+        setRegisterLoading(false);
       }
     });
   }
@@ -236,7 +319,7 @@ loadConfig();
       const len = input.value.length;
       input.setSelectionRange(len, len);
       input.focus();
-    } catch (_) {}
+    } catch (_) { }
   });
 
   document.querySelectorAll('.toggle-eye[data-target]').forEach((btn) => {
