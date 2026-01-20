@@ -23,6 +23,8 @@ const recordRoutes = require('./routes/recordRoutes');
 const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use("/api/reports", require("./routes/reportsRoutes"));
 app.use("/api/notices", require("./routes/noticeRoutes"));
+app.use("/api/password", require("./routes/passwordRoutes"));
+
 
 
 
