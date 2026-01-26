@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AO Clearance Requests</title>
+
+  <link rel="icon" href="images/site-icon.ico" />
+
+  <!-- Same layout css used by other pages -->
+  <link rel="stylesheet" href="css/layout.css" />
+
+  <!-- Optional: reuse objec.css for cards/buttons look -->
+  <link rel="stylesheet" href="css/objec.css" />
+
+  <!-- auth guard (if you use it across pages) -->
+  <script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <!-- Sidebar injected here -->
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <!-- Topbar injected here -->
+      <div id="topbar"></div>
+
+      <section class="content">
+        <!-- Header (same vibe as other pages) -->
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-main">
+              <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">task</span>
+                AO Clearance Requests
+              </h1>
+              <p class="header-subtitle">Admin: Pending clearance request approve/reject করুন</p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
+        </div>
+
+        <!-- Main card container -->
+        <div class="bdh-card">
+          <div class="bdh-top">
+            <div class="bdh-left">
+              <div class="bdh-title">
+                <span class="material-symbols-rounded">filter_alt</span>
+                Filter Requests
+              </div>
+              <div class="bdh-sub">
+                Status filter দিয়ে pending/approved/rejected request দেখুন। Pending থেকে approve/reject করতে পারবেন।
+              </div>
+            </div>
+
+            <div class="bdh-right" id="resultInfo"></div>
+          </div>
+
+          <!-- Filter + Refresh -->
+          <div class="bdh-search">
+            <div class="bdh-input-wrap" style="min-width:240px;max-width:320px;">
+              <span class="material-symbols-rounded bdh-input-icon">tune</span>
+              <select id="statusFilter" class="bdh-input" style="padding-left:40px;">
+                <option value="pending" selected>Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+
+            <button id="refreshBtn" class="bdh-btn bdh-btn-primary" type="button">
+              <span class="material-symbols-rounded">refresh</span>
+              Refresh
+            </button>
+          </div>
+
+          <!-- Error -->
+          <div id="errorBox" class="msg msg-error" style="display:none;"></div>
+
+          <div class="bdh-divider"></div>
+
+          <!-- List -->
+          <div id="list" class="bdh-cards"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Layout init (same as your other pages) -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    try { initLayout("ao-clearance-requests.html"); } catch (e) {}
+  </script>
+
+  <!-- Admin approvals logic -->
+  <script src="js/ao-clearance-requests.js"></script>
+
+  <!-- Date/time updater -->
+  <script>
+    function updateDateTime() {
+      const now = new Date();
+      const date = now.toLocaleDateString("bn-BD", { day: "2-digit", month: "long", year: "numeric" });
+      const time = now.toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const d = document.getElementById("currentDate");
+      const t = document.getElementById("currentTime");
+      if (d) d.textContent = date;
+      if (t) t.textContent = time;
+    }
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+  </script>
+</body>
+</html>

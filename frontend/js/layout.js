@@ -51,7 +51,8 @@ export async function initLayout(activePage) {
     { name: "All Users",      icon: "group",         roles: ["Admin"],                      link: "all-users.html" },
     { name: "Reports",        icon: "bar_chart",     roles: ["Admin", "Master", "General"], link: "reports.html" },
     { name: "Admin Notice", icon: "campaign", roles: ["Admin"], link: "admin-notice.html" },
-    { name: "Bd Objection History", icon: "campaign", roles: ["Admin"], link: "bd-objection-history.html" },
+    { name: "AO Clearance Requests", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
+    { name: "BD Objection History", icon: "history", roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
        { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" }
   ];
 

@@ -1,31 +1,12 @@
 console.log("bd-objection-history.js loaded");
 
-let API_BASE = "";
+let API_BASE = "";        // e.g. http://localhost:5000/api
+let ME_ROLE = "";         // "general" | "master" | "admin"
+let ME_USER = null;
 
-/* ---------- auth helpers (same as your other pages) ---------- */
+/* ------------------ helpers ------------------ */
 function getToken() {
-  return localStorage.getItem("token") || "";
-}
-function redirectLogin() {
-  localStorage.clear();
-  window.location.href = "login.html";
-}
-async function authFetch(url, options = {}) {
-  const token = getToken();
-  const headers = { ...(options.headers || {}) };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 401) {
-    redirectLogin();
-    throw new Error("Unauthorized");
-  }
-  return res;
-}
-
-function normalizeApiBase(apiBaseFromServer) {
-  let base = (apiBaseFromServer || window.location.origin || "").trim();
-  if (base.endsWith("/")) base = base.slice(0, -1);
-  return base.toLowerCase().endsWith("/api") ? base : `${base}/api`;
+  return localStorage.getItem("token");
 }
 
 function esc(s) {
@@ -37,13 +18,40 @@ function esc(s) {
     .replaceAll("'", "&#039;");
 }
 
-function short(s, n = 160) {
+function shortText(s, n = 280) {
   const t = String(s || "").trim();
   if (!t) return "-";
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
 
+function fmtDateTime(v) {
+  if (!v) return "-";
+  try { return new Date(v).toLocaleString(); } catch { return "-"; }
+}
+
+function showError(msg) {
+  const el = document.getElementById("bdSearchError");
+  if (!el) return;
+  el.textContent = msg || "Something went wrong";
+  el.style.display = "block";
+}
+
+function hideError() {
+  const el = document.getElementById("bdSearchError");
+  if (!el) return;
+  el.style.display = "none";
+}
+
+/* ------------------ api base ------------------ */
+function normalizeApiBase(apiBaseFromServer) {
+  let base = (apiBaseFromServer || window.location.origin || "").trim();
+  if (base.endsWith("/")) base = base.slice(0, -1);
+  // If already ends with /api use it, else append
+  return base.toLowerCase().endsWith("/api") ? base : `${base}/api`;
+}
+
 async function loadConfig() {
+  // If /api/config exists -> use it, else fallback to window.location.origin/api
   try {
     const res = await fetch("/api/config");
     const data = await res.json();
@@ -53,7 +61,151 @@ async function loadConfig() {
   }
 }
 
-/* ---------- Preview helpers (default collapsed) ---------- */
+/* ------------------ auth fetch ------------------ */
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(url, { ...options, headers });
+  return res;
+}
+
+async function apiJSON(url, options = {}) {
+  const res = await authFetch(url, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.message || data?.error || "Request failed";
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/* ------------------ role detection (safe) ------------------ */
+function decodeJwtPayload(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "===".slice((b64.length + 3) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+async function getMeSafe() {
+  // Preferred: backend endpoint /api/auth/me
+  try {
+    const data = await apiJSON(`${API_BASE}/auth/me`);
+    return data?.user || data;
+  } catch {
+    // Fallback: decode token payload (role/username may exist)
+    const token = getToken();
+    const payload = token ? decodeJwtPayload(token) : null;
+    return payload || null;
+  }
+}
+
+/* ------------------ AO Clearance Modal ------------------ */
+let AO_CLEARANCE_CTX = { record_id: null, bd_no: null, serial_no: null };
+
+function openAOClearanceModal({ record_id, bd_no, serial_no }) {
+  AO_CLEARANCE_CTX = { record_id, bd_no, serial_no };
+
+  const modal = document.getElementById("aoClearanceModal");
+  if (!modal) return;
+
+  document.getElementById("aoClearanceBdNo").textContent = bd_no ?? "-";
+  document.getElementById("aoClearanceSerial").textContent = serial_no ?? "-";
+  document.getElementById("aoClearanceRecordId").textContent = record_id ?? "-";
+
+  document.getElementById("aoClearanceNote").value = "";
+  document.getElementById("aoClearanceAttachment").value = "";
+
+  const err = document.getElementById("aoClearanceError");
+  const ok = document.getElementById("aoClearanceSuccess");
+  if (err) err.style.display = "none";
+  if (ok) ok.style.display = "none";
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeAOClearanceModal() {
+  const modal = document.getElementById("aoClearanceModal");
+  if (!modal) return;
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function bindModalCloseBehavior() {
+  const modal = document.getElementById("aoClearanceModal");
+  if (!modal) return;
+
+  // click outside content
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeAOClearanceModal();
+  });
+
+  // ESC key
+  document.addEventListener("keydown", (e) => {
+    const opened = modal.classList.contains("is-open");
+    if (opened && e.key === "Escape") closeAOClearanceModal();
+  });
+
+  // buttons
+  const closeBtn = document.getElementById("aoClearanceCloseBtn");
+  const cancelBtn = document.getElementById("aoClearanceCancelBtn");
+  if (closeBtn) closeBtn.addEventListener("click", closeAOClearanceModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeAOClearanceModal);
+}
+
+async function submitClearanceRequest() {
+  const errBox = document.getElementById("aoClearanceError");
+  const okBox = document.getElementById("aoClearanceSuccess");
+  const submitBtn = document.getElementById("aoClearanceSubmitBtn");
+
+  if (errBox) errBox.style.display = "none";
+  if (okBox) okBox.style.display = "none";
+
+  try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+
+    const note = document.getElementById("aoClearanceNote").value.trim();
+    const fileInput = document.getElementById("aoClearanceAttachment");
+    const file = fileInput?.files?.[0] || null;
+
+    const form = new FormData();
+    form.append("record_id", AO_CLEARANCE_CTX.record_id);
+    if (note) form.append("request_note", note);
+    if (file) form.append("attachment", file);
+
+    // IMPORTANT: do not set content-type for FormData
+    await apiJSON(`${API_BASE}/ao-clearance-requests`, {
+      method: "POST",
+      body: form,
+    });
+
+    if (okBox) {
+      okBox.textContent = "Request submitted successfully.";
+      okBox.style.display = "block";
+    }
+
+    setTimeout(() => window.location.reload(), 500);
+  } catch (e) {
+    if (errBox) {
+      errBox.textContent = e.message || "Failed to submit request.";
+      errBox.style.display = "block";
+    }
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Request";
+  }
+}
+
+/* ------------------ Preview builder ------------------ */
 function buildPreviewHTML({ path, mime, name }) {
   const m = (mime || "").toLowerCase();
   if (!path) return "";
@@ -67,160 +219,161 @@ function buildPreviewHTML({ path, mime, name }) {
   return `<div class="muted" style="padding:10px;">Preview not available for this file type.</div>`;
 }
 
-/* ---------- Main search ---------- */
-async function searchBD(bd) {
+/* ------------------ status ------------------ */
+function getStatus(ao_status) {
+  const s = String(ao_status || "open").toLowerCase();
+  if (s === "cleared") return { text: "CLEARED", cls: "cleared" };
+  if (s === "requested") return { text: "REQUESTED", cls: "requested" };
+  return { text: "OPEN", cls: "open" };
+}
+
+/* ------------------ render ------------------ */
+function renderCards(rows, bdNo) {
   const cards = document.getElementById("cards");
   const info = document.getElementById("resultInfo");
 
-  cards.innerHTML = `<div class="muted">Loading...</div>`;
-  info.textContent = "";
+  if (info) info.textContent = `Found ${rows.length} objection(s) for BD: ${bdNo}`;
 
-  const res = await authFetch(
-    `${API_BASE}/records/by-bd?bd_no=${encodeURIComponent(bd)}&only_ao=1&limit=300`
-  );
-  const data = await res.json();
-
-  if (!res.ok) throw new Error(data?.error || "Failed to load");
-
-  const rows = Array.isArray(data.data) ? data.data : [];
-  info.textContent = `Found ${rows.length} objection(s) for BD: ${bd}`;
-
-  if (rows.length === 0) {
+  if (!rows.length) {
     cards.innerHTML = `<div class="muted">No Audit Objection found for this BD.</div>`;
     return;
   }
 
-  // Render modular cards (details + attachment module)
-  cards.innerHTML = rows
-    .map((r) => {
-      const sec = r.Section?.name || "-";
-      const sub = r.Subcategory?.name || "-";
-      const rack = r.Rack?.name || "-";
-      const serial = r.serial_no ?? "-";
+  cards.innerHTML = rows.map((r) => {
+    const st = getStatus(r.ao_status);
 
-      const no = r.objection_no || "-";
-      const title = r.objection_title || "(No title)";
-      const detailsRaw = (r.objection_details || r.description || "").trim();
+    // Core
+    const serial = r.serial_no ?? "-";
+    const no = r.objection_no || "-";
+    const title = r.objection_title || "Audit Objection";
 
-      const createdAt = r.createdAt ? new Date(r.createdAt).toLocaleString() : "-";
-      const openDate = r.opening_date || "-";
+    // Details
+    const detailsRaw = (r.objection_details || r.description || "").trim() || "-";
+    const detailsShort = shortText(detailsRaw, 280);
 
-      const hasFile = !!r.attachment_path;
-      const fileName = r.attachment_name || "Attachment";
-      const mime = (r.attachment_mime || "").toLowerCase();
+    // Others
+    const sec = r.Section?.name || "-";
+    const sub = r.Subcategory?.name || "-";
+    const rack = r.Rack?.name || "-";
+    const openDate = r.opening_date || "-";
+    const createdAt = fmtDateTime(r.createdAt);
 
-      const shortText = short(detailsRaw, 220);
-      const isLong = detailsRaw.length > 220;
+    // Attachment
+    const hasFile = !!r.attachment_path;
+    const fileName = r.attachment_name || "Attachment";
+    const mime = (r.attachment_mime || "").toLowerCase();
 
-      return `
-        <div class="ob-card ob-collapsed ob-preview-collapsed"
-             data-ob-card="${r.id}"
-             data-attach-path="${hasFile ? esc(r.attachment_path) : ""}"
-             data-attach-mime="${esc(mime)}"
-             data-attach-name="${esc(fileName)}">
+    // Clearance button (general/master)
+    const canRequest = (ME_ROLE === "general" || ME_ROLE === "master") && st.cls !== "cleared";
+    const reqDisabled = st.cls === "requested";
 
-          <div class="ob-head">
-            <div style="flex:1;min-width:260px;">
-              <div class="ob-title">
-                <span class="ob-no">AO • ${esc(no)}</span>
-                <span>${esc(title)}</span>
-              </div>
+    return `
+      <div class="ob-card"
+        data-ob-card="${esc(r.id)}"
+        data-attach-path="${hasFile ? esc(r.attachment_path) : ""}"
+        data-attach-mime="${esc(mime)}"
+        data-attach-name="${esc(fileName)}">
 
-              <div class="ob-subtitle">
-                BD: <b>${esc(r.bd_no || "")}</b> • Record ID: <b>${esc(r.id)}</b>
-              </div>
-
-              <div class="ob-meta">
-                <span class="meta-chip">Section: ${esc(sec)}</span>
-                <span class="meta-chip">Sub: ${esc(sub)}</span>
-                <span class="meta-chip">Rack: ${esc(rack)}</span>
-                <span class="meta-chip">Serial: ${esc(serial)}</span>
-                <span class="meta-chip">Opening: ${esc(openDate)}</span>
-                <span class="meta-chip">Created: ${esc(createdAt)}</span>
-              </div>
+        <!-- TITLE -->
+        <div class="ob-head">
+          <div class="ob-head-left">
+            <div class="ob-title">
+              <span class="ob-no">AO • ${esc(no)}</span>
+              <span class="ob-title-text">${esc(title)}</span>
             </div>
+            <div class="ob-subtitle">
+              BD: <b>${esc(r.bd_no || "")}</b> • Serial: <b>${esc(serial)}</b> • Record: <b>${esc(r.id)}</b>
+            </div>
+          </div>
+
+          <div class="ob-head-right">
+            <span class="status-pill ${st.cls}">${esc(st.text)}</span>
 
             <div class="ob-actions">
-              <a class="ob-btn"
-                 href="view-record.html?q=${encodeURIComponent(r.bd_no || "")}"
-                 title="Open records list filtered by this BD">
-                Open List
-              </a>
-
-              ${hasFile ? `
-                <a class="ob-btn"
-                   href="${r.attachment_path}"
-                   target="_blank"
-                   rel="noopener"
-                   title="Open attachment in new tab">
-                  Open File
-                </a>
-              ` : ""}
-
-              <button class="ob-btn primary" data-toggle="${r.id}">
-                ${isLong ? "Details" : "View"}
-              </button>
+              ${
+                canRequest
+                  ? `<button
+                        class="ob-btn ${reqDisabled ? "" : "primary"} js-ao-clear-btn"
+                        data-record-id="${esc(r.id)}"
+                        data-bd-no="${esc(r.bd_no || "")}"
+                        data-serial="${esc(serial)}"
+                        ${reqDisabled ? "disabled" : ""}>
+                        ${reqDisabled ? "Clearance Requested" : "Request Clearance"}
+                    </button>`
+                  : ""
+              }
             </div>
           </div>
+        </div>
 
-          <div class="ob-section">
-            <div class="ob-sec-title">Details</div>
-
-            <div class="ob-details">
-              <div class="ob-details-short">${esc(shortText)}</div>
-              <div class="ob-details-full">${esc(detailsRaw || "-")}</div>
-            </div>
-
-            ${isLong ? `
-              <div style="margin-top:10px;">
-                <button class="ob-btn" data-toggle="${r.id}">Show More</button>
-              </div>
-            ` : ""}
+        <!-- DETAILS (always visible) -->
+        <div class="ob-section">
+          <div class="ob-sec-title">Details</div>
+          <div class="ob-details">
+            <div class="ob-details-short">${esc(detailsShort)}</div>
           </div>
+        </div>
 
-          <div class="ob-section">
-            <div class="ob-sec-title">Attachment</div>
+        <!-- OTHERS (expand) -->
+        <details class="ob-more">
+          <summary>More (Full details • Location • Dates • Attachment • Clearance)</summary>
 
+          <div class="ob-more-body">
+
+            <div class="ob-sec-title">Full Details</div>
+            <div class="ob-details-full">${esc(detailsRaw)}</div>
+
+            <div class="ob-sec-title" style="margin-top:12px;">Location</div>
+            <ul class="ob-list">
+              <li><b>Section:</b> ${esc(sec)}</li>
+              <li><b>Subcategory:</b> ${esc(sub)}</li>
+              <li><b>Rack:</b> ${esc(rack)}</li>
+            </ul>
+
+            <div class="ob-sec-title" style="margin-top:12px;">Dates</div>
+            <ul class="ob-list">
+              <li><b>Opening:</b> ${esc(openDate)}</li>
+              <li><b>Created:</b> ${esc(createdAt)}</li>
+            </ul>
+
+            <div class="ob-sec-title" style="margin-top:12px;">Attachment</div>
             <div class="ob-attach">
               <span class="attach-chip">${hasFile ? "📎 " + esc(fileName) : "📎 None"}</span>
 
-              ${hasFile ? `
-                <a class="attach-open"
-                   href="${r.attachment_path}"
-                   target="_blank"
-                   rel="noopener">
-                  Open Attachment
-                </a>
-                <button class="ob-btn" data-preview-toggle="${r.id}">
-                  Show Preview
-                </button>
-              ` : ""}
+              ${
+                hasFile
+                  ? `<a class="attach-open" href="${r.attachment_path}" target="_blank" rel="noopener">Open Attachment</a>
+                     <button class="ob-btn" type="button" data-preview-toggle="${esc(r.id)}">Show Preview</button>`
+                  : ""
+              }
             </div>
 
-            <!-- preview container; empty until user clicks -->
-            <div class="attach-preview" data-preview-box="${r.id}"></div>
+            <div class="attach-preview ob-preview-collapsed" data-preview-box="${esc(r.id)}"></div>
+
+            <div class="ob-sec-title" style="margin-top:12px;">Clearance</div>
+            <ul class="ob-list">
+              <li><b>Status:</b> ${esc(st.text)}</li>
+              ${st.cls === "cleared" && r.ao_cleared_at ? `<li><b>Cleared at:</b> ${esc(fmtDateTime(r.ao_cleared_at))}</li>` : ""}
+              ${st.cls === "cleared" && r.ao_cleared_by ? `<li><b>Cleared by:</b> ${esc(r.ao_cleared_by)}</li>` : ""}
+            </ul>
+
           </div>
-        </div>
-      `;
-    })
-    .join("");
+        </details>
+      </div>
+    `;
+  }).join("");
 
-  // Details expand/collapse
-  cards.querySelectorAll("[data-toggle]").forEach((btn) => {
+  // bind clearance request buttons
+  cards.querySelectorAll(".js-ao-clear-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-toggle");
-      const card = cards.querySelector(`[data-ob-card="${id}"]`);
-      if (!card) return;
-
-      const isCollapsed = card.classList.contains("ob-collapsed");
-      card.classList.toggle("ob-collapsed", !isCollapsed);
-
-      const allToggleBtns = card.querySelectorAll(`[data-toggle="${id}"]`);
-      allToggleBtns.forEach((b) => (b.textContent = isCollapsed ? "Hide Details" : "Details"));
+      const record_id = Number(btn.getAttribute("data-record-id"));
+      const bd_no = btn.getAttribute("data-bd-no") || "";
+      const serial_no = btn.getAttribute("data-serial") || "";
+      openAOClearanceModal({ record_id, bd_no, serial_no });
     });
   });
 
-  // Preview expand/collapse (default collapsed)
+  // bind preview toggle
   cards.querySelectorAll("[data-preview-toggle]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-preview-toggle");
@@ -233,57 +386,164 @@ async function searchBD(bd) {
       const name = card.getAttribute("data-attach-name") || "Attachment";
       if (!path) return;
 
-      const isCollapsed = card.classList.contains("ob-preview-collapsed");
-
-      if (isCollapsed) {
+      const hidden = box.classList.contains("ob-preview-collapsed");
+      if (hidden) {
         box.innerHTML = buildPreviewHTML({ path, mime, name });
-        card.classList.remove("ob-preview-collapsed");
+        box.classList.remove("ob-preview-collapsed");
         btn.textContent = "Hide Preview";
       } else {
         box.innerHTML = "";
-        card.classList.add("ob-preview-collapsed");
+        box.classList.add("ob-preview-collapsed");
         btn.textContent = "Show Preview";
       }
     });
   });
 }
 
-/* ---------- Init ---------- */
+/* ------------------ search ------------------ */
+async function searchBD() {
+  hideError();
+
+  const bdInput = document.getElementById("bdInput");
+  const bdNo = (bdInput?.value || "").trim();
+  const cards = document.getElementById("cards");
+  const info = document.getElementById("resultInfo");
+
+  if (!bdNo) {
+    showError("Please enter BD No");
+    return;
+  }
+
+  cards.innerHTML = `<div class="muted">Loading...</div>`;
+  if (info) info.textContent = "";
+
+  // ✅ তোমার project এ working endpoint এটাই:
+  const url = `${API_BASE}/records/by-bd?bd_no=${encodeURIComponent(bdNo)}&only_ao=1&limit=300`;
+
+  try {
+    const res = await authFetch(url);
+
+    // JSON parse safe
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      // Better error message
+      const msg =
+        data?.message ||
+        data?.error ||
+        `Request failed (HTTP ${res.status})`;
+      throw new Error(msg);
+    }
+
+    let rows = Array.isArray(data?.data) ? data.data : [];
+
+    // ✅ Serial-wise ASC
+    rows.sort((a, b) => {
+      const sa = a?.serial_no ?? Number.POSITIVE_INFINITY;
+      const sb = b?.serial_no ?? Number.POSITIVE_INFINITY;
+      if (sa !== sb) return sa - sb;
+
+      const ta = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return ta - tb;
+    });
+
+    renderCards(rows, bdNo);
+  } catch (e) {
+    cards.innerHTML = "";
+    showError(e.message || "Failed to load objection history");
+  }
+}
+
+function clearUI() {
+  hideError();
+  const bdInput = document.getElementById("bdInput");
+  const cards = document.getElementById("cards");
+  const info = document.getElementById("resultInfo");
+  if (bdInput) bdInput.value = "";
+  if (cards) cards.innerHTML = "";
+  if (info) info.textContent = "";
+}
+
+/* ------------------ init ------------------ */
 document.addEventListener("DOMContentLoaded", async () => {
+  // 1) Load config (API base)
   await loadConfig();
 
+  // 2) Detect logged-in user role (safe)
+  try {
+    ME_USER = await getMeSafe();
+    const role =
+      ME_USER?.role ||
+      ME_USER?.Role ||
+      ME_USER?.user?.role ||
+      "";
+    ME_ROLE = String(role).toLowerCase();
+  } catch {
+    ME_ROLE = "";
+  }
+
+  // 3) Bind modal close + submit
+  bindModalCloseBehavior();
+  const submitBtn = document.getElementById("aoClearanceSubmitBtn");
+  if (submitBtn) submitBtn.addEventListener("click", submitClearanceRequest);
+
+  // 4) Inputs & buttons
   const bdInput = document.getElementById("bdInput");
   const btnSearch = document.getElementById("btnSearch");
   const btnClear = document.getElementById("btnClear");
 
-  // if user comes with ?bd_no=...
+  // 5) 🔹 If user comes via clickable link (?bd_no=...)
   const params = new URLSearchParams(window.location.search);
   const bdFromUrl = (params.get("bd_no") || "").trim();
+
   if (bdFromUrl) {
     bdInput.value = bdFromUrl;
+
+    // auto-search
     searchBD(bdFromUrl).catch((err) => {
-      document.getElementById("cards").innerHTML = `<div class="muted">${esc(err.message)}</div>`;
+      document.getElementById("cards").innerHTML =
+        `<div class="muted">${esc(err.message)}</div>`;
     });
   }
 
-  btnSearch.addEventListener("click", () => {
-    const bd = bdInput.value.trim();
-    if (!bd) return;
+  // 6) 🔹 Search button click
+  if (btnSearch) {
+    btnSearch.addEventListener("click", () => {
+      const bd = bdInput.value.trim();
+      if (!bd) return;
 
-    history.replaceState(null, "", `bd-objection-history.html?bd_no=${encodeURIComponent(bd)}`);
-    searchBD(bd).catch((err) => {
-      document.getElementById("cards").innerHTML = `<div class="muted">${esc(err.message)}</div>`;
+      // keep URL in sync
+      history.replaceState(
+        null,
+        "",
+        `bd-objection-history.html?bd_no=${encodeURIComponent(bd)}`
+      );
+
+      searchBD(bd).catch((err) => {
+        document.getElementById("cards").innerHTML =
+          `<div class="muted">${esc(err.message)}</div>`;
+      });
     });
-  });
+  }
 
-  bdInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") btnSearch.click();
-  });
+  // 7) 🔹 Enter key = Search
+  if (bdInput) {
+    bdInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") btnSearch.click();
+    });
+  }
 
-  btnClear.addEventListener("click", () => {
-    bdInput.value = "";
-    document.getElementById("cards").innerHTML = "";
-    document.getElementById("resultInfo").textContent = "";
-    history.replaceState(null, "", "bd-objection-history.html");
-  });
+  // 8) 🔹 Clear button
+  if (btnClear) {
+    btnClear.addEventListener("click", () => {
+      bdInput.value = "";
+      document.getElementById("cards").innerHTML = "";
+      document.getElementById("resultInfo").textContent = "";
+      hideError();
+
+      // clean URL
+      history.replaceState(null, "", "bd-objection-history.html");
+    });
+  }
 });

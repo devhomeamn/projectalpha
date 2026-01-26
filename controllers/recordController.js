@@ -3,6 +3,7 @@ const Record = require("../models/recordModel");
 const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
 const Rack = require("../models/rackModel");
+const sequelize = require("../config/db"); 
 
 // helper: normalize BD
 const normalizeBd = (v) => (typeof v === "string" ? v.trim() : v);
@@ -935,7 +936,12 @@ exports.getBdObjectionHistory = async (req, res) => {
     const rows = await Record.findAll({
       where,
       limit,
-      order: [["createdAt", "DESC"]],
+      order: [
+  [sequelize.literal("serial_no IS NULL"), "ASC"], // NULL গুলো last
+  ["serial_no", "ASC"],
+  ["createdAt", "ASC"],
+],
+
       include: [
         { model: Section, attributes: ["id", "name"] },
         { model: Subcategory, attributes: ["id", "name"] },

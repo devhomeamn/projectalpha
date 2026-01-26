@@ -132,8 +132,21 @@ attachment_size: {
   allowNull: true,
 },
 
+ao_status: {
+  type: DataTypes.ENUM("open", "requested", "cleared"),
+  allowNull: false,
+  defaultValue: "open",
+},
+ao_cleared_by: { type: DataTypes.STRING, allowNull: true },
+ao_cleared_at: { type: DataTypes.DATE, allowNull: true },
+
+
 
 });
+
+
+
+
 
 // 🧩 Relationships
 Section.hasMany(Record, { foreignKey: "section_id", onDelete: "CASCADE" });

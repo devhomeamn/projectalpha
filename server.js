@@ -21,9 +21,16 @@ const authRoutes = require('./routes/authRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
 const recordRoutes = require('./routes/recordRoutes');
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const aoClearanceRoutes = require("./routes/aoClearanceRoutes");
 app.use("/api/reports", require("./routes/reportsRoutes"));
 app.use("/api/notices", require("./routes/noticeRoutes"));
 app.use("/api/password", require("./routes/passwordRoutes"));
+
+
+
+app.use("/api/ao-clearance-requests", aoClearanceRoutes);
+
+
 
 
 
