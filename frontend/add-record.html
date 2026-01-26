@@ -138,6 +138,48 @@
                 <span class="state-icon" aria-hidden="true"></span>
               </div>
             </div>
+            <div id="lalAOGroup" style="display:none;" class="span-3">
+  <div class="form-group span-3">
+    <label for="audit_objection">Audit Objection?</label>
+    <div class="control">
+      <select id="audit_objection">
+        <option value="no" selected>No</option>
+        <option value="yes">Yes</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="objectionFields" style="display:none;">
+    <div class="form-group span-3">
+      <label for="objection_no">Objection Number <span class="required">*</span></label>
+      <div class="control">
+        <input type="text" id="objection_no" placeholder="e.g., AO-2023-14" />
+      </div>
+    </div>
+
+    <div class="form-group span-3">
+      <label for="objection_title">Objection Title <span class="required">*</span></label>
+      <div class="control">
+        <input type="text" id="objection_title" placeholder="Short title" />
+      </div>
+    </div>
+
+    <div class="form-group span-3">
+      <label for="objection_details">Details <span class="required">*</span></label>
+      <div class="control">
+        <textarea id="objection_details" rows="4" placeholder="Write details..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-group span-3">
+      <label for="attachment">Attachment (PDF/JPG/PNG) <span class="required">*</span></label>
+      <div class="control">
+        <input type="file" id="attachment" accept=".pdf,.jpg,.jpeg,.png" />
+      </div>
+    </div>
+  </div>
+</div>
+
 
             <div class="form-group span-3">
               <label for="description">Description (Optional)</label>

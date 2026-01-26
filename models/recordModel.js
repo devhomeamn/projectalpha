@@ -95,6 +95,44 @@ const Record = sequelize.define("Record", {
     allowNull: true,
     comment: "User who moved this record to central",
   },
+// ✅ LA/LAO Audit Objection fields
+audit_objection: {
+  type: DataTypes.BOOLEAN,
+  allowNull: false,
+  defaultValue: false,
+},
+objection_no: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
+objection_title: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
+objection_details: {
+  type: DataTypes.TEXT,
+  allowNull: true,
+},
+
+// 📎 Attachment fields
+attachment_path: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
+attachment_name: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
+attachment_mime: {
+  type: DataTypes.STRING,
+  allowNull: true,
+},
+attachment_size: {
+  type: DataTypes.INTEGER,
+  allowNull: true,
+},
+
+
 });
 
 // 🧩 Relationships

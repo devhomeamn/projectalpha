@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const upload = require("../middleware/uploads");
+
 
 const { requireAuth, requireRole } = require("../middleware/auth");
 const {
@@ -13,7 +15,8 @@ const {
   deleteRecord,
   checkBdUnique,
   getRecordForPrint,
-  updateWorkflowStatus, // ✅ workflow status update
+  updateWorkflowStatus,
+  getBdObjectionHistory, // ✅ workflow status update
 } = require("../controllers/recordController");
 
 const Record = require("../models/recordModel");
@@ -28,11 +31,16 @@ router.delete("/delete/:id", requireAuth, requireRole("admin","master"), deleteR
 
 // ✅ Live BD check
 router.get("/check-bd", requireAuth, checkBdUnique);
+
+
+router.get("/by-bd", requireAuth, getBdObjectionHistory);
+
 // topbar search
 router.get("/lookup", requireAuth, requireRole("admin","master","general"), lookupRecords);
 
-// ➕ Add new record
-router.post("/add", requireAuth, requireRole("admin","master","general"), addRecord);
+
+router.post(  "/add",  requireAuth,  requireRole("admin","master","general"),  upload.single("attachment"),  addRecord
+);
 
 // 📄 Get all records (pagination/search)
 router.get("/", requireAuth, requireRole("admin","master","general"), getRecords);
@@ -47,6 +55,7 @@ router.get("/central", requireAuth, requireRole("admin","master","general"), get
 
 // 📦 Bulk move records to central
 router.post("/bulk-move", requireAuth, requireRole("admin","master"), bulkMoveRecords);
+
 
 // 🔢 Get serial numbers by rack
 router.get("/by-rack/:rackId", requireAuth, async (req, res) => {

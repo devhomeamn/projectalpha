@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BD Objection History</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="icon" href="images/site-icon.ico">
+
+  <!-- Same layout as reports.html -->
+  <link rel="stylesheet" href="css/layout.css">
+
+  <!-- New page css (create this file if you want custom styling) -->
+  <link rel="stylesheet" href="css/objec.css">
+
+  <!-- auth guard -->
+  <script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content">
+        <!-- Same header style as reports.html -->
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-main">
+              <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">history</span>
+                BD Objection History
+              </h1>
+              <p class="header-subtitle">একই BD-র সকল Audit Objection একসাথে দেখুন</p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
+        </div>
+
+        <!-- Main content card -->
+        <div class="bdh-card">
+          <div class="bdh-top">
+            <div class="bdh-left">
+              <div class="bdh-title">
+                <span class="material-symbols-rounded">search</span>
+                Search by BD No
+              </div>
+              <div class="bdh-sub">BD No লিখে Search করলে ঐ BD-র সব AO (Audit Objection) এন্ট্রি দেখাবে</div>
+            </div>
+
+            <div class="bdh-right" id="resultInfo"></div>
+          </div>
+
+          <div class="bdh-search">
+            <div class="bdh-input-wrap">
+              <span class="material-symbols-rounded bdh-input-icon">badge</span>
+              <input id="bdInput" class="bdh-input" placeholder="Enter BD No (e.g., BD-100)" autocomplete="off">
+            </div>
+
+            <button id="btnSearch" class="bdh-btn bdh-btn-primary">
+              <span class="material-symbols-rounded">search</span>
+              Search
+            </button>
+
+            <button id="btnClear" class="bdh-btn">
+              <span class="material-symbols-rounded">close</span>
+              Clear
+            </button>
+          </div>
+
+          <div class="bdh-divider"></div>
+
+          <!-- Results -->
+          <div id="cards" class="bdh-cards"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Layout init: same pattern as reports.html -->
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("bd-objection-history.html");
+  </script>
+
+  <!-- Page logic -->
+  <script src="js/bd-objection-history.js"></script>
+
+  <!-- Date/time updater (same concept used elsewhere) -->
+  <script>
+    function updateDateTime() {
+      const now = new Date();
+      const date = now.toLocaleDateString('bn-BD', { day: '2-digit', month: 'long', year: 'numeric' });
+      const time = now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const d = document.getElementById("currentDate");
+      const t = document.getElementById("currentTime");
+      if (d) d.textContent = date;
+      if (t) t.textContent = time;
+    }
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+  </script>
+</body>
+</html>

@@ -51,7 +51,8 @@ export async function initLayout(activePage) {
     { name: "All Users",      icon: "group",         roles: ["Admin"],                      link: "all-users.html" },
     { name: "Reports",        icon: "bar_chart",     roles: ["Admin", "Master", "General"], link: "reports.html" },
     { name: "Admin Notice", icon: "campaign", roles: ["Admin"], link: "admin-notice.html" },
-    { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" }
+    { name: "Bd Objection History", icon: "campaign", roles: ["Admin"], link: "bd-objection-history.html" },
+       { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" }
   ];
 
   const allowed = menuItems.filter(i => i.roles.includes(role));

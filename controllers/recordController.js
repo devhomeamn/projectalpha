@@ -124,6 +124,32 @@ exports.addRecord = async (req, res) => {
       allocate_table = null;
     }
 
+    const isLALAO = (secName || "").trim().toLowerCase().replace(/\s+/g, "") === "la/lao";
+
+const audit_objection_raw = req.body.audit_objection;
+const audit_objection =
+  String(audit_objection_raw || "").toLowerCase() === "true" ||
+  String(audit_objection_raw || "").toLowerCase() === "yes" ||
+  String(audit_objection_raw || "").toLowerCase() === "1";
+
+const objection_no = (req.body.objection_no || "").trim();
+const objection_title = (req.body.objection_title || "").trim();
+const objection_details = (req.body.objection_details || "").trim();
+
+const f = req.file;
+// ✅ LA&LAO + Audit Objection = Yes => required fields + required attachment
+if (isLALAO && audit_objection) {
+  if (!objection_no) return res.status(400).json({ error: "Objection number is required" });
+  if (!objection_title) return res.status(400).json({ error: "Objection title is required" });
+  if (!objection_details) return res.status(400).json({ error: "Objection details is required" });
+  if (!f) return res.status(400).json({ error: "Attachment file is required for audit objection" });
+}
+
+
+
+
+
+
     // 🧮 Auto serial
     let finalSerial = serial_no ? parseInt(serial_no, 10) : null;
     if (!finalSerial) {
@@ -135,14 +161,20 @@ exports.addRecord = async (req, res) => {
     }
 
     // ✅ BD No unique check (same subcategory)
-    const bdExists = await Record.findOne({
-      where: { subcategory_id, bd_no },
+    // ✅ BD No unique check
+// Rule: LA/LAO + Audit Objection = YES → same BD allowed
+if (!(isLALAO && audit_objection)) {
+  const bdExists = await Record.findOne({
+    where: { subcategory_id, bd_no },
+  });
+
+  if (bdExists) {
+    return res.status(400).json({
+      error: `BD No. ${bd_no} already exists in this subcategory`,
     });
-    if (bdExists) {
-      return res.status(400).json({
-        error: `BD No. ${bd_no} already exists in this subcategory`,
-      });
-    }
+  }
+}
+
 
     // 🛑 Duplicate check (serial in same rack)
     const exists = await Record.findOne({
@@ -179,7 +211,19 @@ exports.addRecord = async (req, res) => {
       allocate_table,
       serial_no: finalSerial,
       status: "active",
-      added_by: actor, // ✅ fixed
+      added_by: actor, 
+      audit_objection,
+objection_no: audit_objection ? objection_no : null,
+objection_title: audit_objection ? objection_title : null,
+objection_details: audit_objection ? objection_details : null,
+
+attachment_path: f ? `/uploads/records/${f.filename}` : null,
+attachment_name: f ? f.originalname : null,
+attachment_mime: f ? f.mimetype : null,
+attachment_size: f ? f.size : null,
+
+      
+      // ✅ fixed
     });
 
     res.json({ message: "✅ Record added successfully", record });
@@ -870,5 +914,42 @@ exports.updateWorkflowStatus = async (req, res) => {
   } catch (err) {
     console.error("❌ updateWorkflowStatus error:", err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+
+exports.getBdObjectionHistory = async (req, res) => {
+  try {
+    const bd_no = String(req.query.bd_no || "").trim();
+    if (!bd_no) return res.status(400).json({ error: "bd_no is required" });
+
+    // optional filters
+    const section_id = req.query.section_id ? parseInt(req.query.section_id, 10) : null;
+    const only_ao = (String(req.query.only_ao || "1") === "1"); // default only AO
+    const limit = Math.min(parseInt(req.query.limit || "200", 10), 500);
+
+    const where = { bd_no };
+    if (only_ao) where.audit_objection = true;
+    if (section_id) where.section_id = section_id;
+
+    const rows = await Record.findAll({
+      where,
+      limit,
+      order: [["createdAt", "DESC"]],
+      include: [
+        { model: Section, attributes: ["id", "name"] },
+        { model: Subcategory, attributes: ["id", "name"] },
+        { model: Rack, attributes: ["id", "name"] },
+      ],
+    });
+
+    return res.json({
+      bd_no,
+      total: rows.length,
+      data: rows,
+    });
+  } catch (err) {
+    console.error("getBdObjectionHistory error:", err);
+    return res.status(500).json({ error: "Failed to load BD objection history" });
   }
 };

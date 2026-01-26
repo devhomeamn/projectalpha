@@ -226,6 +226,9 @@ function initPage() {
   syncAllocateTable("");
   toggleClosingDate();
 
+  // Wire audit objection toggle (safe if element exists)
+  document.getElementById("audit_objection")?.addEventListener("change", syncObjectionFields);
+
   // Auto uppercase file name
   document.getElementById("file_name")?.addEventListener("input", (e) => {
     e.target.value = e.target.value.toUpperCase();
@@ -291,6 +294,7 @@ async function loadSections() {
       rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
       serialInput.value = "";
       syncAllocateTable(selected?.name || "");
+      syncLALAOUI(selected?.name || "");
 
       if (!sid) return;
 
@@ -363,16 +367,31 @@ async function checkBdNoLive() {
 
   const bdValue = bdInput?.value.trim() || "";
 
+  // Detect LA/LAO from selected option text
+  const sectionSelect = document.getElementById("section_id");
+  const selectedSectionName =
+    sectionSelect?.options?.[sectionSelect.selectedIndex]?.textContent?.trim() || "";
+  const isLALAO = (selectedSectionName || "").toLowerCase() === "la/lao";
+
   if (!bdValue || !subId) {
     bdOk = true;
     setMsg(msg, "");
     return;
   }
 
+  // ✅ LA/LAO হলে duplicate BD allow → live uniqueness check skip
+  if (isLALAO) {
+    bdOk = true;
+    setMsg(msg, "LA/LAO: Same BD allowed (Audit Objection multiple entry)", true, "warn");
+    return;
+  }
+
   const token = ++lastBdCheckToken;
 
   try {
-    const res = await authFetch(`${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(bdValue)}&subcategory_id=${subId}`);
+    const res = await authFetch(
+      `${API_BASE}/records/check-bd?bd_no=${encodeURIComponent(bdValue)}&subcategory_id=${subId}`
+    );
     const data = await res.json();
 
     if (token !== lastBdCheckToken) return;
@@ -397,8 +416,28 @@ async function onAddRecord(e) {
 
   subSubmitAttempted = true;
 
-  // Run all validations
-  const isValid =
+  // ---- Detect LA/LAO from selected section name ----
+  const sectionSelect = document.getElementById("section_id");
+  const selectedSectionName =
+    sectionSelect?.options?.[sectionSelect.selectedIndex]?.textContent?.trim() || "";
+  const isLALAO = isLALAOSection(selectedSectionName);
+
+  // ---- Read Audit Objection UI values ----
+  const auditSel = document.getElementById("audit_objection");
+  const auditYes = isLALAO && (auditSel?.value || "").toLowerCase() === "yes";
+
+  const objectionNoEl = document.getElementById("objection_no");
+  const objectionTitleEl = document.getElementById("objection_title");
+  const objectionDetailsEl = document.getElementById("objection_details");
+  const attachmentEl = document.getElementById("attachment");
+
+  const objection_no = objectionNoEl ? objectionNoEl.value.trim() : "";
+  const objection_title = objectionTitleEl ? objectionTitleEl.value.trim() : "";
+  const objection_details = objectionDetailsEl ? objectionDetailsEl.value.trim() : "";
+  const attachmentFile = attachmentEl?.files?.[0] || null;
+
+  // ---- Run all validations ----
+  const isValidBase =
     validateFileName() &&
     validateBdFormat() &&
     validateDescription() &&
@@ -407,11 +446,23 @@ async function onAddRecord(e) {
     document.getElementById("subcategory_id").value &&
     document.getElementById("rack_id").value &&
     document.getElementById("opening_date").value &&
-    bdOk;
+  (isLALAO ? true : bdOk);
 
-  if (!isValid) {
+
+  if (!isValidBase) {
     showToast("Please fix the errors in the form", "error");
     return;
+  }
+
+  // ---- Extra validation for LA/LAO + Audit Objection = Yes ----
+  if (auditYes) {
+    if (!objection_no || !objection_title || !objection_details || !attachmentFile) {
+      showToast(
+        "LA/LAO: Audit Objection = Yes হলে Objection No/Title/Details এবং Attachment বাধ্যতামূলক",
+        "error"
+      );
+      return;
+    }
   }
 
   const payload = {
@@ -426,6 +477,12 @@ async function onAddRecord(e) {
     closing_date: document.getElementById("closing_date").value || null,
     allocate_table: document.getElementById("allocate_table")?.value.trim() || null,
     description: document.getElementById("description").value.trim() || null,
+
+    // ✅ LA/LAO audit objection fields
+    audit_objection: auditYes ? "yes" : "no",
+    objection_no: auditYes ? objection_no : "",
+    objection_title: auditYes ? objection_title : "",
+    objection_details: auditYes ? objection_details : "",
   };
 
   isSubmitting = true;
@@ -435,9 +492,15 @@ async function onAddRecord(e) {
   btn.innerHTML = `<span class="material-symbols-rounded">hourglass_top</span> Saving...`;
 
   try {
+    // ✅ Use FormData (supports file upload)
+    const fd = new FormData();
+    Object.entries(payload).forEach(([k, v]) => fd.append(k, v ?? ""));
+
+    if (attachmentFile) fd.append("attachment", attachmentFile);
+
     const res = await authFetch(`${API_BASE}/records/add`, {
       method: "POST",
-      body: JSON.stringify(payload)
+      body: fd
     });
     const data = await res.json();
 
@@ -454,20 +517,23 @@ async function onAddRecord(e) {
         previewReady = true;
         showToast("Record added successfully!", "success");
         openPreviewConfirmModal();
-} else {
+      } else {
         showToast("Record added successfully!", "success");
       }
     } else {
       showToast("Record added successfully!", "success");
     }
 
-    // reset formm
+    // reset form
     e.target.reset();
     document.getElementById("serial_no").value = "";
     syncAllocateTable("");
     toggleClosingDate();
 
-    // Clear messagesgg
+    // reset LA/LAO fields UI
+    syncLALAOUI("");
+
+    // Clear messages
     ["file_msg", "bd_format_msg", "bd_unique_msg", "desc_msg", "alloc_msg"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = "";
@@ -482,6 +548,59 @@ async function onAddRecord(e) {
   }
 }
 
+/* ================== LA/LAO (AUDIT OBJECTION UI) HELPERS ================== */
+function isLALAOSection(sectionName) {
+  return (sectionName || "").trim().toLowerCase() === "la/lao";
+}
+
+function clearObjectionValues() {
+  ["objection_no", "objection_title", "objection_details", "attachment"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+}
+
+function setObjectionRequired(required) {
+  const no = document.getElementById("objection_no");
+  const title = document.getElementById("objection_title");
+  const details = document.getElementById("objection_details");
+  const file = document.getElementById("attachment");
+  if (no) no.required = required;
+  if (title) title.required = required;
+  if (details) details.required = required;
+  if (file) file.required = required;
+}
+
+function syncObjectionFields() {
+  const objectionFields = document.getElementById("objectionFields");
+  const auditSel = document.getElementById("audit_objection");
+  if (!objectionFields || !auditSel) return;
+
+  const yes = (auditSel.value || "").toLowerCase() === "yes";
+  objectionFields.style.display = yes ? "" : "none";
+  setObjectionRequired(yes);
+
+  if (!yes) clearObjectionValues();
+}
+
+function syncLALAOUI(sectionName) {
+  const group = document.getElementById("lalAOGroup");
+  const objectionFields = document.getElementById("objectionFields");
+  const auditSel = document.getElementById("audit_objection");
+  if (!group || !objectionFields || !auditSel) return;
+
+  const isLALAO = isLALAOSection(sectionName);
+  group.style.display = isLALAO ? "" : "none";
+
+  if (!isLALAO) {
+    auditSel.value = "no";
+    objectionFields.style.display = "none";
+    setObjectionRequired(false);
+    clearObjectionValues();
+    return;
+  }
+  syncObjectionFields();
+}
 
 /* ================== PRINT PREVIEW CONFIRM (SUCCESS MODAL) ================== */
 let previewConfirmWired = false;
@@ -532,7 +651,6 @@ function wirePreviewConfirmOnce() {
     }
   });
 }
-
 
 /* ================== PRINT MODAL & TEMPLATE ================== */
 function wirePrintButtonsOnce() {

@@ -46,6 +46,8 @@ app.use("/api/dashboard", dashboardRoutes);
 
 // ✅ Static serve (সবচেয়ে শেষে)
 app.use(express.static(path.join(__dirname, 'frontend')));
+// ✅ serve uploaded files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ Root page
 app.get('/', (req, res) => {
@@ -53,7 +55,7 @@ app.get('/', (req, res) => {
 });
 
 // ✅ Database sync
-sequelize.sync({ alter: false })
+sequelize.sync({ alter: true })
   .then(() => console.log("✅ Database synced with approval system"))
   .catch(console.error);
 

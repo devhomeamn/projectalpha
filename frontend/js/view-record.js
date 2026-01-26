@@ -15,6 +15,7 @@ let pageSize = 10;
 
 let currentUser = localStorage.getItem("username") || "Unknown User";
 let lastViewedRecordForPrint = null;
+
 /* ================== AUTH HELPER (copy from add-record.js) ================== */
 function getToken() {
   return localStorage.getItem("token") || "";
@@ -47,10 +48,6 @@ async function authFetch(url, options = {}) {
   }
   return res;
 }
-
-
-
-
 
 /* ================== TOAST ================== */
 function showToast(message, type = "success") {
@@ -86,6 +83,51 @@ function showToast(message, type = "success") {
     .toast.warn { background: #f59e0b; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .icon-move.disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ✅ AO badge */
+    .ao-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      font-weight:800;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid #ef4444;
+      color:#ef4444;
+      margin-left:8px;
+      vertical-align:middle;
+    }
+    .ao-badge::before{
+      content:"●";
+      font-size:10px;
+      line-height:1;
+    }
+
+    /* ✅ Attachment preview */
+    .attach-preview{
+      margin-top:10px;
+      border:1px solid #ddd;
+      border-radius:10px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .attach-preview iframe{
+      width:100%;
+      height:460px;
+      border:0;
+      display:block;
+    }
+    .attach-preview img{
+      width:100%;
+      height:auto;
+      display:block;
+    }
+    .attach-meta{
+      font-size:12px;
+      opacity:.8;
+      margin-top:6px;
+    }
   `;
   document.head.appendChild(style);
 })();
@@ -124,8 +166,8 @@ async function loadConfig() {
     console.log("API Base loaded:", API_BASE);
 
     await Promise.all([
-      loadSections(),      // already exists
-      loadCentralRacks(),  // 👉 এটা নতুন
+      loadSections(),
+      loadCentralRacks(),
     ]);
 
     await fetchRecords(1);
@@ -142,9 +184,7 @@ async function loadConfig() {
   }
 }
 
-
 //notif to filter ongoing rec for 
-
 function getRecordStatusParam() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -153,7 +193,6 @@ function getRecordStatusParam() {
     return "";
   }
 }
-
 
 function getUrlParam(name) {
   try {
@@ -164,17 +203,13 @@ function getUrlParam(name) {
   }
 }
 
-
-//load central racks
-
 /* =============== CENTRAL ROOM RACKS → MOVE TO CENTRAL MODAL =============== */
 async function loadCentralRacks() {
-  const singleSelect = document.getElementById("singleMoveRack"); // single move modal er select
-  const bulkSelect   = document.getElementById("bulkRackId");     // bulk move modal er select
+  const singleSelect = document.getElementById("singleMoveRack");
+  const bulkSelect   = document.getElementById("bulkRackId");
 
   if (!singleSelect && !bulkSelect) return;
 
-  // ১) প্রথমে loading text
   [singleSelect, bulkSelect].forEach((sel) => {
     if (!sel) return;
     sel.innerHTML = "";
@@ -183,12 +218,10 @@ async function loadCentralRacks() {
   });
 
   try {
-    // ২) সব section আনবো
     const secRes = await authFetch(`${API_BASE}/sections`);
     const sections = await secRes.json();
     if (!Array.isArray(sections)) throw new Error("Invalid sections data");
 
-    // ৩) Central Room নামের section খুঁজবো
     const centralSection = sections.find(
       (s) => (s.name || "").trim().toLowerCase() === "central room"
     );
@@ -204,7 +237,6 @@ async function loadCentralRacks() {
       return;
     }
 
-    // ৪) ওই section এর র্যাকগুলো আনবো
     const rackRes = await authFetch(
       `${API_BASE}/sections/racks/${centralSection.id}`
     );
@@ -250,7 +282,6 @@ async function loadCentralRacks() {
   }
 }
 
-
 /* ================== SECTIONS ================== */
 async function loadSections() {
   try {
@@ -284,7 +315,6 @@ async function loadRacksForSection(sectionId) {
   const sel = document.getElementById("rackFilter");
   if (!sel) return;
 
-  // reset
   sel.innerHTML = "";
   sel.add(new Option("All Racks", ""));
   sel.disabled = true;
@@ -296,7 +326,6 @@ async function loadRacksForSection(sectionId) {
   sel.innerHTML = "";
   sel.add(new Option("Loading racks...", ""));
 
-  // Prefer section-wise racks endpoint
   const endpoints = [
     `${API_BASE}/sections/${sectionId}/racks`,
     `${API_BASE}/sections/${sectionId}/rack`,
@@ -337,7 +366,6 @@ async function loadRacksForSection(sectionId) {
 
 /* ================== RACK-WISE A4 + QR BULK PRINT ================== */
 async function printLabelsForCurrentRack() {
-  // 1) আগে চেক করবো Section + Rack সিলেক্ট আছে কিনা
   if (!selectedSection || !selectedRack) {
     showToast("⚠️ আগে Section এবং Rack নির্বাচন করুন", "warn");
     return;
@@ -592,12 +620,10 @@ async function fetchRecords(page = 1) {
     const recordStatusParam = safeRS ? `&record_status=${encodeURIComponent(safeRS)}` : "";
     const mineParam = mine ? `&mine=1` : "";
 
-
     const data = await fetchJson(
       `${API_BASE}/records?page=${page}&limit=${pageSize}&q=${encodeURIComponent(q)}${sectionParam}${rackParam}${recordStatusParam}${mineParam}`,
       { headers: { ...getAuthHeaders() } }
     );
-
 
     allRecords = data.data || [];
     currentPage = data.page || 1;
@@ -610,6 +636,14 @@ async function fetchRecords(page = 1) {
   } catch (err) {
     console.error("fetchRecords error:", err);
   }
+}
+
+/* ================== AO HELPER ================== */
+function isAuditObjection(rec) {
+  return rec?.audit_objection === true ||
+    rec?.audit_objection === 1 ||
+    String(rec?.audit_objection || "").toLowerCase() === "true" ||
+    String(rec?.audit_objection || "").toLowerCase() === "yes";
 }
 
 /* ================== RENDER TABLE ================== */
@@ -648,11 +682,14 @@ function renderTable(records) {
 
     const tableSerial = startIndex + idx + 1;
 
+    // ✅ AO badge in list (no new column)
+    const aoBadge = isAuditObjection(rec) ? `<span class="ao-badge" title="Audit Objection">AO</span>` : "";
+
     tr.innerHTML = `
 <td>${tableSerial}</td>
   <td><input type="checkbox" class="record-select" data-id="${rec.id}"></td>
  
- <td class="file-cell" title="View details">${rec.file_name}</td>
+ <td class="file-cell" title="View details">${rec.file_name}${aoBadge}</td>
 
   <td>${rec.bd_no || "-"}</td>
   <td>${sectionName}</td>
@@ -679,20 +716,17 @@ function renderTable(records) {
   ` : ""}
 </td> `;
 
-    // ✅ Row click = details modal
     const fileCell = tr.querySelector(".file-cell");
     fileCell.addEventListener("click", (e) => {
       e.stopPropagation();
       showDetails(rec);
     });
 
-    // Edit click
     tr.querySelector(".icon-edit")?.addEventListener("click", (e) => {
       e.stopPropagation();
       openEditModal(rec);
     });
 
-    // Move click (only if CLOSED)
     const moveIcon = tr.querySelector(".icon-move");
     const isClosed = (rec.record_status || "ongoing").toLowerCase() === "closed";
 
@@ -714,7 +748,6 @@ function renderTable(records) {
       });
     }
 
-    // Delete click
     tr.querySelector(".icon-delete")?.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!confirm("Are you sure you want to delete this record?")) return;
@@ -820,13 +853,9 @@ async function openSingleMove(rec) {
   const prevRack = rec.Rack?.name || rec.previous_rack_id || "-";
   document.getElementById("currentLocation").textContent = `${prevSection} → Rack ${prevRack}`;
 
-  // ⭐ modal খুললেই fresh central rack লোড করবো
   await loadCentralRacks();
-
-  // তারপর auto-serial হিসাব
   computeSingleAutoSerial();
 }
-
 
 async function computeSingleAutoSerial() {
   const rackId = document.getElementById("singleMoveRack")?.value;
@@ -1025,6 +1054,72 @@ function bindCheckAll() {
   master.onchange = () => boxes.forEach((cb) => (cb.checked = master.checked));
 }
 
+/* ================== DETAILS MODAL HELPERS (AO + Attachment) ================== */
+function renderAuditObjectionBlock(rec) {
+  const yes = isAuditObjection(rec);
+  if (!yes) return `<div class="block"><p><strong>🧾 Audit Objection:</strong> No</p></div>`;
+
+  const no = rec.objection_no || "-";
+  const title = rec.objection_title || "-";
+  const details = rec.objection_details || "-";
+
+  const bd = (rec.bd_no || "").trim();
+  const historyUrl = bd
+    ? `bd-objection-history.html?bd_no=${encodeURIComponent(bd)}`
+    : `bd-objection-history.html`;
+
+  return `
+    <div class="block">
+      <p><strong>🧾 Audit Objection:</strong> <span class="ao-badge">AO</span></p>
+      <p><strong>Objection No:</strong> ${no}</p>
+      <p><strong>Title:</strong> ${title}</p>
+      <p><strong>Details:</strong><br>${details}</p>
+
+      <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="${historyUrl}" target="_blank" rel="noopener">
+          BD Objection History
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+
+function renderAttachmentBlock(rec) {
+  const path = rec?.attachment_path || "";
+  if (!path) {
+    return `<div class="block"><p><strong>📎 Attachment:</strong> None</p></div>`;
+  }
+
+  const name = rec.attachment_name || "Attachment";
+  const mime = (rec.attachment_mime || "").toLowerCase();
+
+  let preview = "";
+  if (mime.startsWith("image/")) {
+    preview = `
+      <div class="attach-preview">
+        <img src="${path}" alt="${name}">
+      </div>
+    `;
+  } else if (mime === "application/pdf") {
+    preview = `
+      <div class="attach-preview">
+        <iframe src="${path}"></iframe>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="block">
+      <p><strong>📎 Attachment:</strong>
+        <a href="${path}" target="_blank" rel="noopener">View / Download</a>
+      </p>
+      <div class="attach-meta">${name}</div>
+      ${preview}
+    </div>
+  `;
+}
+
 /* ================== DETAILS MODAL ================== */
 function showDetails(rec) {
   lastViewedRecordForPrint = rec;
@@ -1084,11 +1179,140 @@ function showDetails(rec) {
       <p><strong>📅 Opening Date:</strong> ${openingDate}</p>
       <p><strong>📅 Closing Date:</strong> ${closingDate}</p>
     </div>
+
+    ${renderAuditObjectionBlock(rec)}
+    ${renderAttachmentBlock(rec)}
+
+    <div class="block" id="sameBdAoBlock">
+      <p><strong>🧾 Same BD - Other Audit Objections</strong></p>
+      <div id="sameBdAoList" style="opacity:.75;">Loading...</div>
+    </div>
   `;
 
   bindWorkflowControls(rec);
   modal.style.display = "flex";
+
+  // ✅ call AFTER html injected
+  loadSameBdAuditObjections(rec);
 }
+
+
+
+function truthyAO(v) {
+  return v === true || v === 1 || String(v || "").toLowerCase() === "true" || String(v || "").toLowerCase() === "yes";
+}
+
+async function loadSameBdAuditObjections(rec) {
+  const wrap = document.getElementById("sameBdAoBlock");
+  const list = document.getElementById("sameBdAoList");
+  if (!wrap || !list) return;
+
+  const bd = (rec?.bd_no || "").trim();
+  if (!bd) {
+    list.textContent = "BD No নেই";
+    return;
+  }
+
+  const secName = (rec?.Section?.name || "").trim().toLowerCase();
+  const cleaned = secName.replace(/\s+/g, "");
+  const isLALAO = cleaned === "la/lao" || cleaned === "la-lao" || cleaned === "lalao";
+  if (!isLALAO) {
+    list.textContent = "এই ফিচারটা শুধু LA/LAO এর জন্য";
+    return;
+  }
+
+  try {
+    const url = `${API_BASE}/records?page=1&limit=300&q=${encodeURIComponent(bd)}`;
+    const data = await fetchJson(url, { headers: { ...getAuthHeaders() } });
+
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    const sameBd = rows.filter(r => String(r?.bd_no || "").trim() === bd);
+
+    const others = sameBd
+      .filter(r => r?.id !== rec?.id && truthyAO(r?.audit_objection))
+      .sort((a, b) => {
+        const ao = String(a?.objection_no || "");
+        const bo = String(b?.objection_no || "");
+        return ao.localeCompare(bo);
+      });
+
+    if (others.length === 0) {
+      list.textContent = "No other objections found for this BD.";
+      return;
+    }
+
+    const esc = (s) =>
+      String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+    const short = (s, n = 90) => {
+      const t = String(s || "").trim();
+      if (!t) return "-";
+      return t.length > n ? t.slice(0, n) + "…" : t;
+    };
+
+    list.innerHTML = `
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px;">
+        ${others.map((r) => {
+          const no = r.objection_no || "-";
+          const title = r.objection_title || "(No title)";
+          const openDate = r.opening_date || "-";
+          const details = short(r.objection_details || r.description || "", 100);
+
+          const hasFile = !!r.attachment_path;
+          const fileIcon = hasFile ? ` <span title="Attachment">📎</span>` : "";
+
+          const viewFileBtn = hasFile
+            ? `<a class="btn" href="${r.attachment_path}" target="_blank" rel="noopener" style="margin-left:8px;">Open File</a>`
+            : "";
+
+          return `
+            <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff;">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:900;">
+                    ${esc(no)} — ${esc(title)}${fileIcon}
+                  </div>
+                  <div style="font-size:12px;opacity:.8;margin-top:4px;">
+                    <b>Opening:</b> ${esc(openDate)} &nbsp; • &nbsp; <b>ID:</b> ${esc(r.id)}
+                  </div>
+                  <div style="font-size:12px;opacity:.9;margin-top:6px;line-height:1.35;">
+                    <b>Details:</b> ${esc(details)}
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:8px;align-items:center;white-space:nowrap;">
+                  <button class="btn btn-primary" data-open-ao="${r.id}">
+                    Open
+                  </button>
+                  ${viewFileBtn}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    list.querySelectorAll("[data-open-ao]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = Number(btn.getAttribute("data-open-ao"));
+        const found = sameBd.find(x => x.id === id);
+        if (found) showDetails(found);
+        else showToast("Record not found in list", "error");
+      });
+    });
+
+  } catch (err) {
+    console.error("loadSameBdAuditObjections error:", err);
+    list.textContent = "Failed to load same BD objections.";
+  }
+}
+
 
 /* ================== PRINT (View – Single) ================== */
 function startPrintFromView() {
@@ -1517,8 +1741,6 @@ if (urlQ) {
   if (input) input.value = urlQ;
 }
 
-
-
 /* ================== INIT ================== */
 document.addEventListener("DOMContentLoaded", () => {
   bindSearch();
@@ -1527,9 +1749,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEditForm();
   bindSingleMove();
   bindBulkMove();
- 
 
-  // ✅ Rack filter (works only when section selected)
   const rackSel = document.getElementById("rackFilter");
   if (rackSel) {
     rackSel.innerHTML = "";
