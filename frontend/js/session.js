@@ -2,9 +2,11 @@
    Drop-in session manager for Project Alpha (vanilla JS).
    Features:
    - Idle logout (default 30 min)
+   - ✅ Idle warning toast before logout (default 5 min before)
    - JWT expiry logout (if token has exp)
+   - ✅ JWT expiry warning toast (default 5 min before expiry)
    - Cross-tab sync (logout in one tab logs out others)
-   - Optional “expiring soon” warning toast (uses window.showToast if available)
+   - Uses window.showToast if available (silent fallback)
 */
 
 (function () {
@@ -13,7 +15,10 @@
   // ====== CONFIG (edit as you like) ======
   const DEFAULTS = {
     idleTimeoutMs: 30 * 60 * 1000,     // 30 minutes
-    warnBeforeMs: 2 * 60 * 1000,       // warn 2 minutes before token expiry (if possible)
+    idleWarnBeforeMs: 5 * 60 * 1000,   // ✅ warn 5 minutes before idle logout
+
+    warnBeforeMs: 5 * 60 * 1000,       // ✅ warn 5 minutes before token expiry (if possible)
+
     logoutUrl: "login.html",
     storageTokenKey: "token",
     storageLastActiveKey: "last_active_ts",
@@ -87,6 +92,8 @@
     const cfg = { ...DEFAULTS, ...options };
 
     let idleTimer = null;
+    let idleWarnTimer = null;
+
     let expiryTimer = null;
     let warnTimer = null;
 
@@ -107,10 +114,26 @@
       setTimeout(() => redirectToLogin(cfg.logoutUrl), 700);
     }
 
+    // ✅ schedule warning before idle logout
+    function scheduleIdleWarning() {
+      if (idleWarnTimer) clearTimeout(idleWarnTimer);
+
+      const warnIn = cfg.idleTimeoutMs - cfg.idleWarnBeforeMs;
+      // if timeout smaller than warn window, don't warn
+      if (!Number.isFinite(warnIn) || warnIn <= 0) return;
+
+      idleWarnTimer = setTimeout(() => {
+        safeShowToast("⚠️ You will be logged out in 5 minutes due to inactivity. Move mouse / press any key to stay logged in.", "warn");
+      }, warnIn);
+    }
+
     function resetIdleTimer() {
       if (idleTimer) clearTimeout(idleTimer);
 
       setLS(cfg.storageLastActiveKey, now());
+
+      // ✅ re-arm idle warning every time activity happens
+      scheduleIdleWarning();
 
       idleTimer = setTimeout(() => {
         signalLogout("idle");
@@ -158,7 +181,7 @@
       const warnAt = remaining - cfg.warnBeforeMs;
       if (warnAt > 0) {
         warnTimer = setTimeout(() => {
-          safeShowToast("⚠️ Session will expire soon. Save your work.", "warn");
+          safeShowToast("⚠️ Session will expire in 5 minutes. Save your work.", "warn");
         }, warnAt);
       }
 
@@ -171,14 +194,17 @@
     function setupCrossTabSync() {
       window.addEventListener("storage", (e) => {
         if (!e) return;
+
         // Another tab triggered logout
         if (e.key === cfg.storageLogoutSignalKey && e.newValue) {
           doLogout("expired");
         }
+
         // Another tab refreshed token: re-arm expiry timer
         if (e.key === cfg.storageTokenKey) {
           setupTokenExpiryWatcher();
         }
+
         // Another tab activity: keep idle aligned
         if (e.key === cfg.storageLastActiveKey) {
           const lastActive = getLSNumber(cfg.storageLastActiveKey, now());
@@ -190,7 +216,6 @@
     }
 
     // Don’t start if already on login page (optional)
-    // You can remove this if you want session.js also on login.html
     const page = (window.location.pathname || "").toLowerCase();
     if (page.endsWith("/login.html") || page.endsWith("login.html")) return;
 

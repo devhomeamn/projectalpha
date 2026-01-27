@@ -38,6 +38,43 @@ export async function initLayout(activePage) {
     ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
     : "";
 
+
+  // ------------------------------
+  // Auto Logout (Idle + JWT expiry)
+  // ------------------------------
+  (function initAutoLogout() {
+    // login/forgot/reset page-এ না (যদি কখনো initLayout call হয়)
+    const p = (window.location.pathname || "").toLowerCase();
+    if (p.endsWith("login.html") || p.endsWith("forgot-password.html") || p.endsWith("reset-password.html")) return;
+
+    // already loaded?
+    if (window.__SESSION_AUTO_LOGOUT_LOADED__) return;
+    window.__SESSION_AUTO_LOGOUT_LOADED__ = true;
+
+    // session.js inject
+    const s = document.createElement("script");
+    s.src = "js/session.js"; // ✅ session.js কে frontend/js/session.js এ রাখবেন
+    s.defer = true;
+
+    // optional: configure after load (if your session.js exposes init)
+    s.onload = () => {
+      // if your session.js exposes something like window.SessionManager.init
+      if (window.SessionManager && typeof window.SessionManager.init === "function") {
+        window.SessionManager.init({
+          idleTimeoutMs: 30 * 60 * 1000,   // 30 min (change if needed)
+          logoutUrl: "login.html",
+          storageTokenKey: "token",
+          storageUserKey: "username" // or "user" if you use that
+        });
+      }
+    };
+
+    document.head.appendChild(s);
+  })();
+
+
+
+
   /* ------------------------------
         Sidebar Menu Items
   ------------------------------ */

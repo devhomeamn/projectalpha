@@ -521,3 +521,51 @@
 }
 
 .btn-sm{ padding:6px 10px; }
+
+
+
+
+/* Status chip (JS uses .chip) */
+#list .card .chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: .6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(0,0,0,.03);
+  user-select: none;
+}
+
+#list .card .chip::before{
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.35);
+}
+
+/* Status colors */
+#list .card .chip[data-status="pending"]{
+  background: rgba(245,158,11,.12);
+  border-color: rgba(245,158,11,.25);
+  color: #7a4a00;
+}
+#list .card .chip[data-status="pending"]::before{ background: #f59e0b; }
+
+#list .card .chip[data-status="approved"]{
+  background: rgba(16,185,129,.12);
+  border-color: rgba(16,185,129,.25);
+  color: #065f46;
+}
+#list .card .chip[data-status="approved"]::before{ background: #10b981; }
+
+#list .card .chip[data-status="rejected"]{
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.25);
+  color: #7f1d1d;
+}
+#list .card .chip[data-status="rejected"]::before{ background: #ef4444; }

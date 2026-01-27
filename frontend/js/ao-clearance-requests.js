@@ -64,7 +64,10 @@ async function loadList() {
             <div><strong>Serial:</strong> ${serialNo}</div>
           </div>
           <div>
-            <span class="chip">${(r.status || "").toUpperCase()}</span>
+           <span class="chip" data-status="${(r.status || "").toLowerCase()}">
+  ${(r.status || "").toUpperCase()}
+</span>
+
           </div>
         </div>
 
