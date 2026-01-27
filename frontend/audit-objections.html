@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Audit Objection List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" href="images/site-icon.ico" />
+
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/audit-objections.css" />
+
+  <script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content">
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-main">
+              <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">list_alt</span>
+                Audit Objection List
+              </h1>
+              <p class="header-subtitle">সব Audit Objection একসাথে (Table view). Row expand করলে Details দেখা যাবে।</p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
+        </div>
+
+        <div class="ao-card">
+          <div class="ao-filters">
+            <div class="ao-field">
+              <label for="aoStatus">Status</label>
+              <select id="aoStatus" class="ao-input">
+                <option value="">All</option>
+                <option value="open">Open</option>
+                <option value="requested">Requested</option>
+                <option value="cleared">Cleared</option>
+              </select>
+            </div>
+
+            <div class="ao-field">
+              <label for="aoBdNo">BD No</label>
+              <input id="aoBdNo" class="ao-input" placeholder="e.g., BD-100" autocomplete="off" />
+            </div>
+
+            <div class="ao-field ao-field-wide">
+              <label for="aoSearchQ">Search</label>
+              <input id="aoSearchQ" class="ao-input" placeholder="file / objection no / title / details" autocomplete="off" />
+            </div>
+
+            <div class="ao-actions">
+              <button id="aoSearchBtn" class="ao-btn ao-btn-primary" type="button">
+                <span class="material-symbols-rounded">search</span>
+                Search
+              </button>
+              <button id="aoClearBtn" class="ao-btn" type="button">
+                <span class="material-symbols-rounded">close</span>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div id="aoError" class="msg msg-error" style="display:none;"></div>
+
+          <div class="ao-table-wrap">
+            <table class="ao-table">
+              <thead>
+                <tr>
+                  <th style="width:44px;"></th>
+                  <th>BD No</th>
+                  <th style="width:70px;">Serial</th>
+                  <th>File Name</th>
+                  <th style="width:120px;">Objection No</th>
+                  <th>Title</th>
+                  <th>Location</th>
+                  <th style="width:95px;">Status</th>
+                  <th style="width:85px;">Attachment</th>
+                  <th style="width:150px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="aoTableBody">
+                <tr><td colspan="10" style="text-align:center;">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="ao-pagination">
+            <button id="aoPrevBtn" class="ao-btn" type="button">Prev</button>
+            <div class="ao-pageinfo" id="aoPageInfo">Page -</div>
+            <button id="aoNextBtn" class="ao-btn" type="button">Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("audit-objections.html");
+  </script>
+
+  <script src="js/audit-objections.js"></script>
+</body>
+</html>

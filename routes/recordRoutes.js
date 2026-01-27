@@ -17,6 +17,7 @@ const {
   getRecordForPrint,
   updateWorkflowStatus,
   getBdObjectionHistory, // ✅ workflow status update
+  getAuditObjectionsList,
 } = require("../controllers/recordController");
 
 const Record = require("../models/recordModel");
@@ -34,6 +35,10 @@ router.get("/check-bd", requireAuth, checkBdUnique);
 
 
 router.get("/by-bd", requireAuth, getBdObjectionHistory);
+
+// 📋 Full Audit Objection list (table)
+router.get("/audit-objections", requireAuth, getAuditObjectionsList);
+
 
 // topbar search
 router.get("/lookup", requireAuth, requireRole("admin","master","general"), lookupRecords);

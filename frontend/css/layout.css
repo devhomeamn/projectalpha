@@ -4,8 +4,14 @@
    - Topbar: actions + profile dropdown
 =========================================== */
 
+
 *{ box-sizing: border-box; }
 html, body{ height: 100%; }
+body{
+  font-family: "SiyamRupaliBN", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, Helvetica, Arial;
+}
+
 
 body{
   margin: 0;
@@ -155,6 +161,79 @@ body{
   background: #e8f1ff;
   color: #2563eb;
   font-weight: 700;
+}
+
+/* ---------- MENU GROUP / SUBMENU ---------- */
+.sidebar .menu-group{ margin: 4px 0; }
+
+.sidebar .menu-group-btn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #374151;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.sidebar .menu-group-btn:hover{
+  background: #eef5ff;
+  color: #2563eb;
+}
+
+.sidebar .menu-group-title{ flex: 1 1 auto; text-align: left; }
+
+.sidebar .menu-caret{
+  font-size: 18px;
+  transition: transform 0.18s ease;
+}
+
+.sidebar .menu-group.open .menu-caret{ transform: rotate(180deg); }
+
+.sidebar .submenu{
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0 0 0 12px;
+  display: none;
+}
+
+.sidebar .menu-group.open .submenu{ display: block; }
+
+
+/* ✅ Submenu: visually nested inside parent (child items shift right) */
+.sidebar .submenu.submenu-nested{
+  margin: 6px 0 10px;
+  padding: 0 0 0 18px;          /* base left padding */
+  border-left: 2px solid rgba(37, 99, 235, 0.18);
+  margin-left: 10px;            /* pushes submenu to the right */
+}
+
+.sidebar .submenu.submenu-nested .submenu-item a{
+  padding: 9px 12px 9px 16px;   /* extra indent inside submenu */
+  border-radius: 10px;
+  font-weight: 650;
+  font-size: 13px;
+}
+
+
+.sidebar .submenu-item a{
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-weight: 650;
+}
+
+.sidebar .submenu-item.active > a,
+.sidebar .submenu-item a.active{
+  background: #e8f1ff;
+  color: #2563eb;
+  font-weight: 750;
 }
 
 /* icon inside menu */
@@ -932,3 +1011,50 @@ body.sidebar-collapsed .dashboard-container .main-content{
 
 .topbar .notif-item.is-clickable { cursor: pointer; }
 .topbar .notif-item.is-clickable:hover .ni-title { color:#1d4ed8; }
+
+
+/* ===========================================
+   Bangla-only font override (Siyam Rupali)
+   - Keeps existing English font stack intact
+   - Applies ONLY to Bengali Unicode range
+   Put at the VERY END of layout.css
+=========================================== */
+
+/* 1) Define a Bengali-only face */
+@font-face{
+  font-family: "SiyamRupaliBN";
+  src: url("/fonts/Siyamrupali.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0980-09FF, U+200C, U+200D; /* Bengali + ZWJ/ZWNJ */
+}
+
+/* 2) Add it BEFORE your existing stack, but only Bengali chars will use it */
+body{
+  font-family: "SiyamRupaliBN", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, Helvetica, Arial;
+}
+/* ===========================================
+   Bangla-only font override (Siyam Rupali)
+   - Keeps existing English font stack intact
+   - Applies ONLY to Bengali Unicode range
+   Put at the VERY END of layout.css
+=========================================== */
+
+/* 1) Define a Bengali-only face */
+@font-face{
+  font-family: "SiyamRupaliBN";
+  src: url("/fonts/Siyamrupali.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0980-09FF, U+200C, U+200D; /* Bengali + ZWJ/ZWNJ */
+}
+
+/* 2) Add it BEFORE your existing stack, but only Bengali chars will use it */
+body{
+  
+  font-family: "SiyamRupaliBN", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, Helvetica, Arial;
+}

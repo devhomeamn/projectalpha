@@ -1,0 +1,134 @@
+/* Audit Objection List (table + expand row) */
+
+.content { padding: 20px; }
+
+.ao-card{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:16px;
+}
+
+.ao-filters{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:flex-end;
+  margin-bottom:12px;
+}
+
+.ao-field{ display:flex; flex-direction:column; gap:6px; min-width:160px; }
+.ao-field-wide{ min-width:260px; flex:1; }
+.ao-field label{ font-size:12px; font-weight:700; color:#374151; }
+
+.ao-input{
+  padding:10px 12px;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  outline:none;
+  font-size:14px;
+}
+
+.ao-actions{ display:flex; gap:10px; }
+
+.ao-btn{
+  border:1px solid #d1d5db;
+  background:#fff;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+}
+
+.ao-btn-primary{
+  background: linear-gradient(135deg, #0578bb 0%, #69329c 100%);
+  color:#fff;
+  border: none;
+}
+
+.ao-table-wrap{
+  width:100%;
+  overflow:auto;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+}
+
+.ao-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:1100px;
+}
+
+.ao-table thead th{
+  background:#f9fafb;
+  padding:12px 10px;
+  text-align:left;
+  font-size:12px;
+  color:#111827;
+  border-bottom:1px solid #e5e7eb;
+  position:sticky;
+  top:0;
+  z-index:1;
+}
+
+.ao-table tbody td{
+  padding:10px 10px;
+  border-bottom:1px solid #f1f5f9;
+  vertical-align:top;
+  font-size:13px;
+  color:#111827;
+}
+
+.ao-main-row:hover{ background:#f8fafc; }
+
+.ao-toggle{
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  font-size:14px;
+  width:28px;
+  height:28px;
+  border-radius:8px;
+}
+
+.ao-toggle:hover{ background:#eef2ff; }
+
+.ao-details-row td{
+  background:#fbfbff;
+  padding:0;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.ao-details-box{
+  padding:12px 14px;
+}
+
+.ao-details-box .label{
+  font-weight:800;
+  margin-bottom:6px;
+}
+
+.ao-details-box .details{
+  white-space:pre-wrap;
+  color:#374151;
+}
+
+.ao-pagination{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  margin-top:12px;
+}
+
+.ao-pageinfo{
+  font-weight:800;
+  color:#374151;
+}
+
+/* Reuse global msg styles if present; fallback */
+.msg{ padding:10px 12px; border-radius:10px; margin:10px 0; }
+.msg-error{ background:#fee2e2; border:1px solid #fecaca; color:#991b1b; }

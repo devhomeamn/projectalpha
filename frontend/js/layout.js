@@ -41,37 +41,114 @@ export async function initLayout(activePage) {
   /* ------------------------------
         Sidebar Menu Items
   ------------------------------ */
+  // Menu schema supports:
+  //  - single item: { name, icon, roles, link }
+  //  - group item : { group: true, name, icon, roles, children:[...] }
   const menuItems = [
     { name: "Dashboard",      icon: "dashboard",     roles: ["Admin", "Master", "General"], link: "dashboard.html" },
     { name: "Add Record",     icon: "library_add",   roles: ["Admin", "Master", "General"], link: "add-record.html" },
     { name: "View Record",    icon: "visibility",    roles: ["Admin", "Master", "General"], link: "view-record.html" },
     { name: "Central Record", icon: "folder",        roles: ["Admin", "Master", "General"], link: "central-record.html" },
+    {
+      group: true,
+      name: "Audit Objections",
+      icon: "gavel",
+      roles: ["Admin", "Master", "General"],
+      children: [
+        { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html" },
+        { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
+        { name: "Clearance Requests", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
+      ],
+    },
     { name: "Add Section",    icon: "add_circle",    roles: ["Admin", "Master"],            link: "add-section.html" },
-    { name: "Approve User",   icon: "verified_user", roles: ["Admin"],                      link: "approve-user.html" },
-    { name: "All Users",      icon: "group",         roles: ["Admin"],                      link: "all-users.html" },
+    { name: "Approve User",   icon: "verified_user", roles: ["Admin"],                        link: "approve-user.html" },
+    { name: "All Users",      icon: "group",         roles: ["Admin"],                        link: "all-users.html" },
     { name: "Reports",        icon: "bar_chart",     roles: ["Admin", "Master", "General"], link: "reports.html" },
-    { name: "Admin Notice", icon: "campaign", roles: ["Admin"], link: "admin-notice.html" },
-    { name: "AO Clearance Requests", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
-    { name: "BD Objection History", icon: "history", roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
-       { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" }
+    { name: "Admin Notice",   icon: "campaign",      roles: ["Admin"],                        link: "admin-notice.html" },
+    { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" },
   ];
 
-  const allowed = menuItems.filter(i => i.roles.includes(role));
   const menuList = document.getElementById("menuList");
   const currentPage = activePage || window.location.pathname.split("/").pop();
 
+  function isAllowedByRole(item) {
+    return (item.roles || []).includes(role);
+  }
+
+  function anyChildAllowed(children) {
+    return (children || []).some((c) => isAllowedByRole(c));
+  }
+
+  function isAnyChildActive(children) {
+    return (children || []).some((c) => c.link === currentPage);
+  }
+
+  function renderMenu(items) {
+    return (items || [])
+      .map((item, idx) => {
+        if (item.group) {
+          // group visible if the group itself is allowed AND at least one child is allowed
+          if (!isAllowedByRole(item) || !anyChildAllowed(item.children)) return "";
+
+          const groupId = `menuGroup_${idx}`;
+          const childHtml = (item.children || [])
+            .filter(isAllowedByRole)
+            .map((c) => {
+              const active = c.link === currentPage;
+              return `
+                <li class="submenu-item ${active ? "active" : ""}">
+                  <a href="${c.link}" class="${active ? "active" : ""}">
+                    <span class="material-symbols-rounded menu-icon">${c.icon}</span>
+                    <span>${c.name}</span>
+                  </a>
+                </li>
+              `;
+            })
+            .join("");
+
+          const groupActive = isAnyChildActive(item.children);
+          const expanded = groupActive ? "true" : "false";
+          const openClass = groupActive ? "open" : "";
+          return `
+            <li class="menu-group ${openClass}" data-group-id="${groupId}">
+              <button class="menu-group-btn" type="button" aria-expanded="${expanded}">
+                <span class="material-symbols-rounded menu-icon">${item.icon}</span>
+                <span class="menu-group-title">${item.name}</span>
+                <span class="material-symbols-rounded menu-caret">expand_more</span>
+              </button>
+              <ul class="submenu submenu-nested">${childHtml}</ul>
+
+            </li>
+          `;
+        }
+
+        if (!isAllowedByRole(item)) return "";
+        const isActive = currentPage === item.link;
+        return `
+          <li class="menu-item ${isActive ? "active" : ""}">
+            <a href="${item.link}" class="${isActive ? "active" : ""}">
+              <span class="material-symbols-rounded menu-icon">${item.icon}</span>
+              <span>${item.name}</span>
+            </a>
+          </li>
+        `;
+      })
+      .join("");
+  }
+
   if (menuList) {
-    menuList.innerHTML = allowed.map(item => {
-      const isActive = currentPage === item.link;
-      return `
-        <li class="menu-item ${isActive ? "active" : ""}">
-          <a href="${item.link}" class="${isActive ? "active" : ""}">
-            <span class="material-symbols-rounded menu-icon">${item.icon}</span>
-            <span>${item.name}</span>
-          </a>
-        </li>
-      `;
-    }).join("");
+    menuList.innerHTML = renderMenu(menuItems);
+
+    // Group toggle behavior
+    menuList.querySelectorAll(".menu-group-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const li = btn.closest(".menu-group");
+        if (!li) return;
+
+        const isOpen = li.classList.toggle("open");
+        btn.setAttribute("aria-expanded", String(isOpen));
+      });
+    });
   }
 
   /* ------------------------------

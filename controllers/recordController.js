@@ -959,3 +959,90 @@ exports.getBdObjectionHistory = async (req, res) => {
     return res.status(500).json({ error: "Failed to load BD objection history" });
   }
 };
+
+
+// ================== AUDIT OBJECTION FULL LIST ==================
+// GET /api/records/audit-objections?status=open|requested|cleared&bd_no=...&q=...&page=1&limit=20
+exports.getAuditObjectionsList = async (req, res) => {
+  try {
+    const user = req.user || {};
+    const role = String(user.role || "").toLowerCase();
+
+    const status = req.query.status ? String(req.query.status).trim() : "";
+    const bd_no = req.query.bd_no ? String(req.query.bd_no).trim() : "";
+    const q = req.query.q ? String(req.query.q).trim() : "";
+    const section_id = req.query.section_id ? parseInt(req.query.section_id, 10) : null;
+
+    const page = Math.max(parseInt(req.query.page || "1", 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit || "20", 10) || 20, 1), 100);
+    const offset = (page - 1) * limit;
+
+    const where = {
+      audit_objection: true, // only records marked as audit objection
+    };
+
+    if (status) where.ao_status = status;
+    if (bd_no) where.bd_no = bd_no;
+
+    if (q) {
+      where[Op.and] = [
+        ...(where[Op.and] || []),
+        {
+          [Op.or]: [
+            { file_name: { [Op.like]: `%${q}%` } },
+            { bd_no: { [Op.like]: `%${q}%` } },
+            { objection_no: { [Op.like]: `%${q}%` } },
+            { objection_title: { [Op.like]: `%${q}%` } },
+            { objection_details: { [Op.like]: `%${q}%` } },
+          ],
+        },
+      ];
+    }
+
+    // Role-based scope
+    // General: own section + own-origin central (previous_section_id)
+    if (role === "general") {
+      const userSectionId = user.section_id;
+      if (!userSectionId) {
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      where[Op.and] = [
+        ...(where[Op.and] || []),
+        {
+          [Op.or]: [
+            { section_id: userSectionId },
+            { previous_section_id: userSectionId },
+          ],
+        },
+      ];
+    } else {
+      // Admin/Master optional filter
+      if (section_id) where.section_id = section_id;
+    }
+
+    const { rows, count } = await Record.findAndCountAll({
+      where,
+      include: [
+        { model: Section, attributes: ["id", "name"] },
+        { model: Subcategory, attributes: ["id", "name"] },
+        { model: Rack, attributes: ["id", "name"] },
+      ],
+      order: [
+        ["bd_no", "ASC"],
+        [sequelize.literal("serial_no IS NULL"), "ASC"],
+        ["serial_no", "ASC"],
+        ["createdAt", "DESC"],
+      ],
+      limit,
+      offset,
+    });
+
+    return res.json({
+      items: rows,
+      pagination: { page, limit, total: count },
+    });
+  } catch (err) {
+    console.error("getAuditObjectionsList error:", err);
+    return res.status(500).json({ error: "Failed to load audit objection list" });
+  }
+};
