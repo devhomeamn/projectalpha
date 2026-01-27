@@ -103,11 +103,23 @@ document.addEventListener("DOMContentLoaded", () => {
             <td>${sectionName}</td>
             <td><span class="status ${status}">${u.status || ""}</span></td>
             <td>${created}</td>
-            <td style="text-align:center;">
-              <button class="btn-edit" type="button" data-action="edit" aria-label="Edit user access" title="Edit">
-                <span class="material-symbols-rounded">edit</span>
-              </button>
-            </td>
+           <td style="text-align:center; display:flex; gap:6px; justify-content:center;">
+  <button class="btn-edit" type="button" data-action="edit" title="Edit Access">
+    <span class="material-symbols-rounded">edit</span>
+  </button>
+
+  <button
+    class="btn-toggle"
+    type="button"
+    data-action="toggle"
+    data-active="${u.is_active !== false}"
+    title="${u.is_active === false ? "Activate User" : "Deactivate User"}">
+    <span class="material-symbols-rounded">
+      ${u.is_active === false ? "lock_open" : "lock"}
+    </span>
+  </button>
+</td>
+
           </tr>
         `;
       })
@@ -211,17 +223,81 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Row click (or edit button) → open modal
   tbody?.addEventListener("click", (e) => {
-    const editBtn = e.target.closest("button[data-action='edit']");
-    if (editBtn) {
-      e.stopPropagation();
-    }
 
-    const tr = e.target.closest("tr[data-user-id]");
+  /* ===============================
+     1️⃣ Deactivate / Activate button
+  =============================== */
+ const toggleBtn = e.target.closest("button[data-action='toggle']");
+if (toggleBtn) {
+  e.stopPropagation();
+  e.preventDefault();
+
+  const tr = toggleBtn.closest("tr[data-user-id]");
+  const id = Number(tr.getAttribute("data-user-id"));
+  const user = allUsers.find(u => Number(u.id) === id);
+  if (!user) return;
+
+  const nextActive = user.is_active === false;
+
+  const ok = window.confirm(
+    (nextActive ? "Activate User?\n\n" : "Deactivate User?\n\n") +
+    (nextActive
+      ? "এই ইউজার আবার login করতে পারবে।"
+      : "এই ইউজার login করতে পারবে না।")
+  );
+
+  if (!ok) return;
+
+  (async () => {
+    try {
+      const res = await authFetch(`/api/auth/users/${id}/toggle-active`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: nextActive })
+      });
+
+      const out = await res.json();
+      if (out?.user) {
+        const idx = allUsers.findIndex(u => Number(u.id) === id);
+        if (idx >= 0) allUsers[idx] = out.user;
+        renderUsers(allUsers);
+      }
+    } catch (err) {
+      alert(err?.message || "Update failed");
+    }
+  })();
+
+  return;
+}
+
+
+  /* ===============================
+     2️⃣ Edit button
+  =============================== */
+  const editBtn = e.target.closest("button[data-action='edit']");
+  if (editBtn) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const tr = editBtn.closest("tr[data-user-id]");
     if (!tr) return;
     const id = Number(tr.getAttribute("data-user-id"));
-    const user = allUsers.find((u) => Number(u.id) === id);
+    const user = allUsers.find(u => Number(u.id) === id);
     if (user) openAccessModal(user);
-  });
+
+    return; // 🔴 stop row click
+  }
+
+  /* ===============================
+     3️⃣ Row click (fallback)
+  =============================== */
+  const tr = e.target.closest("tr[data-user-id]");
+  if (!tr) return;
+
+  const id = Number(tr.getAttribute("data-user-id"));
+  const user = allUsers.find(u => Number(u.id) === id);
+  if (user) openAccessModal(user);
+});
+
 
   // Modal events
   accessCloseBtn?.addEventListener("click", closeAccessModal);
@@ -310,6 +386,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+
+
+
+
 
   // Init
   loadSections().then(loadUsers);

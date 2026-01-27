@@ -38,7 +38,13 @@ const User = sequelize.define('User', {
   status: {
     type: DataTypes.ENUM('pending', 'approved', 'rejected'),
     defaultValue: 'pending', // ✅ new field for approval
-  }
+  },
+  is_active: {
+  type: DataTypes.BOOLEAN,
+  allowNull: false,
+  defaultValue: true,
+},
+
 });
 
 module.exports = User;

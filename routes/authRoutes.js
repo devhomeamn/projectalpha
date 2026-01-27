@@ -8,6 +8,15 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
+//AC DEACTIVE
+router.patch(
+  "/users/:id/toggle-active",
+  requireAuth,
+  requireRole("admin"),
+  authController.toggleUserActive
+);
+
+
 // 🔐 Admin-only approval & user management APIs
 router.get(
   '/pending',

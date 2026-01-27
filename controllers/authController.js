@@ -61,6 +61,13 @@ exports.login = async (req, res) => {
             ? 'Your account is pending admin approval.'
             : 'Your account has been rejected by admin.',
       });
+
+      if (user.is_active === false) {
+  return res.status(403).json({
+    message: "আপনার একাউন্টটি সাময়িকভাবে নিষ্ক্রিয় করা হয়েছে। Admin এর সাথে যোগাযোগ করুন।"
+  });
+}
+
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -195,3 +202,25 @@ exports.updateUserAccess = async (req, res) => {
     res.status(500).json({ error: 'Failed to update user access' });
   }
 };
+exports.toggleUserActive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // self-lock prevent
+    if (req.user.id === user.id && is_active === false) {
+      return res.status(400).json({ message: "নিজেকে deactivate করা যাবে না।" });
+    }
+
+    user.is_active = Boolean(is_active);
+    await user.save();
+
+    res.json({ message: "Updated", user });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+

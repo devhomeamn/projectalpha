@@ -405,6 +405,21 @@
 
 .btn-primary:hover { background: #1d4ed8; }
 
+
+tr[data-user-id] .btn-toggle {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+tr[data-user-id] .btn-toggle:hover {
+  background: #f3f4f6;
+}
+
+tr[data-user-id][data-inactive="true"] {
+  opacity: 0.6;
+}
+
+
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
 }
