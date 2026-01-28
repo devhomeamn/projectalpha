@@ -101,7 +101,6 @@
     document.getElementById("aoPageInfo").textContent =
       `Page ${page} • Showing ${items.length} • Total ${total}`;
 
-    // prev/next enabled
     document.getElementById("aoPrevBtn").disabled = page <= 1;
     document.getElementById("aoNextBtn").disabled = page * limit >= total;
 
@@ -118,8 +117,11 @@
       const location = `${escapeHtml(section)} / ${escapeHtml(sub)} / ${escapeHtml(rack)}`;
 
       const attachment = r.attachment_path
-        ? `<a href="${escapeHtml(r.attachment_path)}" target="_blank" rel="noopener">Open</a>`
-        : "-";
+        ? `<a class="ao-attach-btn" href="${escapeHtml(r.attachment_path)}" target="_blank" rel="noopener" data-tooltip="Attachment খুলুন">
+             <span class="material-symbols-rounded">attach_file</span>
+             Open
+           </a>`
+        : `<span class="ao-attach-none">—</span>`;
 
       const detailsRowId = `ao-details-${r.id}`;
 
@@ -134,18 +136,32 @@
           <td>${escapeHtml(r.objection_no || "-")}</td>
           <td>${escapeHtml(r.objection_title || "-")}</td>
           <td>${location}</td>
-          <td>${escapeHtml(r.ao_status || "-")}</td>
+          <td>
+            <span class="ao-status ${escapeHtml((r.ao_status || "").toLowerCase())}">
+              ${escapeHtml(r.ao_status || "-")}
+            </span>
+          </td>
           <td>${attachment}</td>
           <td>
-            <a class="btn btn-sm" href="/view-record.html?id=${encodeURIComponent(r.id)}">View</a>
-            <a class="btn btn-sm" href="/bd-objection-history.html?bd_no=${encodeURIComponent(r.bd_no || "")}">History</a>
+            <div class="ao-actions">
+              <a class="ao-action-btn primary"
+                 href="/view-record.html?id=${encodeURIComponent(r.id)}"
+                 data-tooltip="পুরো অবজেকশন দেখুন">
+                <span class="material-symbols-rounded">visibility</span>
+                </a>
+              <a class="ao-action-btn"
+                 href="/bd-objection-history.html?bd_no=${encodeURIComponent(r.bd_no || "")}"
+                 data-tooltip="হিস্ট্রি ও পরিবর্তন দেখুন">
+                <span class="material-symbols-rounded">history</span>
+                 </a>
+            </div>
           </td>
         </tr>
 
         <tr id="${detailsRowId}" class="ao-details-row" style="display:none;">
           <td colspan="10">
             <div class="ao-details-box">
-              <div class="label">Details:</div>
+              <div class="label">বিস্তারিত:</div>
               <div class="details">${escapeHtml(r.objection_details || "-")}</div>
             </div>
           </td>
@@ -186,7 +202,7 @@
       loadObjections();
     });
 
-    // Expand/collapse (accordion: only one open)
+    // Expand / Collapse logic
     const tbody = document.getElementById("aoTableBody");
     tbody.addEventListener("click", (e) => {
       const btn = e.target.closest(".ao-toggle");
@@ -199,13 +215,23 @@
       const detailsRow = document.getElementById(targetId);
       if (!detailsRow) return;
 
-      const isOpen = detailsRow.style.display !== "none";
+      const isCurrentlyOpen = detailsRow.style.display !== "none";
 
-      document.querySelectorAll(".ao-details-row").forEach((r) => (r.style.display = "none"));
-      document.querySelectorAll(".ao-toggle").forEach((b) => (b.textContent = "▶"));
+      // সবগুলো বন্ধ করা + expanded class সরানো
+      document.querySelectorAll(".ao-details-row").forEach((r) => {
+        r.style.display = "none";
+      });
+      document.querySelectorAll(".ao-main-row").forEach((row) => {
+        row.classList.remove("expanded");
+      });
+      document.querySelectorAll(".ao-toggle").forEach((b) => {
+        b.textContent = "▶";
+      });
 
-      if (!isOpen) {
+      // যদি এটি আগে খোলা না থাকতো তাহলে খুলবো
+      if (!isCurrentlyOpen) {
         detailsRow.style.display = "";
+        mainRow.classList.add("expanded");
         btn.textContent = "▼";
       }
     });
@@ -214,7 +240,6 @@
   document.addEventListener("DOMContentLoaded", () => {
     setNowDateTime();
     bindEvents();
-    // ensure URL has page/limit defaults
     const p = getParams();
     if (!p.get("page") || !p.get("limit")) {
       applyFiltersToUrl(Number(p.get("page") || 1));
