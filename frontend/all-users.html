@@ -7,47 +7,7 @@
    <link rel="icon" href="images/site-icon.ico">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/all-users.css">
-  <style>
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: #fff;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    th {
-      background: #2563eb;
-      color: #fff;
-      font-weight: 600;
-    }
-    tr:hover { background: #f9fafb; cursor: pointer; }
-    .status {
-      padding: 5px 10px;
-      border-radius: 6px;
-      color: #fff;
-      font-weight: 500;
-    }
-    .approved { background: #10b981; }
-    .pending { background: #f59e0b; }
-    .rejected { background: #ef4444; }
-    .search-box {
-      margin: 15px 0;
-      display: flex;
-      justify-content: space-between;
-    }
-    input {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      width: 40%;
-    }
-  </style>
+
 </head>
 <body>
   <div class="dashboard-container">
@@ -55,30 +15,12 @@
     <main class="main-content">
       <div id="topbar"></div>
 
-      <section class="content">
-             <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-                 <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">supervisor_account</span>
-                All Users
-              </h1>
-              <p class="header-subtitle">সকল ইউজার এবং তাদের অবস্থাসমূহ</p>
-            </div>
+       
 
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
+      <section class="content">
+          <div id="pageHeaderMount"></div>
+          
+
 
 
         <div class="search-box">
@@ -143,13 +85,22 @@
     </main>
   </div>
 
-  <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("all-users.html");
-  </script>
-
   <script src="js/auth-guard.js"></script>
-  <script src="js/confirm-util.js"></script>
-  <script src="js/all-users.js"></script>
+
+<script type="module">
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+  initLayout("all-users.html");
+
+  renderPageHeader({
+    icon: "group",
+    title: "All Users",
+    subtitle: "Assign Role, Section, Block/Unblock the Existing Users.",
+    showClock: true,
+  });
+</script>
+
+<script src="js/confirm-util.js"></script>
+<script src="js/all-users.js"></script>
+
 </body>
 </html>

@@ -84,6 +84,8 @@ button:hover {
 
 
 .page-header {
+  margin-top: 20px;
+  margin-left: 10px;
   position: relative;
   background: linear-gradient(135deg, #0578bb 0%, #69329c 100%);
   color: #fff;
@@ -702,14 +704,14 @@ body{
 .print-item{
   width:100%;
   padding:10px 12px;
-  background:#fff;
+  background:#3b6969ef;
   border:0;
   text-align:left;
   cursor:pointer;
   font-weight:800;
   font-size:13px;
 }
-.print-item:hover{ background:#f3f4f6; }
+.print-item:hover{ background:#077cdb; }
 
 /* Make modal truly centered (already exists, but ensure) */
 .modal{
@@ -717,3 +719,117 @@ body{
   align-items:center;
   justify-content:center;
 }
+
+
+/* ---------- logs timeline ---------- */
+.logs-timeline{
+  display:grid;
+  gap:12px;
+}
+
+.log-card{
+  border:1px solid #eef2f7;
+  border-radius:14px;
+  padding:12px 14px;
+  background:#fff;
+  box-shadow:0 6px 16px rgba(0,0,0,.04);
+}
+
+.log-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.log-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  border:1px solid #e5e7eb;
+  background:#fafafa;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+
+.log-badge.create{ border-color:rgba(16,185,129,.35); background:rgba(16,185,129,.10); color:#065f46; }
+.log-badge.update{ border-color:rgba(37,99,235,.35); background:rgba(37,99,235,.10); color:#1e3a8a; }
+.log-badge.return{ border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.12); color:#7a4a00; }
+.log-badge.delete{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.10); color:#7f1d1d; }
+
+.log-meta{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  font-weight:800;
+  opacity:.86;
+  font-size:12px;
+}
+
+.log-meta .dot{
+  width:5px;height:5px;border-radius:50%;
+  background:rgba(0,0,0,.28);
+}
+
+.log-body{
+  margin-top:10px;
+  display:grid;
+  gap:8px;
+}
+
+.log-note{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:700;
+  white-space:pre-wrap;
+}
+
+.diff-wrap{
+  display:grid;
+  gap:6px;
+}
+
+.diff-line{
+  font-weight:800;
+  font-size:13px;
+  line-height:1.35;
+}
+
+.diff-field{ font-weight:1000; }
+
+.diff-old{
+  background:rgba(239,68,68,.10);
+  border:1px solid rgba(239,68,68,.18);
+  padding:2px 6px;
+  border-radius:999px;
+  margin:0 6px 0 6px;
+  font-weight:1000;
+}
+
+.diff-new{
+  background:rgba(16,185,129,.12);
+  border:1px solid rgba(16,185,129,.20);
+  padding:2px 6px;
+  border-radius:999px;
+  margin-left:6px;
+  font-weight:1000;
+}
+
+.logs-empty{
+  padding:14px 12px;
+  border-radius:12px;
+  background:#f8fafc;
+  border:1px dashed #e5e7eb;
+  color:#6b7280;
+  font-weight:800;
+  text-align:center;
+}
+

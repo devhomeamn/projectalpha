@@ -22,30 +22,11 @@
       <div id="topbar"></div>
 
       <section class="content">
+         <div id="pageHeaderMount"></div>
 
-        <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-                 <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">note_add</span>
-                Add New Record
-              </h1>
-              <p class="header-subtitle">নতুন রেকর্ড এন্ট্রি করুন এবং সিস্টেমে সংরক্ষণ করুন</p>
-            </div>
+        
 
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
+
 
         <form id="recordForm" class="form-card">
           <div class="form-grid">
@@ -237,8 +218,16 @@
   </div>
 
   <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("add-record.html");
+import { initLayout, renderPageHeader } from "./js/layout.js";
+  initLayout("add-record.html");
+
+  renderPageHeader({
+    icon: "note_add",
+    title: "Add Record" ,
+    subtitle: "Create, view, update, and manage section-wise records.",
+    showClock: true,
+  });
+
   </script>
   <script src="js/add-record.js"></script>
 </body>

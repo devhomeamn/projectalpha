@@ -63,6 +63,14 @@ function isAdmin() {
   return getRole() === "admin";
 }
 
+function isMaster() {
+  return getRole() === "master";
+}
+
+function canViewLogs() {
+  return isAdmin() || isMaster();
+}
+
 // ------------------ clock ------------------
 function startClock() {
   const dateEl = byId("currentDate");
@@ -227,6 +235,11 @@ function renderEntries(payload) {
             style="padding:6px 10px;${canReturn ? "" : "opacity:.5;cursor:not-allowed;"}">
             <span class="material-symbols-rounded" style="font-size:18px;">assignment_turned_in</span>
           </button>
+          <button class="bdh-btn bdh-btn-sm" data-action="logs" data-id="${r.id}"
+            data-entry-no="${escapeHtml(r.entry_no ?? "")}" data-token-no="${escapeHtml(r.token_no || "-")}"
+            style="padding:6px 10px;background:#111827;color:#fff;border-color:#111827;">
+            <span class="material-symbols-rounded" style="font-size:18px;">history</span>
+          </button>
 
           ${delBtn}
         </td>
@@ -241,6 +254,7 @@ function renderEntries(payload) {
       if (!id) return;
       if (act === "edit") openEditModal(id);
       if (act === "return") doReturn(id);
+      if (act === "logs") openLogs(id, btn.getAttribute("data-entry-no"), btn.getAttribute("data-token-no"));
       if (act === "delete") doDelete(id);
     });
   });
@@ -311,6 +325,192 @@ function openAddModal() {
   openModal("New Cheque Entry");
 }
 
+
+// ------------------ logs modal (Admin/Master) ------------------
+function openLogsModal() {
+  const m = byId("logsModal");
+  if (!m) return;
+  m.style.display = "flex";
+}
+function closeLogsModal() {
+  const m = byId("logsModal");
+  if (!m) return;
+  m.style.display = "none";
+}
+
+function safeJsonParse(s) {
+  try {
+    if (!s) return null;
+    if (typeof s === "object") return s;
+    return JSON.parse(String(s));
+  } catch {
+    return null;
+  }
+}
+
+function labelForField(k) {
+  const map = {
+    entry_no: "Entry No",
+    bill_ref_no: "Bill Ref",
+    origin_section_id: "Origin",
+    received_date: "Received",
+    token_no: "Token",
+    amount: "Amount",
+    remarks: "Remarks",
+    status: "Status",
+    returned_to_section_id: "Returned To",
+    returned_date: "Returned Date",
+    delete_reason: "Delete Reason",
+    deleted_at: "Deleted At",
+    deleted_by: "Deleted By",
+  };
+  return map[k] || k;
+}
+
+function valueForField(k, v) {
+  if (v === undefined || v === null || v === "") return "-";
+  if (k === "amount") return formatMoney(v);
+  if (k === "received_date" || k === "returned_date") return formatDate(v);
+  if (k === "origin_section_id" || k === "returned_to_section_id") return sectionName(v);
+  return String(v);
+}
+
+function diffObjects(oldObj, newObj) {
+  const o = oldObj || {};
+  const n = newObj || {};
+  const keys = new Set([...Object.keys(o), ...Object.keys(n)]);
+  const ignore = new Set(["id", "created_by", "updated_by", "deleted_at", "deleted_by", "createdAt", "updatedAt"]);
+
+  const importantOrder = [
+    "bill_ref_no",
+    "origin_section_id",
+    "received_date",
+    "token_no",
+    "amount",
+    "status",
+    "returned_to_section_id",
+    "returned_date",
+    "remarks",
+    "delete_reason",
+  ];
+
+  const ordered = [
+    ...importantOrder.filter((k) => keys.has(k)),
+    ...Array.from(keys).filter((k) => !importantOrder.includes(k)),
+  ];
+
+  const out = [];
+  for (const k of ordered) {
+    if (ignore.has(k)) continue;
+    const ov = valueForField(k, o[k]);
+    const nv = valueForField(k, n[k]);
+    if (ov === nv) continue;
+    out.push({ k, ov, nv });
+  }
+  return out;
+}
+
+function actionBadge(action) {
+  const a = String(action || "").toLowerCase();
+  if (a === "create") return { text: "CREATED", cls: "create" };
+  if (a === "update") return { text: "UPDATED", cls: "update" };
+  if (a === "return") return { text: "RETURNED", cls: "return" };
+  if (a === "delete") return { text: "DELETED", cls: "delete" };
+  return { text: a.toUpperCase() || "LOG", cls: "update" };
+}
+
+function actorName(log) {
+  return log.actor?.name || log.actor?.username || log.actor_name || (log.actor_id ? `User#${log.actor_id}` : "System");
+}
+
+function formatDateTime(v) {
+  try {
+    if (!v) return "-";
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v);
+    return d.toLocaleString();
+  } catch {
+    return String(v || "-");
+  }
+}
+
+async function openLogs(id, entryNo, tokenNo) {
+  if (!canViewLogs()) return alert("Admin/Master only");
+
+  byId("logsEntryNo").textContent = entryNo || "-";
+  byId("logsTokenNo").textContent = tokenNo || "-";
+
+  const body = byId("logsBody");
+  if (body) body.innerHTML = `<div class="muted">Loading...</div>`;
+
+  openLogsModal();
+
+  try {
+    const res = await fetch(`${API_BASE}/cheque-register/${id}/logs`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Failed to load logs");
+
+    const logs = Array.isArray(data?.data) ? data.data : [];
+    if (!logs.length) {
+      if (body) body.innerHTML = `<div class="logs-empty">No logs found for this entry.</div>`;
+      return;
+    }
+
+    const cards = logs
+      .map((log) => {
+        const badge = actionBadge(log.action);
+        const oldObj = safeJsonParse(log.old_data);
+        const newObj = safeJsonParse(log.new_data);
+        const diffs = diffObjects(oldObj, newObj);
+
+        const diffsHtml = diffs.length
+          ? `<div class="diff-wrap">
+              ${diffs
+                .map(
+                  (d) => `
+                  <div class="diff-line">
+                    <span class="diff-field">${escapeHtml(labelForField(d.k))}</span>:
+                    <span class="diff-old">${escapeHtml(d.ov)}</span>
+                    &rarr;
+                    <span class="diff-new">${escapeHtml(d.nv)}</span>
+                  </div>`
+                )
+                .join("")}
+            </div>`
+          : `<div class="muted small">No field changes captured.</div>`;
+
+        const note = (log.note || "").trim();
+        const noteHtml = note ? `<div class="log-note">${escapeHtml(note)}</div>` : "";
+
+        return `
+          <div class="log-card">
+            <div class="log-top">
+              <span class="log-badge ${badge.cls}">${escapeHtml(badge.text)}</span>
+              <div class="log-meta">
+                <span>${escapeHtml(actorName(log))}</span>
+                <span class="dot"></span>
+                <span>${escapeHtml(formatDateTime(log.created_at))}</span>
+              </div>
+            </div>
+            <div class="log-body">
+              ${diffsHtml}
+              ${noteHtml}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    if (body) body.innerHTML = `<div class="logs-timeline">${cards}</div>`;
+  } catch (err) {
+    console.error(err);
+    if (body) body.innerHTML = `<div class="msg msg-error">${escapeHtml(err.message || "Failed")}</div>`;
+  }
+}
+
+
 // ------------------ submit ------------------
 async function submitForm(e) {
   e.preventDefault();
@@ -375,7 +575,7 @@ async function doReturn(id) {
       onConfirm: run,
     });
   } else {
-    if (confirm("Mark as returned?")) run();
+    if (confirm("Mark as Issued?")) run();
   }
 }
 
@@ -399,10 +599,13 @@ async function doReturnConfirmed(id) {
 async function doDelete(id) {
   if (!isAdmin()) return alert("Admin only");
 
+  const reason = (prompt("Delete reason (optional):") || "").trim();
+
   const run = async () => {
     const res = await fetch(`${API_BASE}/cheque-register/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${getToken()}` },
+      headers: authHeaders(),
+      body: JSON.stringify({ reason }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return alert(data.message || "Delete failed");
@@ -779,6 +982,9 @@ function bindUi() {
   byId("monthlyCancel")?.addEventListener("click", closeMonthlyModal);
   byId("monthlyPrint")?.addEventListener("click", printMonthlyReportGrouped);
 
+  // logs modal events
+  byId("logsClose")?.addEventListener("click", closeLogsModal);
+
   // modal close
   byId("btnCancel")?.addEventListener("click", closeModal);
   byId("modalClose")?.addEventListener("click", closeModal);
@@ -796,6 +1002,14 @@ function bindUi() {
   if (mm) {
     mm.addEventListener("click", (e) => {
       if (e.target === mm) closeMonthlyModal();
+    });
+  }
+
+  // logs modal outside click close
+  const lm = byId("logsModal");
+  if (lm) {
+    lm.addEventListener("click", (e) => {
+      if (e.target === lm) closeLogsModal();
     });
   }
 

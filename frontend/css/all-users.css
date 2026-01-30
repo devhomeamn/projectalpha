@@ -90,6 +90,49 @@
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='0.18' d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") bottom/cover no-repeat;
 }
 
+
+
+
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    th {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+    }
+    tr:hover { background: #f9fafb; cursor: pointer; }
+    .status {
+      padding: 5px 10px;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 500;
+    }
+    .approved { background: #10b981; }
+    .pending { background: #f59e0b; }
+    .rejected { background: #ef4444; }
+    .search-box {
+      margin: 15px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 40%;
+    }
 /* ===========================================
    SEARCH BAR
 =========================================== */

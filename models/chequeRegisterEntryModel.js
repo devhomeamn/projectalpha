@@ -20,6 +20,9 @@ const ChequeRegisterEntry = sequelize.define(
     returned_date: { type: DataTypes.DATEONLY, allowNull: true },
     created_by: { type: DataTypes.INTEGER, allowNull: true },
     updated_by: { type: DataTypes.INTEGER, allowNull: true },
+    deleted_at: { type: DataTypes.DATE, allowNull: true },
+    deleted_by: { type: DataTypes.INTEGER, allowNull: true },
+    delete_reason: { type: DataTypes.STRING(255), allowNull: true },
   },
   { tableName: "cheque_register_entries" }
 );

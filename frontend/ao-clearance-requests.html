@@ -30,30 +30,8 @@
 
       <section class="content">
         <!-- Header (same vibe as other pages) -->
-        <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-              <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">task</span>
-                AO Clearance Requests
-              </h1>
-              <p class="header-subtitle">Admin: Pending clearance request approve/reject করুন</p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
-
+          <div id="pageHeaderMount"></div>
+       
         <!-- Main card container -->
         <div class="bdh-card">
           <div class="bdh-top">
@@ -101,27 +79,24 @@
   </div>
 
   <!-- Layout init (same as your other pages) -->
+ 
   <script type="module">
-    import { initLayout } from "./js/layout.js";
-    try { initLayout("ao-clearance-requests.html"); } catch (e) {}
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+   initLayout("ao-clearance-requests.html");
+
+  renderPageHeader({
+    icon: "filter_alt",
+    title: "AO Clearance" ,
+    subtitle: "Pending clearance request approve/reject ",
+    showClock: true,
+  });
   </script>
 
   <!-- Admin approvals logic -->
   <script src="js/ao-clearance-requests.js"></script>
 
   <!-- Date/time updater -->
-  <script>
-    function updateDateTime() {
-      const now = new Date();
-      const date = now.toLocaleDateString("bn-BD", { day: "2-digit", month: "long", year: "numeric" });
-      const time = now.toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit", hour12: false });
-      const d = document.getElementById("currentDate");
-      const t = document.getElementById("currentTime");
-      if (d) d.textContent = date;
-      if (t) t.textContent = time;
-    }
-    updateDateTime();
-    setInterval(updateDateTime, 60000);
-  </script>
+
 </body>
 </html>

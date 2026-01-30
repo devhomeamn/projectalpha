@@ -162,31 +162,12 @@
       <!-- Topbar -->
       <div id="topbar"></div>
 
+      
+
       <!-- Page Content -->
       <section class="content">
-             <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-                 <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">person_check</span>
-                Approve Users
-              </h1>
-              <p class="header-subtitle"> অপেক্ষমান অথেনটিক ইউজারদের এপ্রুভ করুন</p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
+        <div id="pageHeaderMount"></div>
+        
 
         <table id="pendingUsers">
           <thead>
@@ -224,9 +205,18 @@
   </div>
 
   <!-- ✅ Shared Layout Loader -->
+
   <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("approve-user.html"); // highlight current sidebar menu
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("approve-user.html");
+
+  renderPageHeader({
+    icon: "person_check",
+    title: "Approve Users" ,
+    subtitle: "Approve Reject Newly Registered Users.",
+    showClock: true,
+  });
   </script>
 
   <!-- Page Scripts -->

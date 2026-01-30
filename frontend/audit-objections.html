@@ -23,30 +23,8 @@
       <div id="topbar"></div>
 
       <section class="content">
-        <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-              <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">list_alt</span>
-                Audit Objection List
-              </h1>
-              <p class="header-subtitle">সব Audit Objection একসাথে (Table view). Row expand করলে Details দেখা যাবে।</p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
-
+         <div id="pageHeaderMount"></div>
+       
         <div class="ao-card">
           <div class="ao-filters">
             <div class="ao-field">
@@ -115,9 +93,19 @@
     </main>
   </div>
 
-  <script type="module">
-    import { initLayout } from "./js/layout.js";
+  
+  
+     <script type="module">
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
     initLayout("audit-objections.html");
+
+  renderPageHeader({
+    icon: "list_alt",
+    title: "Audit Objections" ,
+    subtitle: "Audit Objection List",
+    showClock: true,
+  });
   </script>
 
   <script src="js/audit-objections.js"></script>

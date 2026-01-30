@@ -8,6 +8,9 @@ const chequeRegisterController = require("../controllers/chequeRegisterControlle
 // IMPORTANT: auth for all cheque-register routes
 router.use(requireAuth);
 
+// ✅ Logs (Admin/Master only - controller enforces)
+router.get("/:id/logs", chequeRegisterController.getEntryLogs);
+
 // list all origin sections (cheque users/admin/master only)
 router.get("/origin-sections", chequeRegisterController.listOriginSections);
 
@@ -17,7 +20,7 @@ router.get("/:id", chequeRegisterController.getEntry);
 router.put("/:id", chequeRegisterController.updateEntry);
 router.post("/:id/return", chequeRegisterController.returnEntry);
 
-// ✅ NEW: Admin-only delete
+// ✅ Admin-only delete
 router.delete("/:id", chequeRegisterController.deleteEntry);
 
 module.exports = router;

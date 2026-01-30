@@ -25,33 +25,14 @@
 
       <!-- Topbar -->
       <div id="topbar"></div>
+      <section class="content">
+      <div id="pageHeaderMount"></div>
+      </section>
 
       <section class="content section-page">
 
         <!-- Page Header -->
-             <div class="page-headerformaintitle">
-          <div class="header-content">
-            <div class="header-main">
-                 <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">dashboard_2_edit</span>
-                Add Section and Categories
-              </h1>
-              <p class="header-subtitle">সেকশন,ক্যাটাগরি,র‍্যাক এবং শেলফ যুক্ত বা পরিমার্জন করণ </p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
+             
 
 
         <div class="section-grid">
@@ -179,10 +160,21 @@
 
   </div>
 
-  <script type="module">
-    import { initLayout } from "./js/layout.js";
+ 
+     <script type="module">
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
     initLayout("add-section.html");
+
+  renderPageHeader({
+    icon: "dashboard_2_edit",
+    title: "Add Sections" ,
+    subtitle: "Add sections, Subcategory, Section racks and Central Racks",
+    showClock: true,
+  });
   </script>
+
+  
 
   <script src="js/add-section.js"></script>
   <script src="js/auth-guard.js"></script>

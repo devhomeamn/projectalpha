@@ -5,6 +5,7 @@ const sequelize = require("../config/db");
 const Section = require("../models/sectionModel");
 const ChequeRegisterEntry = require("../models/chequeRegisterEntryModel");
 const User = require("../models/userModel");
+const ChequeRegisterLog = require("../models/chequeRegisterLogModel");
 
 // -----------------------------
 // Associations (safe init)
@@ -21,6 +22,11 @@ function ensureAssociations() {
   // ChequeRegisterEntry.updated_by -> User
   if (!ChequeRegisterEntry.associations?.updater) {
     ChequeRegisterEntry.belongsTo(User, { foreignKey: "updated_by", as: "updater" });
+  }
+
+  // ChequeRegisterLog.actor_id -> User
+  if (!ChequeRegisterLog.associations?.actor) {
+    ChequeRegisterLog.belongsTo(User, { foreignKey: "actor_id", as: "actor" });
   }
 }
 
@@ -80,7 +86,11 @@ async function assertChequeAccess(req) {
 
   const chequeId = await resolveChequeSectionId();
   if (!chequeId) {
-    return { ok: false, status: 500, message: "Cheque section not found. Set CHEQUE_SECTION_NAME in .env" };
+    return {
+      ok: false,
+      status: 500,
+      message: "Cheque section not found. Set CHEQUE_SECTION_NAME in .env",
+    };
   }
 
   const userSectionId = req.user?.section_id;
@@ -122,6 +132,23 @@ function decorateEntry(row) {
   j.updated_by_name = j.updater?.name || j.updater?.username || null;
 
   return j;
+}
+
+// ✅ audit log helper
+async function writeLog({ entryId, action, oldObj, newObj, note, actorId }) {
+  try {
+    await ChequeRegisterLog.create({
+      entry_id: entryId,
+      action,
+      old_data: oldObj ? JSON.stringify(oldObj) : null,
+      new_data: newObj ? JSON.stringify(newObj) : null,
+      note: note || null,
+      actor_id: actorId || null,
+    });
+  } catch (e) {
+    console.error("writeLog failed:", e);
+    // don't block main action
+  }
 }
 
 // -----------------------------
@@ -187,9 +214,21 @@ exports.createEntry = async (req, res) => {
       returned_date: null,
       created_by: req.user?.id || null,
       updated_by: null,
+      // soft-delete fields (if present in DB/model)
+      deleted_at: null,
+      deleted_by: null,
+      delete_reason: null,
     });
 
-    // include creator name immediately
+    await writeLog({
+      entryId: created.id,
+      action: "create",
+      oldObj: null,
+      newObj: created.toJSON ? created.toJSON() : created,
+      note: null,
+      actorId: req.user?.id,
+    });
+
     const row = await ChequeRegisterEntry.findByPk(created.id, {
       include: [
         { model: User, as: "creator", attributes: ["id", "name", "username"] },
@@ -220,6 +259,11 @@ exports.listEntries = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const where = {};
+
+    // soft-delete filter: hide deleted by default
+    const includeDeleted = String(req.query.include_deleted || "") === "1";
+    if (!includeDeleted) where.deleted_at = null;
+
     if (status && status !== "all") where.status = pickStatus(status);
     if (origin_section_id) where.origin_section_id = Number(origin_section_id);
 
@@ -304,6 +348,8 @@ exports.updateEntry = async (req, res) => {
       return res.status(400).json({ message: "Returned entry cannot be edited" });
     }
 
+    const oldObj = row.toJSON ? row.toJSON() : row;
+
     const allowed = [
       "bill_ref_no",
       "origin_section_id",
@@ -340,6 +386,15 @@ exports.updateEntry = async (req, res) => {
     row.updated_by = req.user?.id || null;
     await row.save();
 
+    await writeLog({
+      entryId: row.id,
+      action: "update",
+      oldObj,
+      newObj: row.toJSON ? row.toJSON() : row,
+      note: req.body?.note || null,
+      actorId: req.user?.id,
+    });
+
     const out = await ChequeRegisterEntry.findByPk(row.id, {
       include: [
         { model: User, as: "creator", attributes: ["id", "name", "username"] },
@@ -367,14 +422,26 @@ exports.returnEntry = async (req, res) => {
     const row = await ChequeRegisterEntry.findByPk(req.params.id);
     if (!row) return res.status(404).json({ message: "Entry not found" });
 
+    const oldObj = row.toJSON ? row.toJSON() : row;
+
     row.status = "returned";
-    row.returned_date = parseDateOnlyOrNull(req.body.returned_date) || new Date().toISOString().slice(0, 10);
+    row.returned_date =
+      parseDateOnlyOrNull(req.body.returned_date) || new Date().toISOString().slice(0, 10);
     row.returned_to_section_id = req.body.returned_to_section_id
       ? Number(req.body.returned_to_section_id)
       : (row.returned_to_section_id || row.origin_section_id);
 
     row.updated_by = req.user?.id || null;
     await row.save();
+
+    await writeLog({
+      entryId: row.id,
+      action: "return",
+      oldObj,
+      newObj: row.toJSON ? row.toJSON() : row,
+      note: req.body?.note || null,
+      actorId: req.user?.id,
+    });
 
     const out = await ChequeRegisterEntry.findByPk(row.id, {
       include: [
@@ -391,10 +458,12 @@ exports.returnEntry = async (req, res) => {
 };
 
 // -----------------------------
-// DELETE /api/cheque-register/:id  (Admin only)
+// DELETE /api/cheque-register/:id  (Admin only) => SOFT DELETE
 // -----------------------------
 exports.deleteEntry = async (req, res) => {
   try {
+    ensureAssociations();
+
     const access = await assertChequeAccess(req);
     if (!access.ok) return res.status(access.status).json({ message: access.message });
 
@@ -404,10 +473,54 @@ exports.deleteEntry = async (req, res) => {
     const row = await ChequeRegisterEntry.findByPk(req.params.id);
     if (!row) return res.status(404).json({ message: "Entry not found" });
 
-    await row.destroy();
-    return res.json({ message: "Deleted" });
+    const oldObj = row.toJSON ? row.toJSON() : row;
+
+    row.deleted_at = new Date();
+    row.deleted_by = req.user?.id || null;
+    row.delete_reason = (req.body?.reason || "").trim() || null;
+    row.updated_by = req.user?.id || null;
+    await row.save();
+
+    await writeLog({
+      entryId: row.id,
+      action: "delete",
+      oldObj,
+      newObj: row.toJSON ? row.toJSON() : row,
+      note: row.delete_reason || null,
+      actorId: req.user?.id,
+    });
+
+    return res.json({ message: "Soft deleted" });
   } catch (err) {
     console.error("deleteEntry error:", err);
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+// -----------------------------
+// GET /api/cheque-register/:id/logs (admin/master)
+// -----------------------------
+exports.getEntryLogs = async (req, res) => {
+  try {
+    ensureAssociations();
+
+    const role = String(req.user?.role || "").toLowerCase();
+    if (role !== "admin" && role !== "master") {
+      return res.status(403).json({ message: "Admin/Master only" });
+    }
+
+    const entryId = Number(req.params.id);
+    if (!entryId) return res.status(400).json({ message: "Invalid entry id" });
+
+    const logs = await ChequeRegisterLog.findAll({
+      where: { entry_id: entryId },
+      include: [{ model: User, as: "actor", attributes: ["id", "name", "username"] }],
+      order: [["created_at", "ASC"]],
+    });
+
+    return res.json({ data: logs });
+  } catch (err) {
+    console.error("getEntryLogs error:", err);
     return res.status(500).json({ message: err.message || "Server error" });
   }
 };

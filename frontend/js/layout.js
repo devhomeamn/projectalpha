@@ -837,3 +837,62 @@ async function lookup(value) {
 
   document.body.classList.add("layout-ready");
 }
+
+
+// layout.js
+export function renderPageHeader({
+  mountId = "pageHeaderMount",
+  icon = "dashboard",
+  title = "Dashboard",
+  subtitle = "",
+  showClock = true,
+} = {}) {
+  const mount = document.getElementById(mountId);
+  if (!mount) return;
+
+  mount.innerHTML = `
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-main">
+          <h1 class="header-title">
+            <span class="material-symbols-rounded header-icon">${icon}</span>
+            ${title}
+          </h1>
+          ${subtitle ? `<p class="header-subtitle">${subtitle}</p>` : ``}
+        </div>
+
+        ${
+          showClock
+            ? `<div class="header-meta">
+                <div class="meta-item">
+                  <span class="material-symbols-rounded">calendar_today</span>
+                  <span id="currentDate">Loading...</span>
+                </div>
+                <div class="meta-item">
+                  <span class="material-symbols-rounded">schedule</span>
+                  <span id="currentTime">Loading...</span>
+                </div>
+              </div>`
+            : ``
+        }
+      </div>
+      <div class="header-wave"></div>
+    </div>
+  `;
+
+  if (showClock) startHeaderClock();
+}
+
+function startHeaderClock() {
+  const dateEl = document.getElementById("currentDate");
+  const timeEl = document.getElementById("currentTime");
+  if (!dateEl || !timeEl) return;
+
+  const tick = () => {
+    const now = new Date();
+    dateEl.textContent = now.toLocaleDateString();
+    timeEl.textContent = now.toLocaleTimeString();
+  };
+  tick();
+  setInterval(tick, 1000);
+}

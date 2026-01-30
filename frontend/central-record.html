@@ -17,31 +17,10 @@
       <div id="topbar"></div>
 
       <section class="content">
-             <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-                 <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">hub</span>
-                Central Records
-              </h1>
-              <p class="header-subtitle">সেন্ট্রাল রুমে রাখা রেকর্ডসমূহ</p>
-            </div>
 
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
-
-
+        <div id="pageHeaderMount"></div>
+             
+      
         <div class="search-export">
           <input type="text" id="searchInput" placeholder="🔍 Search by File Name, Section, Rack No...">
           <button class="btn-export" onclick="exportToCSV()">📤 Export CSV</button>
@@ -99,10 +78,18 @@
     </div>
   </div>
 
-  <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("central-record.html");
-  </script>
+ <script type="module">
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+   initLayout("central-record.html");
+
+  renderPageHeader({
+    icon: "hub",
+    title: "Central Room Records",
+    subtitle: "View the central records",
+    showClock: true,
+  });
+</script>
+
 </body>
 
 <script src="js/central-record.js"></script>

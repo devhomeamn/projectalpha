@@ -24,31 +24,7 @@
       <div id="topbar"></div>
 
       <!-- Modern Page Header -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-main">
-            <h1 class="header-title">
-              <span class="material-symbols-rounded header-icon">dashboard</span>
-              Dashboard
-            </h1>
-            <p class="header-subtitle">
-              সিস্টেমের সামগ্রিক ওভারভিউ এবং সেকশন পরিসংখ্যান
-            </p>
-          </div>
-
-          <div class="header-meta">
-            <div class="meta-item">
-              <span class="material-symbols-rounded">calendar_today</span>
-              <span id="currentDate">Loading...</span>
-            </div>
-            <div class="meta-item">
-              <span class="material-symbols-rounded">schedule</span>
-              <span id="currentTime">Loading...</span>
-            </div>
-          </div>
-        </div>
-        <div class="header-wave"></div>
-      </div>
+      <div id="pageHeaderMount"></div>
 
       <!-- Top Stats -->
       <section class="stats">
@@ -90,9 +66,17 @@
     </main>
   </div>
 
-  <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("dashboard.html");
+   <script type="module">
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+  initLayout("view-record.html");
+
+  renderPageHeader({
+    icon: "visibility",
+    title: "Dashboard" ,
+    subtitle: "Overview of records, movements, activity, and system status",
+    showClock: true,
+  });
   </script>
 
   <script src="js/dashboard.js"></script>

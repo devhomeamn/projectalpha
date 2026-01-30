@@ -25,31 +25,10 @@
 
     <main class="main-content">
       <div id="topbar"></div>
+      <div id="pageHeaderMount"></div>
 
       <section class="content">
-        <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-              <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">history</span>
-                BD Objection History
-              </h1>
-              <p class="header-subtitle">একই BD-র সকল Audit Objection একসাথে দেখুন (Serial-wise)</p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
+        
 
         <div class="bdh-card">
           <div class="bdh-top">
@@ -137,9 +116,18 @@
   </div>
 
   <!-- Layout init (if your layout.js exports initLayout) -->
-  <script type="module">
-    import { initLayout } from "./js/layout.js";
-    try { initLayout("bd-objection-history.html"); } catch (e) {}
+
+    <script type="module">
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("bd-objection-history.html");
+
+  renderPageHeader({
+    icon: "list_alt",
+    title: "Objections History" ,
+    subtitle: "View complete audit objection history for a specific BD.",
+    showClock: true,
+  });
   </script>
 
   <!-- Page logic -->

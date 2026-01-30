@@ -23,30 +23,9 @@
     <section class="content">
 
       <!-- ✅ SAME header style as reports -->
-      <div class="page-header">
-        <div class="header-content">
-          <div class="header-main">
-            <h1 class="header-title">
-              <span class="material-symbols-rounded header-icon">campaign</span>
-              Admin Notice
-            </h1>
-            <p class="header-subtitle">সব user-এর জন্য login-এর পরে popup notice সেট করুন</p>
-          </div>
+     <div id="pageHeaderMount"></div>
 
-          <div class="header-meta">
-            <div class="meta-item">
-              <span class="material-symbols-rounded">calendar_today</span>
-              <span id="currentDate">Loading...</span>
-            </div>
-            <div class="meta-item">
-              <span class="material-symbols-rounded">schedule</span>
-              <span id="currentTime">Loading...</span>
-            </div>
-          </div>
-        </div>
-        <div class="header-wave"></div>
-      </div>
-
+    
       <!-- ✅ card container -->
       <div class="notice-grid">
 
@@ -141,9 +120,17 @@
 
 <!-- ✅ same layout init as reports -->
 <script type="module">
-  import { initLayout } from "./js/layout.js";
-  initLayout("admin-notice.html");
-</script>
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("admin-notice.html");
+
+  renderPageHeader({
+    icon: "campaign",
+    title: "Add Notices" ,
+    subtitle: "Create and manage system-wide notices and alerts.",
+    showClock: true,
+  });
+  </script>
 
 <!-- ✅ notice.js must be loaded so "Test popup now" can call it -->
 <script src="js/notice.js"></script>

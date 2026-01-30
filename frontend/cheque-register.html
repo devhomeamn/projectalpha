@@ -23,30 +23,8 @@
       <div id="topbar"></div>
 
       <section class="content">
-        <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-              <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">receipt_long</span>
-                Cheque Register
-              </h1>
-              <p class="header-subtitle">Cheque (Section D): Bill entry করুন, processing করুন, এবং completed হলে origin section-এ ফেরত দেখান।</p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
-
+          <div id="pageHeaderMount"></div>
+      
         <div class="bdh-card">
           <div class="bdh-top">
             <div class="bdh-left">
@@ -66,7 +44,7 @@
                 <option value="all">All</option>
                 <option value="received" selected>Received</option>
                 <option value="processing">Processing</option>
-                <option value="returned">Returned</option>
+                <option value="returned">Issued</option>
               </select>
             </div>
 
@@ -254,7 +232,28 @@
     </div>
   </div>
 
-  <!-- Confirm Modal -->
+  
+  <!-- Logs Modal (Admin/Master) -->
+  <div id="logsModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:860px;">
+      <div class="modal-header">
+        <h3>Entry Logs</h3>
+        <button class="close-btn" id="logsClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-meta" id="logsMeta" style="margin-bottom:12px;">
+          <div>Entry: <b id="logsEntryNo">-</b></div>
+          <div>Token: <b id="logsTokenNo">-</b></div>
+        </div>
+
+        <div id="logsBody">
+          <div class="muted">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Confirm Modal -->
   <div id="confirmModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -272,9 +271,17 @@
   </div>
 
   <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("cheque-register.html");
-  </script>
+
+import { initLayout, renderPageHeader } from "./js/layout.js";
+  initLayout("cheque-register.html");
+
+  renderPageHeader({
+    icon: "receipt_long",
+    title: "Cheque Register" ,
+    subtitle: "Search, review, and manage user access.",
+    showClock: true,
+  });
+     </script>
 
   <script src="js/confirm-util.js"></script>
   <script src="js/cheque-register.js"></script>

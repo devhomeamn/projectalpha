@@ -52,30 +52,7 @@
       <div id="topbar"></div>
 
       <section class="content">
-        <div class="page-header">
-          <div class="header-content">
-            <div class="header-main">
-                 <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">visibility</span>
-                View Records
-              </h1>
-              <p class="header-subtitle">এন্ট্রি করা রেকর্ডসমূহের তালিকা</p>
-            </div>
-
-            <div class="header-meta">
-              <div class="meta-item">
-                <span class="material-symbols-rounded">calendar_today</span>
-                <span id="currentDate">Loading...</span>
-              </div>
-              <div class="meta-item">
-                <span class="material-symbols-rounded">schedule</span>
-                <span id="currentTime">Loading...</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-wave"></div>
-        </div>
-
+         <div id="pageHeaderMount"></div>
         <!-- Toolbar -->
 <div class="toolbar">
   <div style="display:flex; gap:10px; align-items:center;">
@@ -247,8 +224,16 @@
 
   <!-- ✅ Shared Layout -->
   <script type="module">
-    import { initLayout } from "./js/layout.js";
-    initLayout("view-record.html");
+   
+  import { initLayout, renderPageHeader } from "./js/layout.js";
+  initLayout("view-record.html");
+
+  renderPageHeader({
+    icon: "visibility",
+    title: "View Record" ,
+    subtitle: "Create, view, update, and manage section-wise records.",
+    showClock: true,
+  });
   </script>
   
 
