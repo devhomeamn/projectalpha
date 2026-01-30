@@ -22,6 +22,7 @@ const sectionRoutes = require('./routes/sectionRoutes');
 const recordRoutes = require('./routes/recordRoutes');
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const aoClearanceRoutes = require("./routes/aoClearanceRoutes");
+const chequeRegisterRoutes = require("./routes/chequeRegisterRoutes");
 app.use("/api/reports", require("./routes/reportsRoutes"));
 app.use("/api/notices", require("./routes/noticeRoutes"));
 app.use("/api/password", require("./routes/passwordRoutes"));
@@ -42,7 +43,8 @@ app.use("/api/ao-clearance-requests", aoClearanceRoutes);
 // ✅ API routes অবশ্যই প্রথমে রাখো
 app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
-app.use('/api/records', recordRoutes);
+app.use("/api/records", recordRoutes);
+app.use("/api/cheque-register", chequeRegisterRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 

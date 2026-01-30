@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cheque Register</title>
+
+  <link rel="icon" href="images/site-icon.ico" />
+
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content">
+        <div class="page-header">
+          <div class="header-content">
+            <div class="header-main">
+              <h1 class="header-title">
+                <span class="material-symbols-rounded header-icon">receipt_long</span>
+                Cheque Register
+              </h1>
+              <p class="header-subtitle">Cheque (Section D): Bill entry করুন, processing করুন, এবং completed হলে origin section-এ ফেরত দেখান।</p>
+            </div>
+
+            <div class="header-meta">
+              <div class="meta-item">
+                <span class="material-symbols-rounded">calendar_today</span>
+                <span id="currentDate">Loading...</span>
+              </div>
+              <div class="meta-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span id="currentTime">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-wave"></div>
+        </div>
+
+        <div class="bdh-card">
+          <div class="bdh-top">
+            <div class="bdh-left">
+              <div class="bdh-title">
+                <span class="material-symbols-rounded">filter_alt</span>
+                Filters
+              </div>
+              <div class="bdh-sub">Status / Origin section / Date / Search দিয়ে দ্রুত খুঁজুন।</div>
+            </div>
+            <div class="bdh-right" id="resultInfo"></div>
+          </div>
+
+          <div class="bdh-search" style="gap:10px;flex-wrap:wrap;">
+            <div class="bdh-input-wrap" style="min-width:220px;max-width:240px;">
+              <span class="material-symbols-rounded bdh-input-icon">tune</span>
+              <select id="statusFilter" class="bdh-input" style="padding-left:40px;">
+                <option value="all">All</option>
+                <option value="received" selected>Received</option>
+                <option value="processing">Processing</option>
+                <option value="returned">Returned</option>
+              </select>
+            </div>
+
+            <div class="bdh-input-wrap" style="min-width:240px;max-width:320px;">
+              <span class="material-symbols-rounded bdh-input-icon">account_tree</span>
+              <select id="originFilter" class="bdh-input" style="padding-left:40px;">
+                <option value="">All Origin Sections</option>
+              </select>
+            </div>
+
+            <div class="bdh-input-wrap" style="min-width:180px;max-width:220px;">
+              <span class="material-symbols-rounded bdh-input-icon">event</span>
+              <input id="fromDate" type="date" class="bdh-input" style="padding-left:40px;" />
+            </div>
+
+            <div class="bdh-input-wrap" style="min-width:180px;max-width:220px;">
+              <span class="material-symbols-rounded bdh-input-icon">event</span>
+              <input id="toDate" type="date" class="bdh-input" style="padding-left:40px;" />
+            </div>
+
+            <div class="bdh-input-wrap" style="flex:1;min-width:240px;">
+              <span class="material-symbols-rounded bdh-input-icon">search</span>
+              <input id="searchBox" class="bdh-input" style="padding-left:40px;" placeholder="Search: entry no / token / bill ref" />
+            </div>
+
+            <button id="btnSearch" class="bdh-btn bdh-btn-sm" type="button">
+              <span class="material-symbols-rounded">search</span>
+              Search
+            </button>
+
+            <button id="btnClear" class="bdh-btn bdh-btn-sm" type="button" style="background:#fff;color:#111;border:1px solid #e5e7eb;">
+              <span class="material-symbols-rounded">clear_all</span>
+              Clear
+            </button>
+
+            <button id="btnNew" class="bdh-btn bdh-btn-sm" type="button">
+              <span class="material-symbols-rounded">add</span>
+              New Entry
+            </button>
+
+            <!-- ✅ Print submenu -->
+            <div class="print-dd">
+              <button id="btnPrintMenu" class="bdh-btn bdh-btn-sm" type="button" style="background:#111827;color:#fff;border-color:#111827;">
+                <span class="material-symbols-rounded">print</span>
+                Print
+                <span class="material-symbols-rounded" style="font-size:18px;">expand_more</span>
+              </button>
+
+              <div id="printMenu" class="print-menu" style="display:none;">
+                <button id="btnPrintSection" type="button" class="print-item">Section-wise Print</button>
+                <button id="btnPrintMonthly" type="button" class="print-item">Monthly Report</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="overflow:auto;margin-top:12px;">
+            <table class="bdh-table" style="width:100%;min-width:1080px;">
+              <thead>
+                <tr>
+                  <th style="width:70px;">SL</th>
+                  <th>Entry</th>
+                  <th>Bill Ref</th>
+                  <th>Origin</th>
+                  <th>Received</th>
+                  <th>Token</th>
+                  <th style="text-align:right;">Amount</th>
+                  <th>Added By</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+
+          <div class="ao-pagination" style="margin-top:14px;">
+            <button id="prevBtn" class="ao-btn" type="button">Prev</button>
+            <div class="ao-pageinfo" id="pageInfo">Page -</div>
+            <button id="nextBtn" class="ao-btn" type="button">Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Entry Modal -->
+  <div id="entryModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:720px;">
+      <div class="modal-header">
+        <h3 id="modalTitle">New Cheque Entry</h3>
+        <button class="close-btn" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="entryForm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <input type="hidden" id="entryId" />
+
+          <div>
+            <label>Origin Section <span style="color:#ef4444;">*</span></label>
+            <select id="originSection" class="bdh-input" required></select>
+          </div>
+
+          <div>
+            <label>Received Date <span style="color:#ef4444;">*</span></label>
+            <input id="receivedDate" type="date" class="bdh-input" required />
+          </div>
+
+          <div>
+            <label>Bill Ref No</label>
+            <input id="billRefNo" class="bdh-input" placeholder="Optional" />
+          </div>
+
+          <div>
+            <label>Token No <span style="color:#ef4444;">*</span></label>
+            <input id="tokenNo" class="bdh-input" required />
+          </div>
+
+          <div>
+            <label>Amount <span style="color:#ef4444;">*</span></label>
+            <input id="amount" type="number" step="0.01" class="bdh-input" required />
+          </div>
+
+          <div>
+            <label>Status</label>
+            <select id="entryStatus" class="bdh-input">
+              <option value="received">Received</option>
+              <option value="processing">Processing</option>
+              <option value="returned">Returned (admin only)</option>
+            </select>
+          </div>
+
+          <div style="grid-column:1 / -1;">
+            <label>Remarks</label>
+            <textarea id="remarks" class="bdh-input" rows="3" placeholder="Optional"></textarea>
+          </div>
+
+          <div style="grid-column:1 / -1;display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" class="bdh-btn bdh-btn-sm" id="btnCancel" style="background:#fff;color:#111;border:1px solid #e5e7eb;">Cancel</button>
+            <button type="submit" class="bdh-btn bdh-btn-sm" id="btnSave">
+              <span class="material-symbols-rounded">save</span>
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Monthly Report Modal -->
+  <div id="monthlyModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:520px;">
+      <div class="modal-header">
+        <h3>Monthly Report</h3>
+        <button class="close-btn" id="monthlyClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label>Month</label>
+            <select id="reportMonth" class="bdh-input">
+              <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+              <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+              <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+              <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+            </select>
+          </div>
+          <div>
+            <label>Year</label>
+            <input id="reportYear" type="number" class="bdh-input" />
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>Origin Section (optional)</label>
+            <select id="reportOrigin" class="bdh-input">
+              <option value="">All Sections</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px;">
+          <button class="bdh-btn bdh-btn-sm" type="button" id="monthlyCancel" style="background:#fff;color:#111;border:1px solid #e5e7eb;">Cancel</button>
+          <button class="bdh-btn bdh-btn-sm" type="button" id="monthlyPrint">
+            <span class="material-symbols-rounded">print</span> Print
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Confirm</h3>
+        <button class="close-btn" onclick="closeConfirm()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">Are you sure?</p>
+        <div class="modal-actions">
+          <button id="confirmYes" class="btn-danger">Yes</button>
+          <button id="confirmCancel" class="btn-secondary" onclick="closeConfirm()">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from "./js/layout.js";
+    initLayout("cheque-register.html");
+  </script>
+
+  <script src="js/confirm-util.js"></script>
+  <script src="js/cheque-register.js"></script>
+</body>
+</html>

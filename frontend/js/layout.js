@@ -38,6 +38,38 @@ export async function initLayout(activePage) {
     ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
     : "";
 
+  // Cheque menu visibility helper: General users must be assigned to Cheque section
+  const userSectionId = Number(localStorage.getItem("section_id") || 0);
+
+  async function getChequeSectionIdCached() {
+    const cached = localStorage.getItem("cheque_section_id");
+    if (cached) return Number(cached);
+
+    try {
+      const res = await fetch("/api/sections", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const rows = data.sections || data.data || data || [];
+      const norm = (s) => String(s || "").toLowerCase();
+      const found =
+        rows.find((r) => norm(r.name).includes("cheque")) ||
+        rows.find((r) => norm(r.name).startsWith("d")) ||
+        null;
+      if (found?.id) {
+        localStorage.setItem("cheque_section_id", String(found.id));
+        return Number(found.id);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  const chequeSectionId = await getChequeSectionIdCached();
+  const isChequeUser = role !== "General" || (chequeSectionId && userSectionId === Number(chequeSectionId));
+
 
   // ------------------------------
   // Auto Logout (Idle + JWT expiry)
@@ -86,6 +118,7 @@ export async function initLayout(activePage) {
     { name: "Add Record",     icon: "library_add",   roles: ["Admin", "Master", "General"], link: "add-record.html" },
     { name: "View Record",    icon: "visibility",    roles: ["Admin", "Master", "General"], link: "view-record.html" },
     { name: "Central Record", icon: "folder",        roles: ["Admin", "Master", "General"], link: "central-record.html" },
+    { name: "Cheque Register", icon: "receipt_long", roles: ["Admin", "Master", "General"], link: "cheque-register.html", onlyChequeUser: true },
     {
       group: true,
       name: "Audit Objections",
@@ -109,7 +142,9 @@ export async function initLayout(activePage) {
   const currentPage = activePage || window.location.pathname.split("/").pop();
 
   function isAllowedByRole(item) {
-    return (item.roles || []).includes(role);
+    if (!(item.roles || []).includes(role)) return false;
+    if (item.onlyChequeUser && !isChequeUser) return false;
+    return true;
   }
 
   function anyChildAllowed(children) {

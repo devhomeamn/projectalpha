@@ -1,11 +1,3 @@
-@import url('https://fonts.googleapis.com/css?family=Poppins:400,500,600,700&display=swap');
-*{
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-font-family: 'Poppins', sans-serif;
-}
-
 
 
 
@@ -38,7 +30,7 @@ form {
 input, select {
   margin: 10px 0;
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #d34848;
   border-radius: 5px;
 }
 
@@ -87,4 +79,641 @@ button:hover {
 
 #confirmModal .btn-secondary:hover {
   background: #d1d5db;
+}
+
+
+
+.page-header {
+  position: relative;
+  background: linear-gradient(135deg, #0578bb 0%, #69329c 100%);
+  color: #fff;
+  border-radius: 20px;
+  padding: 24px 22px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(99, 102, 241, 0.3);
+}
+
+.header-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-main {
+  flex: 1;
+  min-width: 260px;
+}
+
+.header-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-icon {
+  font-size: 26px !important;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px;
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.header-subtitle {
+  font-size: 14px;
+  margin: 0;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+.header-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: right;
+  font-size: 13px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.header-wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='0.18' d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E")
+    bottom/cover no-repeat;
+}
+
+
+/* ---------- page wrapper card ---------- */
+.bdh-card{
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.06);
+  border:1px solid #eef2f7;
+}
+
+.bdh-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.bdh-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:16px;
+  font-weight:900;
+}
+
+.bdh-sub{
+  margin-top:6px;
+  opacity:.78;
+  line-height:1.35;
+}
+
+.bdh-right{
+  font-weight:800;
+  opacity:.8;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+}
+
+.bdh-search{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.bdh-input-wrap{
+  flex:1;
+  min-width:240px;
+  position:relative;
+}
+
+.bdh-input-icon{
+  position:absolute;
+  left:10px;
+  top:50%;
+  transform:translateY(-50%);
+  opacity:.65;
+}
+
+.bdh-input{
+  width:100%;
+  padding:12px 12px 12px 40px;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  outline:none;
+  font-weight:700;
+}
+
+.bdh-input:focus{
+  border-color:#93c5fd;
+  box-shadow:0 0 0 4px rgba(147,197,253,.25);
+}
+
+.bdh-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  background:#03c7ce;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.bdh-btn-primary{
+  background:#2563eb;
+  color:#fff;
+  border-color:#2563eb;
+}
+
+.bdh-divider{
+  margin:14px 0;
+  border-top:1px dashed #e5e7eb;
+}
+
+.bdh-cards{
+  display:grid;
+  gap:12px;
+}
+
+/* ---------- messages ---------- */
+.msg{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:800;
+  border:1px solid transparent;
+}
+
+.msg-error{
+  color:#b00020;
+  background:rgba(176,0,32,.06);
+  border-color:rgba(176,0,32,.18);
+}
+
+.msg-success{
+  color:#0a7a28;
+  background:rgba(10,122,40,.08);
+  border-color:rgba(10,122,40,.20);
+}
+
+.muted{ opacity:.75; }
+.small{ font-size:12px; opacity:.75; }
+
+/* ---------- objection card ---------- */
+.ob-card{
+  border:1px solid #1263c7;
+  border-radius:14px;
+  padding:14px;
+  background:#e0dada;
+  box-shadow:0 6px 16px rgba(0,0,0,.04);
+}
+
+.ob-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+}
+
+.ob-head-left{ flex:1; min-width:260px; }
+
+.ob-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.ob-no{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  border:1px solid #e5e7eb;
+  background:#f8fafc;
+}
+
+.ob-title-text{
+  font-weight:1000;
+  font-size:16px;
+}
+
+.ob-subtitle{
+  margin-top:6px;
+  opacity:.78;
+  font-size:13px;
+  line-height:1.3;
+}
+
+.ob-head-right{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:flex-end;
+}
+
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  border:1px solid #e5e7eb;
+  background:#fafafa;
+}
+
+.status-pill.open{ border-color:#ef4444; color:#ef4444; background:rgba(239,68,68,.06); }
+.status-pill.requested{ border-color:#f59e0b; color:#b45309; background:rgba(245,158,11,.10); }
+.status-pill.cleared{ border-color:#22c55e; color:#15803d; background:rgba(34,197,94,.10); }
+
+.ob-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.ob-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:9px 10px;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  font-weight:900;
+  cursor:pointer;
+  text-decoration:none;
+  color:inherit;
+}
+
+.ob-btn.primary{
+  background:#2563eb;
+  border-color:#2563eb;
+  color:#fff;
+}
+
+.ob-btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+/* details */
+.ob-section{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px dashed #e5e7eb;
+}
+
+.ob-sec-title{
+  font-weight:1000;
+  font-size:13px;
+  margin-bottom:8px;
+}
+
+.ob-details-short{
+  white-space:pre-wrap;
+  line-height:1.45;
+  opacity:.92;
+}
+
+/* more */
+.ob-more{
+  margin-top:12px;
+  border-top:1px dashed #e5e7eb;
+  padding-top:12px;
+}
+
+.ob-more summary{
+  cursor:pointer;
+  font-weight:1000;
+  font-size:12px;
+  opacity:.9;
+  list-style:none;
+}
+
+.ob-more summary::-webkit-details-marker{ display:none; }
+
+.ob-more summary::before{
+  content:"▸";
+  display:inline-block;
+  margin-right:8px;
+  transition: transform .15s ease;
+}
+.ob-more[open] summary::before{ transform: rotate(90deg); }
+
+.ob-more-body{
+  margin-top:10px;
+}
+
+.ob-details-full{
+  white-space:pre-wrap;
+  line-height:1.45;
+  opacity:.92;
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  padding:10px 12px;
+  border-radius:12px;
+}
+
+.ob-list{
+  margin:0;
+  padding-left:18px;
+  display:grid;
+  gap:6px;
+  font-size:13px;
+  opacity:.92;
+}
+
+.ob-list li b{ font-weight:1000; }
+
+/* attachment preview */
+.ob-attach{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.attach-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid #e5e7eb;
+  background:#f8fafc;
+  font-weight:900;
+  font-size:12px;
+}
+
+.attach-open{
+  font-weight:900;
+  text-decoration:none;
+  border-bottom:1px dashed #94a3b8;
+  padding-bottom:1px;
+}
+
+.attach-preview{
+  margin-top:10px;
+  border:1px solid #eef2f7;
+  border-radius:12px;
+  overflow:hidden;
+  background:#fff;
+}
+
+.attach-preview img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:520px;
+  object-fit:contain;
+  background:#0b1220;
+}
+
+.attach-preview iframe{
+  width:100%;
+  height:520px;
+  border:0;
+}
+
+.ob-preview-collapsed{ display:none; }
+
+/* ---------- modal ---------- */
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(0,0,0,.45);
+}
+
+.modal.is-open{
+  display:flex !important;
+}
+
+.modal-content{
+  width:100%;
+  max-width:720px;
+  background:#fff;
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  border:1px solid #eef2f7;
+}
+
+.modal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  border-bottom:1px solid #eef2f7;
+  padding-bottom:10px;
+  margin-bottom:10px;
+}
+
+.modal-body{ padding-top:6px; }
+
+.modal-meta{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:900;
+  margin-bottom:12px;
+}
+
+.modal-field{
+  display:grid;
+  gap:6px;
+  margin:12px 0;
+}
+
+.modal-field textarea{
+  width:100%;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  padding:10px 12px;
+  outline:none;
+  resize:vertical;
+  font-weight:700;
+}
+
+.modal-field textarea:focus{
+  border-color:#93c5fd;
+  box-shadow:0 0 0 4px rgba(147,197,253,.25);
+}
+
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+
+/* Optional basic buttons if your global .btn exists it's fine */
+.btn{
+  padding:9px 12px;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.btn-primary{
+  background:#2563eb;
+  color:#fff;
+  border-color:#2563eb;
+}
+
+.btn-sm{ padding:6px 10px; }
+
+
+
+
+/* Status chip (JS uses .chip) */
+#list .card .chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: .6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(0,0,0,.03);
+  user-select: none;
+}
+
+#list .card .chip::before{
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.35);
+}
+
+/* Status colors */
+#list .card .chip[data-status="pending"]{
+  background: rgba(245,158,11,.12);
+  border-color: rgba(245,158,11,.25);
+  color: #7a4a00;
+}
+#list .card .chip[data-status="pending"]::before{ background: #f59e0b; }
+
+#list .card .chip[data-status="approved"]{
+  background: rgba(16,185,129,.12);
+  border-color: rgba(16,185,129,.25);
+  color: #065f46;
+}
+#list .card .chip[data-status="approved"]::before{ background: #10b981; }
+
+#list .card .chip[data-status="rejected"]{
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.25);
+  color: #7f1d1d;
+}
+#list .card .chip[data-status="rejected"]::before{ background: #ef4444; }
+
+/* =========================
+   Cheque Register UX tweaks
+   ========================= */
+
+/* IMPORTANT: Dashboard pages should not be body-centered */
+body{
+  display: block !important;
+  height: auto !important;
+  justify-content: initial !important;
+  align-items: initial !important;
+}
+
+/* Smaller visible buttons */
+.bdh-btn.bdh-btn-sm{
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  line-height: 1.1 !important;
+}
+
+/* Default bdh-btn color a bit calmer + readable */
+.bdh-btn{
+  background: #2563eb !important;
+  color:#fff !important;
+  border-color:#2563eb !important;
+}
+.bdh-btn:hover{ background:#1d4ed8 !important; }
+
+/* Clear button already inline styled, but keep hover nice */
+#btnClear:hover{ background:#f3f4f6 !important; }
+
+/* Print dropdown */
+.print-dd{ position:relative; }
+.print-menu{
+  position:absolute;
+  right:0;
+  top:44px;
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  min-width:220px;
+  box-shadow:0 12px 30px rgba(0,0,0,.12);
+  z-index:50;
+  overflow:hidden;
+}
+.print-item{
+  width:100%;
+  padding:10px 12px;
+  background:#fff;
+  border:0;
+  text-align:left;
+  cursor:pointer;
+  font-weight:800;
+  font-size:13px;
+}
+.print-item:hover{ background:#f3f4f6; }
+
+/* Make modal truly centered (already exists, but ensure) */
+.modal{
+  display:none;
+  align-items:center;
+  justify-content:center;
 }
