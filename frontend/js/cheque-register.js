@@ -34,6 +34,18 @@ function byId(id) {
   return document.getElementById(id);
 }
 
+// ✅ Local date (YYYY-MM-DD) so Bangladesh timezone e 1 din age/pore hobena
+function toLocalISODate(d) {
+  try {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  } catch {
+    return "";
+  }
+}
+
 function formatDate(v) {
   if (!v) return "-";
   return String(v).slice(0, 10);
@@ -319,12 +331,12 @@ async function openEditModal(id) {
 
 function openAddModal() {
   resetForm();
-  const today = new Date().toISOString().slice(0, 10);
+  // ✅ was: new Date().toISOString().slice(0,10) (UTC issue)
+  const today = toLocalISODate(new Date());
   byId("receivedDate").value = today;
   byId("entryStatus").value = "received";
   openModal("New Cheque Entry");
 }
-
 
 // ------------------ logs modal (Admin/Master) ------------------
 function openLogsModal() {
@@ -510,7 +522,6 @@ async function openLogs(id, entryNo, tokenNo) {
   }
 }
 
-
 // ------------------ submit ------------------
 async function submitForm(e) {
   e.preventDefault();
@@ -658,49 +669,78 @@ async function fetchAllEntriesForPrint({ origin_section_id, from, to }) {
   return all;
 }
 
+// ✅ FIXED monthRange: Local timezone based (no UTC shift)
 function monthRange(year, month) {
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 0);
-  const iso = (d) => d.toISOString().slice(0, 10);
-  return { from: iso(start), to: iso(end) };
+  return { from: toLocalISODate(start), to: toLocalISODate(end) };
 }
 
-function openPrintWindowHtml({ title, subtitleLines, bodyHtml }) {
+function monthLabelText(year, month) {
+  const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const m = names[Math.max(0, Math.min(11, month - 1))];
+  return `${m}-${year}`;
+}
+
+function officeHeaderHtml(title) {
+  return `
+    <div class="head">
+      <div class="head-line head-1">Office of the Senior Finance Controller (Air Force)</div>
+      <div class="head-line head-2">Dhaka Cantonment, Dhaka-1206</div>
+      <div class="head-line head-3">Cheque (D) Section</div>
+      <div class="head-gap"></div>
+      <div class="report-title">${escapeHtml(title || "")}</div>
+    </div>
+  `;
+}
+
+/**
+ * ✅ Print window: bodyHtml can contain MULTIPLE PAGES.
+ * Each page must include its own header inside bodyHtml (to repeat per page).
+ */
+function openPrintWindowHtml({ bodyHtml, docTitle }) {
   const w = window.open("", "_blank", "width=1000,height=800");
   if (!w) {
     alert("Pop-up blocked! Please allow pop-ups for printing.");
     return;
   }
 
-  const subtitles = (subtitleLines || []).map((x) => `<div class="muted">${x}</div>`).join("");
-
   const html = `
   <!doctype html>
   <html>
   <head>
     <meta charset="utf-8"/>
-    <title>${escapeHtml(title)}</title>
+    <title>${escapeHtml(docTitle || "Print")}</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 18px; color:#111; }
-      h1 { margin:0 0 6px; font-size: 20px; }
-      .muted { color:#555; margin:2px 0; font-size:12px; }
-      .meta { margin: 10px 0 14px; display:flex; gap:12px; flex-wrap:wrap; }
-      .chip { border:1px solid #ddd; border-radius:999px; padding:6px 10px; font-size:12px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-      th, td { border:1px solid #ddd; padding:8px; font-size:12px; }
-      th { background:#f6f7f8; text-align:left; }
+      .print-btn { margin-bottom: 12px; }
+      @media print { .print-btn { display:none; } body { padding: 12px; } }
+
+      .head { text-align:center; margin-bottom: 10px; }
+      .head-line { line-height: 1.2; }
+      .head-1 { font-size: 13px; font-weight: 700; }
+      .head-2 { font-size: 12px; font-weight: 600; margin-top: 10px; }
+      .head-3 { font-size: 12px; font-weight: 700; margin-top: 10px; }
+      .head-gap { height: 10px; }
+      .report-title { font-size: 12px; font-weight: 800; text-decoration: underline; margin-top: 2px; }
+
+      .meta { margin-top: 14px; font-size: 11px; line-height: 1.9; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { border:1px solid #d9d9d9; padding:8px; font-size:11px; }
+      th { background:#fff; font-weight:700; text-align:left; }
       .right { text-align:right; }
-      .section-block{ margin-top:16px; }
-      .section-title{ font-weight:700; margin-top:14px; }
-      .section-sub{ color:#555; font-size:12px; margin-top:2px; }
-      @media print { button { display:none; } }
+      .signature { margin-top: 20px; text-align:right; font-size: 11px; font-weight: 600; }
+
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: auto; }
+      @media print {
+        .page { page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+      }
     </style>
   </head>
   <body>
-    <button onclick="window.print()">Print</button>
-    <h1>${escapeHtml(title)}</h1>
-    ${subtitles}
-    <div class="muted">Printed at: <b>${escapeHtml(new Date().toLocaleString())}</b></div>
+    <button class="print-btn" onclick="window.print()">Print</button>
     ${bodyHtml}
     <script> setTimeout(() => window.print(), 300); </script>
   </body>
@@ -750,42 +790,53 @@ async function printSectionWise() {
       `)
       .join("");
 
-    const bodyHtml = `
-      <div class="meta">
-        <div class="chip">Origin: <b>${escapeHtml(sectionTitle)}</b></div>
-        <div class="chip">Entries: <b>${entries.length}</b></div>
-        <div class="chip">Total Amount: <b>${escapeHtml(formatMoney(totalAmount))}</b></div>
-      </div>
+    const rangeLine = (from || to)
+      ? `${escapeHtml(from || "—")} to ${escapeHtml(to || "—")}`
+      : "All";
 
-      <table>
-        <thead>
-          <tr>
-            <th style="width:50px;">SL</th>
-            <th>Entry No</th>
-            <th>Bill Ref</th>
-            <th>Received</th>
-            <th>Token</th>
-            <th class="right">Amount</th>
-            <th>Added By</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml || `<tr><td colspan="8" style="text-align:center;color:#666;">No data</td></tr>`}
-        </tbody>
-      </table>
+    const bodyHtml = `
+      <div class="page">
+        ${officeHeaderHtml("Section-wise Issued Report")}
+
+        <div class="meta">
+          <div>Section Origin: <b>${escapeHtml(sectionTitle)}</b></div>
+          <div>Date Range: <b>${rangeLine}</b></div>
+          <div>Printed at: <b>${escapeHtml(new Date().toLocaleString())}</b></div>
+          <div>Total Bill : <b>${entries.length}</b></div>
+          <div>Grand Total: <b>${escapeHtml(formatMoney(totalAmount))}</b></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">SL</th>
+              <th>Entry No</th>
+              <th>Bill Ref</th>
+              <th>Received</th>
+              <th>Token</th>
+              <th class="right">Amount</th>
+              <th>Added By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || `<tr><td colspan="8" style="text-align:center;color:#666;">No data</td></tr>`}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5"></td>
+              <td class="right" style="font-weight:700;">Total: ${escapeHtml(formatMoney(totalAmount))}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="signature">Signature</div>
+      </div>
     `;
 
-    const rangeLine = (from || to)
-      ? `Date Range: <b>${escapeHtml(from || "—")}</b> to <b>${escapeHtml(to || "—")}</b>`
-      : `Date Range: <b>All</b>`;
-
     openPrintWindowHtml({
-      title: "Cheque Register — Section-wise",
-      subtitleLines: [
-        `Origin Section: <b>${escapeHtml(sectionTitle)}</b>`,
-        rangeLine,
-      ],
+      docTitle: "Cheque(D) Section — Section-wise Print",
       bodyHtml,
     });
   } catch (err) {
@@ -806,7 +857,7 @@ function closeMonthlyModal() {
   byId("monthlyModal").style.display = "none";
 }
 
-// ✅ Monthly report grouped by origin section
+// ✅ Monthly report: if All => section-wise separate pages, if single => single page
 async function printMonthlyReportGrouped() {
   const month = Number(byId("reportMonth").value);
   const year = Number(byId("reportYear").value);
@@ -815,6 +866,8 @@ async function printMonthlyReportGrouped() {
   if (!year || year < 2000) return alert("Valid year দিন");
 
   const { from, to } = monthRange(year, month);
+  const monthLabel = monthLabelText(year, month);
+  const dateRangeText = `${from} to ${to}`;
 
   try {
     const entries = await fetchAllEntriesForPrint({
@@ -823,7 +876,6 @@ async function printMonthlyReportGrouped() {
       to,
     });
 
-    // sort (date, entry)
     entries.sort((a, b) => {
       const da = String(a.received_date || "");
       const db = String(b.received_date || "");
@@ -831,94 +883,148 @@ async function printMonthlyReportGrouped() {
       return Number(a.entry_no || 0) - Number(b.entry_no || 0);
     });
 
-    // group by origin section
-    const groups = new Map(); // key: origin_section_id, value: rows[]
+    closeMonthlyModal();
+
+    // ---------------- single section => single page ----------------
+    if (originId) {
+      const secTitle = sectionName(originId);
+      const totalAmount = entries.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+
+      const rowsHtml = entries
+        .map((r, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${escapeHtml(r.bill_ref_no || "-")}</td>
+            <td>${escapeHtml(formatDate(r.received_date))}</td>
+            <td>${escapeHtml(r.token_no || "-")}</td>
+            <td class="right">${escapeHtml(formatMoney(r.amount))}</td>
+            <td>${escapeHtml(r.status || "-")}</td>
+          </tr>
+        `)
+        .join("");
+
+      const bodyHtml = `
+        <div class="page">
+          ${officeHeaderHtml("Monthly Individual Cheque Issued Report")}
+
+          <div class="meta">
+            <div>Month: <b>${escapeHtml(monthLabel)}</b></div>
+            <div>Date Range: <b>${escapeHtml(dateRangeText)}</b></div>
+            <div>Section Origin: <b>${escapeHtml(secTitle)}</b></div>
+            <div>Printed at: <b>${escapeHtml(new Date().toLocaleString())}</b></div>
+            <div>Total Bill : <b>${entries.length}</b></div>
+            <div>Grand Total: <b>${escapeHtml(formatMoney(totalAmount))}</b></div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px;">SL</th>
+                <th>Bill Ref</th>
+                <th>Received</th>
+                <th>Token</th>
+                <th class="right">Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml || `<tr><td colspan="6" style="text-align:center;color:#666;">No data</td></tr>`}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4"></td>
+                <td class="right" style="font-weight:700;">Total: ${escapeHtml(formatMoney(totalAmount))}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="signature">Signature</div>
+        </div>
+      `;
+
+      openPrintWindowHtml({
+        docTitle: "Cheque(D) Section — Monthly Issued Report",
+        bodyHtml,
+      });
+      return;
+    }
+
+    // ---------------- all sections => each section a page ----------------
+    const groups = new Map();
     for (const r of entries) {
       const key = String(r.origin_section_id || "");
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(r);
     }
 
-    // build HTML blocks
-    let grandAmount = 0;
-    let grandCount = 0;
+    const sortedGroups = Array.from(groups.entries()).sort((a, b) =>
+      sectionName(a[0]).localeCompare(sectionName(b[0]))
+    );
 
-    const blocks = Array.from(groups.entries())
-      .sort((a, b) => sectionName(a[0]).localeCompare(sectionName(b[0])))
-      .map(([originKey, rows]) => {
-        // SL starts at 1 per section (user requirement)
-        const sectionTotal = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-        grandAmount += sectionTotal;
-        grandCount += rows.length;
+    const pages = sortedGroups.map(([originKey, rows]) => {
+      const secTitle = sectionName(originKey);
+      const totalAmount = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
-        const secTitle = sectionName(originKey);
+      const tbody = rows
+        .map((r, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${escapeHtml(r.bill_ref_no || "-")}</td>
+            <td>${escapeHtml(formatDate(r.received_date))}</td>
+            <td>${escapeHtml(r.token_no || "-")}</td>
+            <td class="right">${escapeHtml(formatMoney(r.amount))}</td>
+            <td>${escapeHtml(r.status || "-")}</td>
+          </tr>
+        `)
+        .join("");
 
-        const tbody = rows
-          .map((r, idx) => `
-            <tr>
-              <td>${idx + 1}</td>
-              <td>${escapeHtml(r.entry_no ?? "")}</td>
-              <td>${escapeHtml(r.bill_ref_no || "-")}</td>
-              <td>${escapeHtml(formatDate(r.received_date))}</td>
-              <td>${escapeHtml(r.token_no || "-")}</td>
-              <td class="right">${escapeHtml(formatMoney(r.amount))}</td>
-              <td>${escapeHtml(getAddedByName(r))}</td>
-              <td>${escapeHtml(r.status || "-")}</td>
-            </tr>
-          `)
-          .join("");
+      return `
+        <div class="page">
+          ${officeHeaderHtml("Monthly Individual Cheque Issued Report")}
 
-        return `
-          <div class="section-block">
-            <div class="section-title">Origin: ${escapeHtml(secTitle)}</div>
-            <div class="section-sub">Entries: <b>${rows.length}</b> • Total Amount: <b>${escapeHtml(formatMoney(sectionTotal))}</b></div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:50px;">SL</th>
-                  <th>Entry No</th>
-                  <th>Bill Ref</th>
-                  <th>Received</th>
-                  <th>Token</th>
-                  <th class="right">Amount</th>
-                  <th>Added By</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tbody || `<tr><td colspan="8" style="text-align:center;color:#666;">No data</td></tr>`}
-              </tbody>
-            </table>
+          <div class="meta">
+            <div>Month: <b>${escapeHtml(monthLabel)}</b></div>
+            <div>Date Range: <b>${escapeHtml(dateRangeText)}</b></div>
+            <div>Section Origin: <b>${escapeHtml(secTitle)}</b></div>
+            <div>Printed at: <b>${escapeHtml(new Date().toLocaleString())}</b></div>
+            <div>Total Bill : <b>${rows.length}</b></div>
+            <div>Grand Total: <b>${escapeHtml(formatMoney(totalAmount))}</b></div>
           </div>
-        `;
-      })
-      .join("");
 
-    closeMonthlyModal();
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px;">SL</th>
+                <th>Bill Ref</th>
+                <th>Received</th>
+                <th>Token</th>
+                <th class="right">Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tbody || `<tr><td colspan="6" style="text-align:center;color:#666;">No data</td></tr>`}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4"></td>
+                <td class="right" style="font-weight:700;">Total: ${escapeHtml(formatMoney(totalAmount))}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
 
-    const monthLabel = `${year}-${String(month).padStart(2, "0")}`;
-    const scopeLabel = originId ? sectionName(originId) : "All Sections";
-
-    const bodyHtml = `
-      <div class="meta">
-        <div class="chip">Month: <b>${escapeHtml(monthLabel)}</b></div>
-        <div class="chip">Scope: <b>${escapeHtml(scopeLabel)}</b></div>
-        <div class="chip">Total Entries: <b>${grandCount}</b></div>
-        <div class="chip">Grand Total: <b>${escapeHtml(formatMoney(grandAmount))}</b></div>
-      </div>
-      ${blocks || `<div class="muted" style="margin-top:12px;">No data</div>`}
-    `;
+          <div class="signature">Signature</div>
+        </div>
+      `;
+    }).join("");
 
     openPrintWindowHtml({
-      title: "Cheque Register — Monthly Report (Section-wise)",
-      subtitleLines: [
-        `Month: <b>${escapeHtml(monthLabel)}</b>`,
-        `Date Range: <b>${escapeHtml(from)}</b> to <b>${escapeHtml(to)}</b>`,
-        `Scope: <b>${escapeHtml(scopeLabel)}</b>`,
-      ],
-      bodyHtml,
+      docTitle: "Cheque(D) Section — Monthly Issued Report (All Sections)",
+      bodyHtml: pages || `<div class="page">${officeHeaderHtml("Monthly Individual Cheque Issued Report")}<div class="meta">No data</div></div>`,
     });
+
   } catch (err) {
     console.error(err);
     alert(err.message || "Monthly report failed");
@@ -988,14 +1094,6 @@ function bindUi() {
   // modal close
   byId("btnCancel")?.addEventListener("click", closeModal);
   byId("modalClose")?.addEventListener("click", closeModal);
-
-  // modal close when clicking outside
-  const modal = byId("entryModal");
-  if (modal) {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal();
-    });
-  }
 
   // monthly modal outside click close
   const mm = byId("monthlyModal");
