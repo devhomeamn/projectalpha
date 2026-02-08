@@ -122,6 +122,30 @@ function persistUserSession(data) {
   }
 }
 
+function isTokenValid(token) {
+  if (!token) return false;
+  try {
+    const p = decodeJwtPayload(token);
+    // If no exp, treat as present/valid (legacy)
+    if (!p.exp) return true;
+    return Number(p.exp) * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function redirectIfAlreadyLoggedIn() {
+  const token = localStorage.getItem('token') || '';
+  if (!isTokenValid(token)) return;
+
+  const isLoginPage = !!document.getElementById('loginForm');
+  const isRegisterPage = !!document.getElementById('registerForm');
+
+  if (isLoginPage || isRegisterPage) {
+    window.location.replace('dashboard.html');
+  }
+}
+
 // --------------------
 // Form handlers
 // --------------------
@@ -146,6 +170,9 @@ function setRegisterLoading(isLoading) {
 }
 
 function initForms() {
+  // ✅ If already logged in, keep user away from auth pages
+  redirectIfAlreadyLoggedIn();
+
   // Login Form
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {

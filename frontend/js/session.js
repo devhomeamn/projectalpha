@@ -63,6 +63,15 @@
     }
   }
 
+  function isTokenValid(token) {
+    if (!token) return false;
+    const payload = parseJwt(token);
+    // If token has no exp, treat it as "present" (legacy) and let API calls decide.
+    const expSec = payload && payload.exp ? Number(payload.exp) : 0;
+    if (!expSec || !Number.isFinite(expSec)) return true;
+    return expSec * 1000 > now();
+  }
+
   function getToken(key) {
     try {
       return localStorage.getItem(key) || "";
@@ -215,9 +224,27 @@
       });
     }
 
-    // Don’t start if already on login page (optional)
+    // ====== AUTH GUARD ======
+    // If user visits a protected page without a valid token, send them to login.
     const page = (window.location.pathname || "").toLowerCase();
-    if (page.endsWith("/login.html") || page.endsWith("login.html")) return;
+    const isAuthPage =
+      page.endsWith("/login.html") ||
+      page.endsWith("login.html") ||
+      page.endsWith("/register.html") ||
+      page.endsWith("register.html") ||
+      page.endsWith("/forgot-password.html") ||
+      page.endsWith("forgot-password.html") ||
+      page.endsWith("/reset-password.html") ||
+      page.endsWith("reset-password.html");
+
+    if (isAuthPage) return;
+
+    const tokenForGuard = getToken(cfg.storageTokenKey);
+    if (!isTokenValid(tokenForGuard)) {
+      // No token or expired token → redirect to login
+      redirectToLogin(cfg.logoutUrl);
+      return;
+    }
 
     // Start
     setupCrossTabSync();
