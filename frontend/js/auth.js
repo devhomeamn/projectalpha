@@ -170,6 +170,10 @@ function initForms() {
           // ✅ store everything needed for topbar dropdown + profile section
           persistUserSession(data);
 
+          // ✅ Reset idle timer + clear cross-tab logout signal to avoid immediate logout on first login
+          localStorage.setItem('last_active_ts', String(Date.now()));
+          localStorage.removeItem('logout_signal_ts');
+
           const role = (data?.user?.role || localStorage.getItem('role') || "").toLowerCase();
 
           setTimeout(() => {
