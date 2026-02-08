@@ -127,29 +127,24 @@ exports.addRecord = async (req, res) => {
 
     const isLALAO = (secName || "").trim().toLowerCase().replace(/\s+/g, "") === "la/lao";
 
-const audit_objection_raw = req.body.audit_objection;
-const audit_objection =
-  String(audit_objection_raw || "").toLowerCase() === "true" ||
-  String(audit_objection_raw || "").toLowerCase() === "yes" ||
-  String(audit_objection_raw || "").toLowerCase() === "1";
+    const audit_objection_raw = req.body.audit_objection;
+    const audit_objection =
+      String(audit_objection_raw || "").toLowerCase() === "true" ||
+      String(audit_objection_raw || "").toLowerCase() === "yes" ||
+      String(audit_objection_raw || "").toLowerCase() === "1";
 
-const objection_no = (req.body.objection_no || "").trim();
-const objection_title = (req.body.objection_title || "").trim();
-const objection_details = (req.body.objection_details || "").trim();
+    const objection_no = (req.body.objection_no || "").trim();
+    const objection_title = (req.body.objection_title || "").trim();
+    const objection_details = (req.body.objection_details || "").trim();
 
-const f = req.file;
-// ✅ LA&LAO + Audit Objection = Yes => required fields + required attachment
-if (isLALAO && audit_objection) {
-  if (!objection_no) return res.status(400).json({ error: "Objection number is required" });
-  if (!objection_title) return res.status(400).json({ error: "Objection title is required" });
-  if (!objection_details) return res.status(400).json({ error: "Objection details is required" });
-  if (!f) return res.status(400).json({ error: "Attachment file is required for audit objection" });
-}
-
-
-
-
-
+    const f = req.file;
+    // ✅ LA&LAO + Audit Objection = Yes => required fields + required attachment
+    if (isLALAO && audit_objection) {
+      if (!objection_no) return res.status(400).json({ error: "Objection number is required" });
+      if (!objection_title) return res.status(400).json({ error: "Objection title is required" });
+      if (!objection_details) return res.status(400).json({ error: "Objection details is required" });
+      if (!f) return res.status(400).json({ error: "Attachment file is required for audit objection" });
+    }
 
     // 🧮 Auto serial
     let finalSerial = serial_no ? parseInt(serial_no, 10) : null;
@@ -162,20 +157,18 @@ if (isLALAO && audit_objection) {
     }
 
     // ✅ BD No unique check (same subcategory)
-    // ✅ BD No unique check
-// Rule: LA/LAO + Audit Objection = YES → same BD allowed
-if (!(isLALAO && audit_objection)) {
-  const bdExists = await Record.findOne({
-    where: { subcategory_id, bd_no },
-  });
+    // Rule: LA/LAO + Audit Objection = YES → same BD allowed
+    if (!(isLALAO && audit_objection)) {
+      const bdExists = await Record.findOne({
+        where: { subcategory_id, bd_no },
+      });
 
-  if (bdExists) {
-    return res.status(400).json({
-      error: `BD No. ${bd_no} already exists in this subcategory`,
-    });
-  }
-}
-
+      if (bdExists) {
+        return res.status(400).json({
+          error: `BD No. ${bd_no} already exists in this subcategory`,
+        });
+      }
+    }
 
     // 🛑 Duplicate check (serial in same rack)
     const exists = await Record.findOne({
@@ -212,19 +205,16 @@ if (!(isLALAO && audit_objection)) {
       allocate_table,
       serial_no: finalSerial,
       status: "active",
-      added_by: actor, 
+      added_by: actor,
       audit_objection,
-objection_no: audit_objection ? objection_no : null,
-objection_title: audit_objection ? objection_title : null,
-objection_details: audit_objection ? objection_details : null,
+      objection_no: audit_objection ? objection_no : null,
+      objection_title: audit_objection ? objection_title : null,
+      objection_details: audit_objection ? objection_details : null,
 
-attachment_path: f ? `/uploads/records/${f.filename}` : null,
-attachment_name: f ? f.originalname : null,
-attachment_mime: f ? f.mimetype : null,
-attachment_size: f ? f.size : null,
-
-      
-      // ✅ fixed
+      attachment_path: f ? `/uploads/records/${f.filename}` : null,
+      attachment_name: f ? f.originalname : null,
+      attachment_mime: f ? f.mimetype : null,
+      attachment_size: f ? f.size : null,
     });
 
     res.json({ message: "✅ Record added successfully", record });
@@ -327,8 +317,6 @@ exports.getRecords = async (req, res) => {
   }
 };
 
-
-
 // ================== LOOKUP RECORDS (Topbar global search) ==================
 // উদ্দেশ্য: BD No বা File Name দিয়ে দ্রুত record টা কোথায় আছে (Section/Central) দেখানো
 // Returns: up to 8 matches (most recently updated first)
@@ -348,7 +336,9 @@ exports.lookupRecords = async (req, res) => {
       ],
     };
 
-    let accessWhere = {};
+    let accessWhere = null;
+
+    // ✅ General: only own section + own-origin central
     if (role === "general") {
       if (!userSectionId) return res.json([]);
 
@@ -368,11 +358,14 @@ exports.lookupRecords = async (req, res) => {
       };
     }
 
+    // ✅ FIX: combine without overwriting Op.or
+    const finalWhere =
+      role === "general" && accessWhere
+        ? { [Op.and]: [searchWhere, accessWhere] }
+        : searchWhere; // admin/master: see all
+
     const matches = await Record.findAll({
-      where: {
-        ...searchWhere,
-        ...accessWhere,
-      },
+      where: finalWhere,
       include: [
         { model: Section, attributes: ["id", "name"] },
         { model: Subcategory, attributes: ["id", "name"] },
@@ -455,9 +448,6 @@ exports.lookupRecords = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
-
-
-
 
 // ================== MOVE SINGLE RECORD TO CENTRAL ==================
 exports.moveToCentral = async (req, res) => {
@@ -547,7 +537,6 @@ exports.moveToCentral = async (req, res) => {
     res.status(500).json({ error: err.message || "Failed to move record" });
   }
 };
-
 
 // ================== GET CENTRAL RECORDS ==================
 exports.getCentralRecords = async (req, res) => {
@@ -918,7 +907,6 @@ exports.updateWorkflowStatus = async (req, res) => {
   }
 };
 
-
 exports.getBdObjectionHistory = async (req, res) => {
   try {
     const bd_no = String(req.query.bd_no || "").trim();
@@ -937,11 +925,10 @@ exports.getBdObjectionHistory = async (req, res) => {
       where,
       limit,
       order: [
-  [sequelize.literal("serial_no IS NULL"), "ASC"], // NULL গুলো last
-  ["serial_no", "ASC"],
-  ["createdAt", "ASC"],
-],
-
+        [sequelize.literal("serial_no IS NULL"), "ASC"], // NULL গুলো last
+        ["serial_no", "ASC"],
+        ["createdAt", "ASC"],
+      ],
       include: [
         { model: Section, attributes: ["id", "name"] },
         { model: Subcategory, attributes: ["id", "name"] },
@@ -959,7 +946,6 @@ exports.getBdObjectionHistory = async (req, res) => {
     return res.status(500).json({ error: "Failed to load BD objection history" });
   }
 };
-
 
 // ================== AUDIT OBJECTION FULL LIST ==================
 // GET /api/records/audit-objections?status=open|requested|cleared&bd_no=...&q=...&page=1&limit=20
