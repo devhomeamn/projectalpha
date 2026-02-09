@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico">
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/settings.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content">
+        <div id="pageHeaderMount"></div>
+
+        <div class="card settings-card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="material-symbols-rounded">tune</span>
+              Preferred Racks
+            </div>
+            <div class="card-subtitle">
+              Add Record পেজে Rack dropdown-এ কোন কোন Rack দেখাবে সেটা এখানে সিলেক্ট করুন।
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="settings-actions">
+              <button class="btn" id="btnSelectAll" type="button">
+                <span class="material-symbols-rounded">done_all</span>
+                Select all (shown)
+              </button>
+              <button class="btn" id="btnClearAll" type="button">
+                <span class="material-symbols-rounded">remove_done</span>
+                Clear
+              </button>
+              <button class="btn primary" id="btnSave" type="button">
+                <span class="material-symbols-rounded">save</span>
+                Save
+              </button>
+            </div>
+
+            <div class="hint">
+              Tip: যদি কিছুই সিলেক্ট না করেন, তাহলে Add Record পেজে সব Rack দেখাবে।
+            </div>
+
+            <div id="rackList" class="rack-list">
+              <div class="loading">Loading racks...</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("settings.html");
+    renderPageHeader({
+      icon: "settings",
+      title: "Settings",
+      subtitle: "Customize your experience.",
+      showClock: true,
+    });
+  </script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

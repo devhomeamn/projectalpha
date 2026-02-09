@@ -1,0 +1,102 @@
+.settings-card {
+  max-width: 980px;
+}
+
+.card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 18px 0 18px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.card-subtitle {
+  opacity: 0.85;
+}
+
+.card-body {
+  padding: 18px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn.primary {
+  border-color: rgba(0,0,0,.18);
+}
+
+.hint {
+  margin: 8px 0 14px 0;
+  opacity: 0.85;
+}
+
+.rack-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.rack-group {
+  border: 1px solid rgba(0,0,0,.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.group-title small {
+  font-weight: 600;
+  opacity: .7;
+}
+
+.rack-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  border-radius: 10px;
+}
+
+.rack-item:hover {
+  background: rgba(0,0,0,.04);
+}
+
+.rack-item input {
+  width: 18px;
+  height: 18px;
+}
+
+.loading {
+  opacity: 0.8;
+}

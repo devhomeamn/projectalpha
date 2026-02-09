@@ -2,6 +2,8 @@ const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
+const UserPreferredRack = require('../models/userPreferredRackModel');
+const Rack = require('../models/rackModel');
 
 // ✅ Register (new user = pending)
 exports.register = async (req, res) => {
@@ -224,3 +226,78 @@ exports.toggleUserActive = async (req, res) => {
   }
 };
 
+
+
+// ================== USER PREFERRED RACKS ==================
+// GET /api/auth/me/preferred-racks
+exports.getPreferredRacks = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const rows = await UserPreferredRack.findAll({
+      where: { user_id: userId },
+      attributes: ["rack_id"],
+      order: [["rack_id", "ASC"]],
+    });
+
+    return res.json({ rack_ids: rows.map((r) => r.rack_id) });
+  } catch (err) {
+    console.error("getPreferredRacks error:", err);
+    return res.status(500).json({ error: "Failed to load preferred racks" });
+  }
+};
+
+// PUT /api/auth/me/preferred-racks  body: { rack_ids: number[] }
+exports.setPreferredRacks = async (req, res) => {
+  const t = await UserPreferredRack.sequelize.transaction();
+  try {
+    const user = req.user || {};
+    const userId = user.id;
+    const role = String(user.role || "").toLowerCase();
+    const userSectionId = user.section_id;
+
+    if (!userId) {
+      await t.rollback();
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    let rackIds = req.body?.rack_ids;
+    if (!Array.isArray(rackIds)) rackIds = [];
+    rackIds = [...new Set(rackIds.map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n > 0))];
+
+    // ✅ Safety: General user can only save racks from their assigned section
+    if (role === "general") {
+      if (!userSectionId) {
+        await t.rollback();
+        return res.status(403).json({ error: "Your account is not assigned to any section" });
+      }
+      if (rackIds.length) {
+        const allowed = await Rack.findAll({
+          where: { id: rackIds, section_id: userSectionId },
+          attributes: ["id"],
+          transaction: t,
+        });
+        const allowedSet = new Set(allowed.map((r) => r.id));
+        rackIds = rackIds.filter((id) => allowedSet.has(id));
+      }
+    }
+
+    // replace set
+    await UserPreferredRack.destroy({ where: { user_id: userId }, transaction: t });
+
+    if (rackIds.length) {
+      await UserPreferredRack.bulkCreate(
+        rackIds.map((rack_id) => ({ user_id: userId, rack_id })),
+        { transaction: t }
+      );
+    }
+
+    await t.commit();
+    return res.json({ message: "✅ Preferred racks saved", rack_ids: rackIds });
+  } catch (err) {
+    await t.rollback();
+    console.error("setPreferredRacks error:", err);
+    return res.status(500).json({ error: "Failed to save preferred racks" });
+  }
+};

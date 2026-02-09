@@ -282,35 +282,6 @@ export async function initLayout(activePage) {
     });
   }
 
-  /* ------------------------------
-      Settings: Coming soon message
-  ------------------------------ */
-  (function initSettingsSoonMessage() {
-    const settingsLink = document.querySelector('.user-menu-item[href="settings.html"]');
-    if (!settingsLink) return;
-
-    function showSimpleToast(msg) {
-      if (typeof window.showToast === "function") return window.showToast(msg, "info");
-      const host = document.getElementById("toastHost") || document.body;
-      const t = document.createElement("div");
-      t.className = "toast info";
-      t.textContent = msg;
-      host.appendChild(t);
-      requestAnimationFrame(() => t.classList.add("show"));
-      setTimeout(() => {
-        t.classList.remove("show");
-        t.addEventListener("transitionend", () => t.remove(), { once: true });
-      }, 2500);
-    }
-
-    settingsLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      showSimpleToast("⚙️ Settings: Soon will be developed.");
-      const dd = document.querySelector(".user-dropdown");
-      dd?.classList.remove("open");
-    });
-  })();
-
   // ===== Topbar profile dropdown =====
   (function initTopbarDropdown() {
     const ddWrap = document.querySelector(".user-dropdown");

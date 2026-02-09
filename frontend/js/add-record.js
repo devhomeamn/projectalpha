@@ -28,6 +28,9 @@ let subSubmitAttempted = false;
 let lastPreviewRecord = null;
 let previewReady = false;
 
+// Preferred racks (from Settings)
+let preferredRackIds = null; // null = not loaded, [] = none selected
+
 /* ================== AUTH HELPER ================== */
 function getToken() {
   return localStorage.getItem("token") || "";
@@ -78,6 +81,33 @@ async function loadConfig() {
   }
   initPage();
 }
+async function loadPreferredRacks() {
+  try {
+    const res = await authFetch(`${API_BASE}/auth/me/preferred-racks`);
+    const data = await res.json();
+    const ids = Array.isArray(data?.rack_ids) ? data.rack_ids : [];
+    preferredRackIds = ids.map(Number).filter((n) => Number.isFinite(n) && n > 0);
+
+    // cache for quick UI (optional)
+    localStorage.setItem("preferred_rack_ids", JSON.stringify(preferredRackIds));
+  } catch (e) {
+    // fallback to cached
+    try {
+      const cached = JSON.parse(localStorage.getItem("preferred_rack_ids") || "[]");
+      preferredRackIds = Array.isArray(cached) ? cached.map(Number).filter((n)=>Number.isFinite(n)&&n>0) : [];
+    } catch {
+      preferredRackIds = [];
+    }
+  }
+}
+
+function filterRacksByPreference(racks) {
+  // if user didn't pick anything => show all
+  if (!Array.isArray(preferredRackIds) || preferredRackIds.length === 0) return racks;
+  const allow = new Set(preferredRackIds.map(Number));
+  return (racks || []).filter((r) => allow.has(Number(r.id)));
+}
+
 loadConfig();
 
 /* ================== UI HELPERS ================== */
@@ -250,8 +280,8 @@ function initPage() {
   document.getElementById("description")?.addEventListener("input", validateDescription);
   document.getElementById("allocate_table")?.addEventListener("input", validateAllocateTable);
 
-  // Load sections
-  loadSections();
+  // Load preferred racks (Settings) then load sections
+  loadPreferredRacks().then(() => loadSections());
 
   // Form submit
   document.getElementById("recordForm")?.addEventListener("submit", onAddRecord);
@@ -311,7 +341,8 @@ async function loadSections() {
       // Load Racks (separate endpoint)
       try {
         const rackRes = await authFetch(`${API_BASE}/sections/racks/${sid}`);
-        const racks = await rackRes.json();
+        const racksRaw = await rackRes.json();
+        const racks = filterRacksByPreference(Array.isArray(racksRaw) ? racksRaw : []);
         rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
         if (Array.isArray(racks)) {
           racks.forEach(r => {

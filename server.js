@@ -4,6 +4,9 @@ const cors = require('cors');
 const path = require('path');
 const sequelize = require('./config/db');
 
+// ✅ Ensure preference models are registered before sync
+require('./models/userPreferredRackModel');
+
 dotenv.config();
 
 const app = express();

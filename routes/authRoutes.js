@@ -54,6 +54,10 @@ router.patch(
   authController.updateUserAccess
 );
 
+// ================== Preferences ==================
+router.get('/me/preferred-racks', requireAuth, authController.getPreferredRacks);
+router.put('/me/preferred-racks', requireAuth, authController.setPreferredRacks);
+
 // 🔎 JWT-verified user info (for frontend guard)
 router.get('/me', requireAuth, (req, res) => {
   // req.user আসে jwt.verify() থেকে
