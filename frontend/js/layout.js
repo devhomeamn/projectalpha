@@ -38,37 +38,61 @@ export async function initLayout(activePage) {
     ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
     : "";
 
-  // Cheque menu visibility helper: General users must be assigned to Cheque section
+  // Section-based visibility helpers
   const userSectionId = Number(localStorage.getItem("section_id") || 0);
 
-  async function getChequeSectionIdCached() {
-    const cached = localStorage.getItem("cheque_section_id");
-    if (cached) return Number(cached);
+  function normalizeSectionName(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[\/\-_]/g, "");
+  }
 
+  async function getSectionsCached() {
+    if (window.__LAYOUT_SECTIONS_CACHE__) return window.__LAYOUT_SECTIONS_CACHE__;
     try {
       const res = await fetch("/api/sections", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) return null;
+      if (!res.ok) return [];
       const data = await res.json();
       const rows = data.sections || data.data || data || [];
-      const norm = (s) => String(s || "").toLowerCase();
-      const found =
-        rows.find((r) => norm(r.name).includes("cheque")) ||
-        rows.find((r) => norm(r.name).startsWith("d")) ||
-        null;
-      if (found?.id) {
-        localStorage.setItem("cheque_section_id", String(found.id));
-        return Number(found.id);
-      }
-      return null;
+      window.__LAYOUT_SECTIONS_CACHE__ = Array.isArray(rows) ? rows : [];
+      return window.__LAYOUT_SECTIONS_CACHE__;
     } catch {
-      return null;
+      return [];
     }
   }
 
+  async function getSectionIdCached(storageKey, predicate) {
+    const cached = localStorage.getItem(storageKey);
+    if (cached) return Number(cached);
+
+    const rows = await getSectionsCached();
+    const found = rows.find((r) => predicate(normalizeSectionName(r?.name), r)) || null;
+    if (found?.id) {
+      localStorage.setItem(storageKey, String(found.id));
+      return Number(found.id);
+    }
+    return null;
+  }
+
+  async function getChequeSectionIdCached() {
+    return getSectionIdCached("cheque_section_id", (normalizedName) => {
+      return normalizedName.includes("cheque") || normalizedName.startsWith("d");
+    });
+  }
+
+  async function getLALAOSectionIdCached() {
+    return getSectionIdCached("lalao_section_id", (normalizedName) => {
+      return normalizedName === "lalao";
+    });
+  }
+
   const chequeSectionId = await getChequeSectionIdCached();
+  const lalaoSectionId = await getLALAOSectionIdCached();
   const isChequeUser = role !== "General" || (chequeSectionId && userSectionId === Number(chequeSectionId));
+  const isLALAOUser = role === "General" && !!lalaoSectionId && userSectionId === Number(lalaoSectionId);
 
 
   // ------------------------------
@@ -125,9 +149,10 @@ export async function initLayout(activePage) {
       icon: "gavel",
       roles: ["Admin", "Master", "General"],
       children: [
-        { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html" },
-        { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
-        { name: "Clearance Requests", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
+        { name: "Objection Entry", icon: "post_add", roles: ["Admin", "Master", "General"], link: "add-record.html", onlyLALAOUser: true },
+        { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html", onlyLALAOUser: true },
+        { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html", onlyLALAOUser: true },
+        { name: "Clearance Approvals", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
       ],
     },
     { name: "Add Section",    icon: "add_circle",    roles: ["Admin", "Master"],            link: "add-section.html" },
@@ -144,6 +169,7 @@ export async function initLayout(activePage) {
   function isAllowedByRole(item) {
     if (!(item.roles || []).includes(role)) return false;
     if (item.onlyChequeUser && !isChequeUser) return false;
+    if (item.onlyLALAOUser && !isLALAOUser) return false;
     return true;
   }
 

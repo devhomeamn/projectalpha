@@ -2,6 +2,17 @@ console.log("dashboard.js loaded");
 
 let API_BASE = "";
 let includeCentral = false;
+let recordsChart = null;
+
+function getCurrentRole() {
+  const raw = localStorage.getItem("role") || "";
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : "General";
+}
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 async function loadConfig() {
   try {
@@ -14,17 +25,43 @@ async function loadConfig() {
 }
 
 async function fetchSummary() {
-  const url = `${API_BASE}/dashboard/summary?includeCentral=${includeCentral}`;
-  const res = await fetch(url);
-  const data = await res.json();
+  try {
+    const url = `${API_BASE}/dashboard/summary?includeCentral=${includeCentral}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch summary");
+    return await res.json();
+  } catch (err) {
+    console.error("Summary fetch failed:", err);
+    return null;
+  }
+}
+
+async function fetchMyStats() {
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/my-stats`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (res.status === 401) {
+      return null;
+    }
+
+    if (!res.ok) throw new Error("Failed to fetch my stats");
+    return await res.json();
+  } catch (err) {
+    console.error("My stats fetch failed:", err);
+    return null;
+  }
+}
+
+function setTopStats(data) {
+  if (!data) return;
 
   document.getElementById("totalSections").textContent = data.totalSections || 0;
   document.getElementById("totalRecords").textContent = data.totalRecords || 0;
 
   document.getElementById("centralToggleLabel").textContent =
     includeCentral ? "Central Included" : "Central Excluded";
-
-  renderSections(data.sections || []);
 }
 
 function renderSections(sections) {
@@ -47,7 +84,7 @@ function renderSections(sections) {
       <span class="section-badge">${idx + 1}</span>
       <span class="section-title">${s.name}</span>
       <span class="section-meta">${s.recordCount} records</span>
-      <span class="chev">›</span>
+      <span class="chev">&rsaquo;</span>
     `;
 
     // sub-list
@@ -88,17 +125,161 @@ function renderSections(sections) {
   });
 }
 
+function renderChart(sections) {
+  const canvas = document.getElementById("recordsChart");
+  if (!canvas || typeof Chart === "undefined") return;
 
-// Live Date & Time
-function updateDateTime() {
-  const now = new Date();
-  const date = now.toLocaleDateString('bn-BD', { day: '2-digit', month: 'long', year: 'numeric' });
-  const time = now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const topSections = [...sections]
+    .sort((a, b) => (b.recordCount || 0) - (a.recordCount || 0))
+    .slice(0, 8);
 
-  document.getElementById("currentDate").textContent = date;
-  document.getElementById("currentTime").textContent = time;
+  const labels = topSections.map((s) => s.name);
+  const values = topSections.map((s) => s.recordCount || 0);
+
+  if (recordsChart) {
+    recordsChart.destroy();
+    recordsChart = null;
+  }
+
+  recordsChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Records",
+        data: values,
+        borderRadius: 8,
+        backgroundColor: [
+          "#2563eb",
+          "#0ea5e9",
+          "#10b981",
+          "#f59e0b",
+          "#f97316",
+          "#ef4444",
+          "#14b8a6",
+          "#6366f1",
+        ],
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#475569", maxRotation: 0 } },
+        y: { beginAtZero: true, ticks: { color: "#475569", precision: 0 } },
+      },
+    },
+  });
 }
 
+function buildRoleCards(role, summary, myStats) {
+  const sections = summary?.sections || [];
+
+  if (role === "Admin") {
+    const busiest = sections.reduce(
+      (acc, s) => (s.recordCount > acc.recordCount ? s : acc),
+      { name: "-", recordCount: 0 }
+    );
+    const zeroSections = sections.filter((s) => (s.recordCount || 0) === 0).length;
+    const avg = summary?.totalSections
+      ? (Number(summary.totalRecords || 0) / Number(summary.totalSections || 1)).toFixed(1)
+      : "0.0";
+
+    return [
+      { label: "Busiest Section", value: busiest.name || "-", note: `${busiest.recordCount || 0} records` },
+      { label: "Empty Sections", value: String(zeroSections), note: "Need assignment or cleanup" },
+      { label: "Avg Records / Section", value: String(avg), note: "Distribution health indicator" },
+      { label: "Filter State", value: includeCentral ? "Including Central" : "Excluding Central", note: "Affects all section stats" },
+    ];
+  }
+
+  if (role === "Master") {
+    return [
+      { label: "My Added", value: String(myStats?.totalAdded || 0), note: "Records you created" },
+      { label: "My Moved", value: String(myStats?.totalMoved || 0), note: "Transfer operations done by you" },
+      { label: "My Ongoing", value: String(myStats?.ongoing || 0), note: "Open files that need action" },
+      { label: "My Closed", value: String(myStats?.closed || 0), note: "Completed files" },
+    ];
+  }
+
+  return [
+    { label: "My Ongoing", value: String(myStats?.ongoing || 0), note: "Files currently open" },
+    { label: "My Closed", value: String(myStats?.closed || 0), note: "Closed records so far" },
+    { label: "In Section", value: String(myStats?.inSection || 0), note: "Your files currently in section" },
+    { label: "In Central", value: String(myStats?.inCentral || 0), note: "Your files moved to central room" },
+  ];
+}
+
+function renderRoleInsights(role, summary, myStats) {
+  const titleEl = document.getElementById("roleInsightsTitle");
+  const subtitleEl = document.getElementById("roleInsightsSubtitle");
+  const grid = document.getElementById("roleInsightsGrid");
+
+  if (!grid || !titleEl || !subtitleEl) return;
+
+  const subtitleMap = {
+    Admin: "System-level section and distribution control panel",
+    Master: "Your workload and movement snapshot",
+    General: "Your personal records progress and focus stats",
+  };
+
+  titleEl.textContent = `${role} Insights`;
+  subtitleEl.textContent = subtitleMap[role] || subtitleMap.General;
+
+  const cards = buildRoleCards(role, summary, myStats);
+  grid.innerHTML = cards.map((item) => `
+    <article class="ri-card">
+      <div class="ri-label">${item.label}</div>
+      <div class="ri-value">${item.value}</div>
+      <div class="ri-note">${item.note}</div>
+    </article>
+  `).join("");
+}
+
+function renderRecentActivity(role, myStats) {
+  const section = document.getElementById("recentActivitySection");
+  const list = document.getElementById("activityList");
+  if (!section || !list) return;
+
+  if (role === "Admin") {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  const recent = Array.isArray(myStats?.recent) ? myStats.recent : [];
+
+  if (!recent.length) {
+    list.innerHTML = `<div class="activity-item"><div class="activity-title">No recent activity found.</div><div class="activity-time">Now</div></div>`;
+    return;
+  }
+
+  list.innerHTML = recent.map((item) => `
+    <div class="activity-item">
+      <div>
+        <div class="activity-title">${item.action || "Updated"}: ${item.file_name || "-"}</div>
+        <div class="activity-sub">BD No: ${item.bd_no || "-"}</div>
+      </div>
+      <div class="activity-time">${item.when || "-"}</div>
+    </div>
+  `).join("");
+}
+
+async function refreshDashboard() {
+  const role = getCurrentRole();
+  const summary = await fetchSummary();
+  const needMyStats = role !== "Admin";
+  const myStats = needMyStats ? await fetchMyStats() : null;
+
+  if (!summary) return;
+
+  setTopStats(summary);
+  renderSections(summary.sections || []);
+  renderChart(summary.sections || []);
+  renderRoleInsights(role, summary, myStats);
+  renderRecentActivity(role, myStats);
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadConfig();
@@ -107,11 +288,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (toggle) {
     toggle.addEventListener("change", (e) => {
       includeCentral = e.target.checked;
-      fetchSummary();
+      refreshDashboard();
     });
   }
 
-  fetchSummary();
-  updateDateTime();
-setInterval(updateDateTime, 60000);
+  refreshDashboard();
 });

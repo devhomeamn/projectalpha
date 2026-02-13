@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Dashboard</title>
@@ -10,8 +11,10 @@
   <link rel="stylesheet" href="css/dashboard.css">
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet" />
 
   <script src="js/auth-guard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -29,21 +32,89 @@
       <!-- Top Stats -->
       <section class="stats">
         <div class="stat-card green">
-          <span class="stat-icon material-symbols-rounded">category</span>
-          <h3 id="totalSections">0</h3>
-          <p>Total Sections</p>
+          <div class="stat-icon-bg">
+            <span class="stat-icon material-symbols-rounded">category</span>
+          </div>
+          <div class="stat-info">
+            <h3 id="totalSections">0</h3>
+            <p>Total Sections</p>
+          </div>
         </div>
 
-        <div class="stat-card purple">
-          <span class="stat-icon material-symbols-rounded">description</span>
-          <h3 id="totalRecords">0</h3>
-          <p>Total Records</p>
+        <div class="stat-card amber">
+          <div class="stat-icon-bg">
+            <span class="stat-icon material-symbols-rounded">description</span>
+          </div>
+          <div class="stat-info">
+            <h3 id="totalRecords">0</h3>
+            <p>Total Records</p>
+          </div>
         </div>
 
         <div class="stat-card blue">
-          <span class="stat-icon material-symbols-rounded">tune</span>
-          <h3 id="centralToggleLabel">Central Excluded</h3>
-          <p>Filter Mode</p>
+          <div class="stat-icon-bg">
+            <span class="stat-icon material-symbols-rounded">tune</span>
+          </div>
+          <div class="stat-info">
+            <h3 id="centralToggleLabel">Central Excluded</h3>
+            <p>Filter Mode</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="quick-actions">
+        <div class="qa-head">
+          <h2>Quick Actions</h2>
+          <p>Jump into common tasks</p>
+        </div>
+        <div class="qa-grid">
+          <a class="qa-card" href="add-record.html">
+            <span class="material-symbols-rounded qa-icon">library_add</span>
+            <div class="qa-title">Add Record</div>
+            <div class="qa-desc">Create a new file entry and assign location.</div>
+          </a>
+          <a class="qa-card" href="view-record.html">
+            <span class="material-symbols-rounded qa-icon">visibility</span>
+            <div class="qa-title">View Records</div>
+            <div class="qa-desc">Search, filter, and track file movement.</div>
+          </a>
+          <a class="qa-card" href="central-record.html">
+            <span class="material-symbols-rounded qa-icon">folder</span>
+            <div class="qa-title">Central Records</div>
+            <div class="qa-desc">Check files in the central archive.</div>
+          </a>
+          <a class="qa-card" href="reports.html">
+            <span class="material-symbols-rounded qa-icon">bar_chart</span>
+            <div class="qa-title">Reports</div>
+            <div class="qa-desc">Generate summaries and export insights.</div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Role-Based Insights -->
+      <section class="role-insights" id="roleInsights">
+        <div class="ri-head">
+          <h2 id="roleInsightsTitle">Role Insights</h2>
+          <p id="roleInsightsSubtitle">Personalized stats based on your access level</p>
+        </div>
+        <div class="ri-grid" id="roleInsightsGrid"></div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="recent-activity" id="recentActivitySection" hidden>
+        <div class="ra-head">
+          <h2>Recent Activity</h2>
+          <a href="view-record.html?mine=1">Open My Records</a>
+        </div>
+        <div class="activity-list" id="activityList"></div>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="charts-section">
+        <div class="chart-container">
+          <h3>Record Distribution</h3>
+          <canvas id="recordsChart"></canvas>
         </div>
       </section>
 
@@ -66,17 +137,17 @@
     </main>
   </div>
 
-   <script type="module">
-   
-  import { initLayout, renderPageHeader } from "./js/layout.js";
-  initLayout("view-record.html");
+  <script type="module">
 
-  renderPageHeader({
-    icon: "visibility",
-    title: "Dashboard" ,
-    subtitle: "Overview of records, movements, activity, and system status",
-    showClock: true,
-  });
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("view-record.html");
+
+    renderPageHeader({
+      icon: "visibility",
+      title: "Dashboard",
+      subtitle: "Overview of records, movements, activity, and system status",
+      showClock: true,
+    });
   </script>
 
   <script src="js/dashboard.js"></script>
@@ -93,4 +164,5 @@
   <script src="js/notice.js"></script>
 
 </body>
+
 </html>

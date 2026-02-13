@@ -33,7 +33,12 @@
 
   // ✅ admin-only pages list
   const page = location.pathname.split("/").pop();
-  const adminOnly = new Set(["approve-user.html", "all-users.html", "add-section.html"]);
+  const adminOnly = new Set([
+    "approve-user.html",
+    "all-users.html",
+    "add-section.html",
+    "ao-clearance-requests.html",
+  ]);
 
   if (adminOnly.has(page) && role !== "admin") {
     // admin না হলে ঢুকতেই দেবে না

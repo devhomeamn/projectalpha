@@ -79,6 +79,39 @@
   box-shadow: 0 6px 18px rgba(0,0,0,0.05);
 }
 
+.ao-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.ao-summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.ao-summary-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.ao-summary-value {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #111827;
+}
+
+.ao-summary-card.open { background: rgba(37,99,235,0.08); border-color: rgba(37,99,235,0.25); }
+.ao-summary-card.requested { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.3); }
+.ao-summary-card.cleared { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.3); }
+.ao-summary-card.total { background: rgba(71,85,105,0.08); border-color: rgba(71,85,105,0.25); }
+
 .ao-filters {
   display: flex;
   flex-wrap: wrap;
@@ -374,6 +407,7 @@
 /* Responsive */
 @media (max-width: 768px) {
   .ao-filters { gap: 10px; }
+  .ao-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ao-field { min-width: 140px; }
   .ao-table thead th,
   .ao-table tbody td { padding: 8px 10px; font-size: 12px; }

@@ -19,6 +19,46 @@ function getActor(req, fallbackFromBody) {
   );
 }
 
+function normalizeSectionName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[\/\-_]/g, "");
+}
+
+async function getLALAOSectionId() {
+  const rows = await Section.findAll({ attributes: ["id", "name"] });
+  const found = rows.find((row) => normalizeSectionName(row?.name) === "lalao");
+  return found?.id ? Number(found.id) : null;
+}
+
+async function enforceLALAOAuditAccess(req, res) {
+  const role = String(req.user?.role || "").toLowerCase();
+  if (role === "admin") {
+    res.status(403).json({ error: "Admins can manage clearance approvals only." });
+    return null;
+  }
+
+  if (role !== "general") {
+    res.status(403).json({ error: "Only LA/LAO section users can access this module." });
+    return null;
+  }
+
+  const userSectionId = Number(req.user?.section_id || 0);
+  if (!userSectionId) {
+    res.status(403).json({ error: "Your account is not assigned to any section." });
+    return null;
+  }
+
+  const lalaoSectionId = await getLALAOSectionId();
+  if (!lalaoSectionId || userSectionId !== lalaoSectionId) {
+    res.status(403).json({ error: "Only LA/LAO section users can access this module." });
+    return null;
+  }
+
+  return { userSectionId, lalaoSectionId };
+}
+
 // ================== ADD NEW RECORD ==================
 exports.addRecord = async (req, res) => {
   try {
@@ -909,6 +949,9 @@ exports.updateWorkflowStatus = async (req, res) => {
 
 exports.getBdObjectionHistory = async (req, res) => {
   try {
+    const access = await enforceLALAOAuditAccess(req, res);
+    if (!access) return;
+
     const bd_no = String(req.query.bd_no || "").trim();
     if (!bd_no) return res.status(400).json({ error: "bd_no is required" });
 
@@ -920,6 +963,15 @@ exports.getBdObjectionHistory = async (req, res) => {
     const where = { bd_no };
     if (only_ao) where.audit_objection = true;
     if (section_id) where.section_id = section_id;
+    where[Op.and] = [
+      ...(where[Op.and] || []),
+      {
+        [Op.or]: [
+          { section_id: access.userSectionId },
+          { previous_section_id: access.userSectionId },
+        ],
+      },
+    ];
 
     const rows = await Record.findAll({
       where,
@@ -951,8 +1003,8 @@ exports.getBdObjectionHistory = async (req, res) => {
 // GET /api/records/audit-objections?status=open|requested|cleared&bd_no=...&q=...&page=1&limit=20
 exports.getAuditObjectionsList = async (req, res) => {
   try {
-    const user = req.user || {};
-    const role = String(user.role || "").toLowerCase();
+    const access = await enforceLALAOAuditAccess(req, res);
+    if (!access) return;
 
     const status = req.query.status ? String(req.query.status).trim() : "";
     const bd_no = req.query.bd_no ? String(req.query.bd_no).trim() : "";
@@ -985,26 +1037,19 @@ exports.getAuditObjectionsList = async (req, res) => {
       ];
     }
 
-    // Role-based scope
-    // General: own section + own-origin central (previous_section_id)
-    if (role === "general") {
-      const userSectionId = user.section_id;
-      if (!userSectionId) {
-        return res.status(403).json({ error: "Your account is not assigned to any section" });
-      }
-      where[Op.and] = [
-        ...(where[Op.and] || []),
-        {
-          [Op.or]: [
-            { section_id: userSectionId },
-            { previous_section_id: userSectionId },
-          ],
-        },
-      ];
-    } else {
-      // Admin/Master optional filter
-      if (section_id) where.section_id = section_id;
-    }
+    // Scope: LA/LAO section + own-origin central records
+    where[Op.and] = [
+      ...(where[Op.and] || []),
+      {
+        [Op.or]: [
+          { section_id: access.userSectionId },
+          { previous_section_id: access.userSectionId },
+        ],
+      },
+    ];
+
+    // Optional filter (stays within LA/LAO scope)
+    if (section_id) where.section_id = section_id;
 
     const { rows, count } = await Record.findAndCountAll({
       where,

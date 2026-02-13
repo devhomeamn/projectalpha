@@ -1,4 +1,6 @@
 (function () {
+  let ACCESS_OK = false;
+
   function escapeHtml(str = "") {
     return String(str)
       .replaceAll("&", "&amp;")
@@ -8,6 +10,13 @@
       .replaceAll("'", "&#039;");
   }
 
+  function normalizeSectionName(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[\/\-_]/g, "");
+  }
+
   function setNowDateTime() {
     const dEl = document.getElementById("currentDate");
     const tEl = document.getElementById("currentTime");
@@ -15,15 +24,50 @@
 
     const update = () => {
       const now = new Date();
-      dEl.textContent = now.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
-      tEl.textContent = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      dEl.textContent = now.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+      });
+      tEl.textContent = now.toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     };
     update();
     setInterval(update, 1000 * 10);
   }
 
+  function getToken() {
+    return localStorage.getItem("token") || "";
+  }
+
   function getParams() {
     return new URLSearchParams(window.location.search);
+  }
+
+  function showAccessNote(msg) {
+    const el = document.getElementById("aoAccessNote");
+    if (!el) return;
+    if (!msg) {
+      el.style.display = "none";
+      el.textContent = "";
+      return;
+    }
+    el.style.display = "";
+    el.textContent = msg;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("aoError");
+    if (!el) return;
+    if (!msg) {
+      el.style.display = "none";
+      el.textContent = "";
+      return;
+    }
+    el.style.display = "";
+    el.textContent = msg;
   }
 
   function syncUIFromUrl() {
@@ -50,46 +94,141 @@
     return params;
   }
 
-  function showError(msg) {
-    const el = document.getElementById("aoError");
-    if (!el) return;
-    if (!msg) {
-      el.style.display = "none";
-      el.textContent = "";
-      return;
+  function setSummary(items = []) {
+    const counts = { open: 0, requested: 0, cleared: 0 };
+    items.forEach((x) => {
+      const key = String(x?.ao_status || "").toLowerCase();
+      if (key in counts) counts[key] += 1;
+    });
+
+    const setText = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(val);
+    };
+
+    setText("aoCountOpen", counts.open);
+    setText("aoCountRequested", counts.requested);
+    setText("aoCountCleared", counts.cleared);
+    setText("aoCountPage", items.length);
+  }
+
+  async function ensureLALAOAccess() {
+    const token = getToken();
+    if (!token) {
+      window.location.href = "login.html";
+      return false;
     }
-    el.style.display = "";
-    el.textContent = msg;
+
+    try {
+      const meRes = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const meData = await meRes.json().catch(() => ({}));
+      if (!meRes.ok) throw new Error(meData?.message || "Unauthorized");
+
+      const role = String(meData?.user?.role || "").toLowerCase();
+      if (role === "admin") {
+        showAccessNote("Admins can review and approve only from Clearance Approvals.");
+        setTimeout(() => {
+          window.location.href = "ao-clearance-requests.html";
+        }, 650);
+        return false;
+      }
+      if (role !== "general") {
+        showAccessNote("Only LA/LAO section users can access this module.");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 900);
+        return false;
+      }
+
+      const userSectionId = Number(meData?.user?.section_id || 0);
+      if (!userSectionId) {
+        showAccessNote("Your account is not assigned to a section.");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 900);
+        return false;
+      }
+
+      let lalaoSectionId = Number(localStorage.getItem("lalao_section_id") || 0);
+      if (!lalaoSectionId) {
+        const secRes = await fetch("/api/sections", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const secData = await secRes.json().catch(() => []);
+        if (!secRes.ok) throw new Error("Failed to load sections");
+
+        const rows = secData?.sections || secData?.data || secData || [];
+        const found = Array.isArray(rows)
+          ? rows.find((row) => normalizeSectionName(row?.name) === "lalao")
+          : null;
+
+        lalaoSectionId = Number(found?.id || 0);
+        if (lalaoSectionId) {
+          localStorage.setItem("lalao_section_id", String(lalaoSectionId));
+        }
+      }
+
+      if (!lalaoSectionId || userSectionId !== lalaoSectionId) {
+        showAccessNote("Only LA/LAO section users can access this module.");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 900);
+        return false;
+      }
+
+      showAccessNote("");
+      return true;
+    } catch (err) {
+      showAccessNote(err.message || "Access check failed.");
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 900);
+      return false;
+    }
   }
 
   async function loadObjections() {
+    if (!ACCESS_OK) return;
+
     showError("");
     syncUIFromUrl();
 
-    const token = localStorage.getItem("token");
-    if (!token) return (window.location.href = "login.html");
+    const token = getToken();
+    if (!token) {
+      window.location.href = "login.html";
+      return;
+    }
 
     const params = getParams();
     if (!params.get("page")) params.set("page", "1");
     if (!params.get("limit")) params.set("limit", "20");
 
     const tbody = document.getElementById("aoTableBody");
+    if (!tbody) return;
+
     tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Loading...</td></tr>`;
 
-    let res, data;
+    let res;
+    let data;
     try {
       res = await fetch(`/api/records/audit-objections?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      data = await res.json();
-    } catch (e) {
+      data = await res.json().catch(() => ({}));
+    } catch (_e) {
       tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Failed to load</td></tr>`;
-      return showError("Network error. Please try again.");
+      setSummary([]);
+      showError("Network error. Please try again.");
+      return;
     }
 
     if (!res.ok) {
       tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Failed to load</td></tr>`;
-      return showError(data?.error || data?.message || "Failed to load list");
+      setSummary([]);
+      showError(data?.error || data?.message || "Failed to load list");
+      return;
     }
 
     const items = data.items || [];
@@ -98,11 +237,17 @@
     const limit = Number(pg.limit || params.get("limit") || 20);
     const total = Number(pg.total || 0);
 
-    document.getElementById("aoPageInfo").textContent =
-      `Page ${page} • Showing ${items.length} • Total ${total}`;
+    const pageInfo = document.getElementById("aoPageInfo");
+    if (pageInfo) {
+      pageInfo.textContent = `Page ${page} | Showing ${items.length} | Total ${total}`;
+    }
 
-    document.getElementById("aoPrevBtn").disabled = page <= 1;
-    document.getElementById("aoNextBtn").disabled = page * limit >= total;
+    const prevBtn = document.getElementById("aoPrevBtn");
+    const nextBtn = document.getElementById("aoNextBtn");
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = page * limit >= total;
+
+    setSummary(items);
 
     if (!items.length) {
       tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No objections found</td></tr>`;
@@ -117,11 +262,11 @@
       const location = `${escapeHtml(section)} / ${escapeHtml(sub)} / ${escapeHtml(rack)}`;
 
       const attachment = r.attachment_path
-        ? `<a class="ao-attach-btn" href="${escapeHtml(r.attachment_path)}" target="_blank" rel="noopener" data-tooltip="Attachment খুলুন">
+        ? `<a class="ao-attach-btn" href="${escapeHtml(r.attachment_path)}" target="_blank" rel="noopener" data-tooltip="Open attachment">
              <span class="material-symbols-rounded">attach_file</span>
              Open
            </a>`
-        : `<span class="ao-attach-none">—</span>`;
+        : `<span class="ao-attach-none">-</span>`;
 
       const detailsRowId = `ao-details-${r.id}`;
 
@@ -129,7 +274,7 @@
         "beforeend",
         `
         <tr class="ao-main-row" data-target="${detailsRowId}">
-          <td><button class="ao-toggle" type="button" aria-label="Expand">▶</button></td>
+          <td><button class="ao-toggle" type="button" aria-label="Expand">></button></td>
           <td>${escapeHtml(r.bd_no || "-")}</td>
           <td>${escapeHtml(String(r.serial_no ?? "-"))}</td>
           <td>${escapeHtml(r.file_name || "-")}</td>
@@ -146,14 +291,14 @@
             <div class="ao-actions">
               <a class="ao-action-btn primary"
                  href="/view-record.html?id=${encodeURIComponent(r.id)}"
-                 data-tooltip="পুরো অবজেকশন দেখুন">
+                 data-tooltip="Open record">
                 <span class="material-symbols-rounded">visibility</span>
-                </a>
+              </a>
               <a class="ao-action-btn"
                  href="/bd-objection-history.html?bd_no=${encodeURIComponent(r.bd_no || "")}"
-                 data-tooltip="হিস্ট্রি ও পরিবর্তন দেখুন">
+                 data-tooltip="Open BD history">
                 <span class="material-symbols-rounded">history</span>
-                 </a>
+              </a>
             </div>
           </td>
         </tr>
@@ -161,7 +306,7 @@
         <tr id="${detailsRowId}" class="ao-details-row" style="display:none;">
           <td colspan="10">
             <div class="ao-details-box">
-              <div class="label">বিস্তারিত:</div>
+              <div class="label">Details:</div>
               <div class="details">${escapeHtml(r.objection_details || "-")}</div>
             </div>
           </td>
@@ -172,39 +317,43 @@
   }
 
   function bindEvents() {
-    document.getElementById("aoSearchBtn").addEventListener("click", () => {
+    document.getElementById("aoSearchBtn")?.addEventListener("click", () => {
+      if (!ACCESS_OK) return;
       applyFiltersToUrl(1);
       loadObjections();
     });
 
-    document.getElementById("aoClearBtn").addEventListener("click", () => {
+    document.getElementById("aoClearBtn")?.addEventListener("click", () => {
+      if (!ACCESS_OK) return;
       window.location.href = "/audit-objections.html";
     });
 
-    document.getElementById("aoSearchQ").addEventListener("keydown", (e) => {
+    document.getElementById("aoSearchQ")?.addEventListener("keydown", (e) => {
+      if (!ACCESS_OK) return;
       if (e.key === "Enter") {
         applyFiltersToUrl(1);
         loadObjections();
       }
     });
 
-    document.getElementById("aoPrevBtn").addEventListener("click", () => {
+    document.getElementById("aoPrevBtn")?.addEventListener("click", () => {
+      if (!ACCESS_OK) return;
       const params = getParams();
       const page = Math.max(Number(params.get("page") || 1) - 1, 1);
       applyFiltersToUrl(page);
       loadObjections();
     });
 
-    document.getElementById("aoNextBtn").addEventListener("click", () => {
+    document.getElementById("aoNextBtn")?.addEventListener("click", () => {
+      if (!ACCESS_OK) return;
       const params = getParams();
       const page = Number(params.get("page") || 1) + 1;
       applyFiltersToUrl(page);
       loadObjections();
     });
 
-    // Expand / Collapse logic
     const tbody = document.getElementById("aoTableBody");
-    tbody.addEventListener("click", (e) => {
+    tbody?.addEventListener("click", (e) => {
       const btn = e.target.closest(".ao-toggle");
       if (!btn) return;
 
@@ -217,33 +366,36 @@
 
       const isCurrentlyOpen = detailsRow.style.display !== "none";
 
-      // সবগুলো বন্ধ করা + expanded class সরানো
       document.querySelectorAll(".ao-details-row").forEach((r) => {
         r.style.display = "none";
       });
       document.querySelectorAll(".ao-main-row").forEach((row) => {
         row.classList.remove("expanded");
       });
-      document.querySelectorAll(".ao-toggle").forEach((b) => {
-        b.textContent = "▶";
+      document.querySelectorAll(".ao-toggle").forEach((toggleBtn) => {
+        toggleBtn.textContent = ">";
       });
 
-      // যদি এটি আগে খোলা না থাকতো তাহলে খুলবো
       if (!isCurrentlyOpen) {
         detailsRow.style.display = "";
         mainRow.classList.add("expanded");
-        btn.textContent = "▼";
+        btn.textContent = "v";
       }
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
     setNowDateTime();
     bindEvents();
+
+    ACCESS_OK = await ensureLALAOAccess();
+    if (!ACCESS_OK) return;
+
     const p = getParams();
     if (!p.get("page") || !p.get("limit")) {
       applyFiltersToUrl(Number(p.get("page") || 1));
     }
+
     loadObjections();
   });
 })();
