@@ -149,6 +149,17 @@ function getAddedByName(r) {
 // ------------------ paging/state ------------------
 let currentPage = 1;
 let currentLimit = 20;
+const LIST_VIEW_CONFIG = {
+  showEntryNo: false,
+  showAddedBy: false,
+};
+
+function listTableColspan() {
+  let base = 8; // SL + Bill Ref + Origin + Received + Token + Amount + Status + Actions
+  if (LIST_VIEW_CONFIG.showEntryNo) base += 1;
+  if (LIST_VIEW_CONFIG.showAddedBy) base += 1;
+  return base;
+}
 
 function getFilters() {
   return {
@@ -206,55 +217,81 @@ function renderEntries(payload) {
   if (!tbody) return;
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="10" style="padding:14px;text-align:center;color:#6b7280;">No entries found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${listTableColspan()}" style="padding:14px;text-align:center;color:#6b7280;">No entries found</td></tr>`;
     return;
+  }
+
+  function renderPrimaryCells(r) {
+    const entryCell = LIST_VIEW_CONFIG.showEntryNo
+      ? `<td style="padding:10px;">${escapeHtml(r.entry_no ?? "")}</td>`
+      : "";
+
+    const addedByCell = LIST_VIEW_CONFIG.showAddedBy
+      ? `<td style="padding:10px;">${escapeHtml(getAddedByName(r))}</td>`
+      : "";
+
+    return `
+      ${entryCell}
+      <td style="padding:10px;">${escapeHtml(r.bill_ref_no || "-")}</td>
+      <td style="padding:10px;">${escapeHtml(sectionName(r.origin_section_id))}</td>
+      <td style="padding:10px;">${escapeHtml(formatDate(r.received_date))}</td>
+      <td style="padding:10px;">${escapeHtml(r.token_no || "-")}</td>
+      <td style="padding:10px;text-align:right;">${escapeHtml(formatMoney(r.amount))}</td>
+      ${addedByCell}
+    `;
+  }
+
+  function renderStatusCell(r) {
+    return `
+      <td style="padding:10px;">
+        <span class="badge" style="display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #e5e7eb;">
+          ${escapeHtml(r.status || "-")}
+        </span>
+      </td>
+    `;
+  }
+
+  function renderActionCell(r) {
+    const canReturn = r.status !== "returned";
+    const delBtn = isAdmin()
+      ? `
+        <button class="bdh-btn bdh-btn-sm" data-action="delete" data-id="${r.id}"
+          style="padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;">
+          <span class="material-symbols-rounded" style="font-size:18px;">delete</span>
+        </button>`
+      : "";
+
+    return `
+      <td style="padding:10px;white-space:nowrap;text-align:right;">
+        <button class="bdh-btn bdh-btn-sm" data-action="edit" data-id="${r.id}" style="padding:6px 10px;">
+          <span class="material-symbols-rounded" style="font-size:18px;">edit</span>
+        </button>
+
+        <button class="bdh-btn bdh-btn-sm" data-action="return" data-id="${r.id}" ${canReturn ? "" : "disabled"}
+          style="padding:6px 10px;${canReturn ? "" : "opacity:.5;cursor:not-allowed;"}">
+          <span class="material-symbols-rounded" style="font-size:18px;">assignment_turned_in</span>
+        </button>
+        <button class="bdh-btn bdh-btn-sm" data-action="logs" data-id="${r.id}"
+          data-entry-no="${escapeHtml(r.entry_no ?? "")}" data-token-no="${escapeHtml(r.token_no || "-")}"
+          style="padding:6px 10px;background:#111827;color:#fff;border-color:#111827;">
+          <span class="material-symbols-rounded" style="font-size:18px;">history</span>
+        </button>
+
+        ${delBtn}
+      </td>
+    `;
   }
 
   tbody.innerHTML = rows
     .map((r, idx) => {
       const sl = (currentPage - 1) * currentLimit + (idx + 1);
-      const canReturn = r.status !== "returned";
-
-      const delBtn = isAdmin()
-        ? `
-          <button class="bdh-btn bdh-btn-sm" data-action="delete" data-id="${r.id}"
-            style="padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;">
-            <span class="material-symbols-rounded" style="font-size:18px;">delete</span>
-          </button>`
-        : "";
 
       return `
       <tr>
         <td style="padding:10px;">${sl}</td>
-        <td style="padding:10px;">${escapeHtml(r.entry_no ?? "")}</td>
-        <td style="padding:10px;">${escapeHtml(r.bill_ref_no || "-")}</td>
-        <td style="padding:10px;">${escapeHtml(sectionName(r.origin_section_id))}</td>
-        <td style="padding:10px;">${escapeHtml(formatDate(r.received_date))}</td>
-        <td style="padding:10px;">${escapeHtml(r.token_no || "-")}</td>
-        <td style="padding:10px;text-align:right;">${escapeHtml(formatMoney(r.amount))}</td>
-        <td style="padding:10px;">${escapeHtml(getAddedByName(r))}</td>
-        <td style="padding:10px;">
-          <span class="badge" style="display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #e5e7eb;">
-            ${escapeHtml(r.status || "-")}
-          </span>
-        </td>
-        <td style="padding:10px;white-space:nowrap;text-align:right;">
-          <button class="bdh-btn bdh-btn-sm" data-action="edit" data-id="${r.id}" style="padding:6px 10px;">
-            <span class="material-symbols-rounded" style="font-size:18px;">edit</span>
-          </button>
-
-          <button class="bdh-btn bdh-btn-sm" data-action="return" data-id="${r.id}" ${canReturn ? "" : "disabled"}
-            style="padding:6px 10px;${canReturn ? "" : "opacity:.5;cursor:not-allowed;"}">
-            <span class="material-symbols-rounded" style="font-size:18px;">assignment_turned_in</span>
-          </button>
-          <button class="bdh-btn bdh-btn-sm" data-action="logs" data-id="${r.id}"
-            data-entry-no="${escapeHtml(r.entry_no ?? "")}" data-token-no="${escapeHtml(r.token_no || "-")}"
-            style="padding:6px 10px;background:#111827;color:#fff;border-color:#111827;">
-            <span class="material-symbols-rounded" style="font-size:18px;">history</span>
-          </button>
-
-          ${delBtn}
-        </td>
+        ${renderPrimaryCells(r)}
+        ${renderStatusCell(r)}
+        ${renderActionCell(r)}
       </tr>`;
     })
     .join("");
