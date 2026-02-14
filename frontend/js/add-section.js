@@ -77,7 +77,7 @@ function askConfirm(message, title = "Confirm Action", okText = "Delete") {
 }
 
 /* =========================
-   ✅ JWT Auth Fetch Wrapper
+   JWT Auth Fetch Wrapper
    - Adds Authorization header
    - Handles 401/403
 ========================= */
@@ -471,7 +471,7 @@ function renderSectionsAccordion(sections = []) {
       // for print we only need names
       const rackNamesForPrint = rackObjs.map((r) => r.name);
 
-      const badgeText = `${subObjs.length} Sub • ${rackObjs.length} Rack`;
+      const badgeText = `${subObjs.length} Sub | ${rackObjs.length} Rack`;
 
       const open = idx === 0;
       const hid = `acc_head_${sec.id || idx}`;
@@ -503,7 +503,7 @@ function renderSectionsAccordion(sections = []) {
               </span>
 
               <span class="acc-badge">${escapeHtml(badgeText)}</span>
-              <span class="acc-chevron">▾</span>
+              <span class="acc-chevron">&#9662;</span>
             </div>
           </button>
 
@@ -521,7 +521,7 @@ function renderSectionsAccordion(sections = []) {
                                   role="button"
                                   tabindex="0"
                                   data-subid="${escapeHtml(s.id)}"
-                                  title="Delete Subcategory">✖</span>
+                                  title="Delete Subcategory">&times;</span>
                           </li>`
                       )
                       .join("")}</ul>`
@@ -542,7 +542,7 @@ function renderSectionsAccordion(sections = []) {
                                   role="button"
                                   tabindex="0"
                                   data-rackid="${escapeHtml(r.id)}"
-                                  title="Delete Rack">✖</span>
+                                  title="Delete Rack">&times;</span>
                           </li>`
                       )
                       .join("")}</ul>`
@@ -814,3 +814,4 @@ document.addEventListener("input", (e) => {
   el.value = el.value.toUpperCase();
   el.setSelectionRange(start, start);
 });
+

@@ -4,173 +4,160 @@
   <meta charset="UTF-8">
   <title>Add Section</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <link rel="icon" href="images/site-icon.ico">
+  <link rel="icon" href="images/site-icon.ico">
 
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/add-section.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
-
 <body>
-
-  <!-- Mobile Overlay -->
   <div id="overlay" class="overlay"></div>
 
   <div class="dashboard-container">
-
-    <!-- Sidebar -->
     <div id="sidebar"></div>
 
-    <!-- Main Content -->
     <main class="main-content">
-
-      <!-- Topbar -->
       <div id="topbar"></div>
+
       <section class="content">
-      <div id="pageHeaderMount"></div>
+        <div id="pageHeaderMount"></div>
       </section>
 
       <section class="content section-page">
+        <section class="intro-strip">
+          <article class="intro-card">
+            <h3>Section Setup Workspace</h3>
+            <p>Create sections, add subcategories, and map racks from one place with live overview.</p>
+          </article>
+          <article class="intro-card intro-card-soft">
+            <h3>Workflow</h3>
+            <p>Add Section ? Add Subcategory ? Add Rack ? Print/Manage from overview panel.</p>
+          </article>
+        </section>
+
         <div class="section-grid">
+          <div class="left-col form-stack">
+            <section class="form-block">
+              <header class="page-header compact-head">
+                <h3 class="section-title"><span class="material-symbols-rounded">dashboard_customize</span> Add Section</h3>
+              </header>
 
-          <!-- LEFT: FORMS -->
-          <div class="left-col">
-            <header class="page-header compact-head">
-              <h3 class="section-title">Add Section</h3>
-            </header>
+              <form id="sectionForm" class="form-card">
+                <div class="form-group">
+                  <label for="sectionName">Section Name <span class="required">*</span></label>
+                  <input type="text" id="sectionName" class="force-upper" placeholder="Enter Section Name" required>
+                </div>
 
-            <!-- ADD SECTION -->
-            <form id="sectionForm" class="form-card">
-              <div class="form-group">
-                <label for="sectionName">Section Name <span class="required">*</span></label>
-                <input type="text" id="sectionName" class="force-upper" placeholder="Enter Section Name" required>
-              </div>
+                <div class="form-group">
+                  <label for="sectionDesc">Description (optional)</label>
+                  <textarea id="sectionDesc" placeholder="Describe this section"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="sectionDesc">Description (optional)</label>
-                <textarea id="sectionDesc" placeholder="Describe this section"></textarea>
-              </div>
+                <button type="submit" class="btn-primary">Add Section</button>
+              </form>
+            </section>
 
-              <button type="submit" class="btn-primary">Add Section</button>
-            </form>
+            <section class="form-block">
+              <header class="page-header compact-head">
+                <h3 class="section-title"><span class="material-symbols-rounded">account_tree</span> Add Subcategory</h3>
+              </header>
 
-            <!-- ADD SUBCATEGORY -->
-            <header class="page-header compact-head">
-              <h3 class="section-title">Add Subcategory</h3>
-            </header>
+              <form id="subForm" class="form-card">
+                <div class="form-group">
+                  <label for="sectionSelect">Select Section <span class="required">*</span></label>
+                  <select id="sectionSelect" required></select>
+                </div>
 
-            <form id="subForm" class="form-card">
-              <div class="form-group">
-                <label for="sectionSelect">Select Section <span class="required">*</span></label>
-                <select id="sectionSelect" required></select>
-              </div>
+                <div class="form-group">
+                  <label for="subName">Subcategory Name <span class="required">*</span></label>
+                  <input type="text" id="subName" placeholder="Enter Subcategory Name" required>
+                </div>
 
-              <div class="form-group">
-                <label for="subName">Subcategory Name <span class="required">*</span></label>
-                <input type="text" id="subName" placeholder="Enter Subcategory Name" required>
-              </div>
+                <button type="submit" class="btn-secondary">Add Subcategory</button>
+              </form>
+            </section>
 
-              <button type="submit" class="btn-secondary">Add Subcategory</button>
-            </form>
+            <section class="form-block">
+              <header class="page-header compact-head">
+                <h3 class="section-title"><span class="material-symbols-rounded">inventory_2</span> Add Rack</h3>
+              </header>
 
-            <!-- ADD RACK -->
-            <header class="page-header compact-head">
-              <h3 class="section-title">Add Rack</h3>
-            </header>
+              <form id="rackForm" class="form-card">
+                <div class="form-group">
+                  <label for="sectionSelectRack">Select Section <span class="required">*</span></label>
+                  <select id="sectionSelectRack" required></select>
+                </div>
 
-            <form id="rackForm" class="form-card">
-              <div class="form-group">
-                <label for="sectionSelectRack">Select Section <span class="required">*</span></label>
-                <select id="sectionSelectRack" required></select>
-              </div>
+                <div class="form-group">
+                  <label for="rackName">Rack Name / Number <span class="required">*</span></label>
+                  <input type="text" id="rackName" placeholder="Enter Rack Name or Number" required>
+                </div>
 
-              <div class="form-group">
-                <label for="rackName">Rack Name / Number <span class="required">*</span></label>
-                <input type="text" id="rackName" placeholder="Enter Rack Name or Number" required>
-              </div>
+                <div class="form-group">
+                  <label for="rackDesc">Description (optional)</label>
+                  <textarea id="rackDesc" placeholder="Details about this rack"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="rackDesc">Description (optional)</label>
-                <textarea id="rackDesc" placeholder="Details about this rack"></textarea>
-              </div>
+                <button type="submit" class="btn-tertiary">Add Rack</button>
+              </form>
+            </section>
 
-              <button type="submit" class="btn-tertiary">Add Rack</button>
-            </form>
+            <section class="form-block">
+              <header class="page-header compact-head">
+                <h3 class="section-title"><span class="material-symbols-rounded">hub</span> Add Central Rack</h3>
+              </header>
 
-            <!-- ADD CENTRAL RACK -->
-            <header class="page-header compact-head">
-              <h3 class="section-title">Add Central Rack</h3>
-            </header>
+              <form id="centralRackForm" class="form-card">
+                <div class="form-group">
+                  <label for="centralRackName">Central Rack Name <span class="required">*</span></label>
+                  <input type="text" id="centralRackName" placeholder="e.g., CR-01" required>
+                </div>
 
-            <form id="centralRackForm" class="form-card">
-              <div class="form-group">
-                <label for="centralRackName">Central Rack Name <span class="required">*</span></label>
-                <input type="text" id="centralRackName" placeholder="e.g., CR-01" required>
-              </div>
+                <div class="form-group">
+                  <label for="centralRackDesc">Description (optional)</label>
+                  <textarea id="centralRackDesc" placeholder="Purpose or details"></textarea>
+                </div>
 
-              <div class="form-group">
-                <label for="centralRackDesc">Description (optional)</label>
-                <textarea id="centralRackDesc" placeholder="Purpose or details"></textarea>
-              </div>
-
-              <button type="submit" class="btn-primary">Add Central Rack</button>
-            </form>
-
+                <button type="submit" class="btn-primary">Add Central Rack</button>
+              </form>
+            </section>
           </div>
 
-          <!-- RIGHT: LISTS -->
           <aside class="right-col">
-
-            <!-- CENTRAL RACKS (COLLAPSIBLE) -->
             <div class="list-card">
               <div class="list-head">
                 <h4 class="list-title">Existing Central Racks</h4>
-                <button type="button" class="list-toggle" data-target="#centralRackList" aria-expanded="true">
-                  Collapse
-                </button>
+                <button type="button" class="list-toggle" data-target="#centralRackList" aria-expanded="true">Collapse</button>
               </div>
 
               <div id="centralRackList" class="rack-list"></div>
             </div>
 
-            <!-- SECTIONS OVERVIEW (COLLAPSIBLE + ACCORDION) -->
             <div class="list-card list-card-gap">
               <div class="list-head">
                 <h3 class="section-title section-title-zero">All Sections Overview</h3>
-                <button type="button" class="list-toggle" data-target="#sectionList" aria-expanded="true">
-                  Collapse
-                </button>
+                <button type="button" class="list-toggle" data-target="#sectionList" aria-expanded="true">Collapse</button>
               </div>
 
-              <!-- JS will render accordion here -->
               <div id="sectionList" class="section-list accordion-root"></div>
             </div>
-
           </aside>
-
         </div>
-
       </section>
-
     </main>
-
   </div>
 
- 
-     <script type="module">
-   
-  import { initLayout, renderPageHeader } from "./js/layout.js";
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
     initLayout("add-section.html");
 
-  renderPageHeader({
-    icon: "dashboard_2_edit",
-    title: "Add Sections" ,
-    subtitle: "Add sections, Subcategory, Section racks and Central Racks",
-    showClock: true,
-  });
+    renderPageHeader({
+      icon: "dashboard_2_edit",
+      title: "Add Sections",
+      subtitle: "Add sections, subcategories, section racks, and central racks.",
+      showClock: true,
+    });
   </script>
-
-  
 
   <script src="js/add-section.js"></script>
   <script src="js/auth-guard.js"></script>

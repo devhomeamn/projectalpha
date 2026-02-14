@@ -1,9 +1,59 @@
+:root {
+  --as-bg: #eef4fb;
+  --as-surface: #ffffff;
+  --as-border: #d7e2f0;
+  --as-text: #0f172a;
+  --as-muted: #5b6778;
+  --as-primary: #1466c3;
+  --as-primary-strong: #0f4f94;
+  --as-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --as-radius: 14px;
+}
+
 .content.section-page {
   padding: 20px;
+  background: linear-gradient(180deg, #f5f8fc 0%, var(--as-bg) 100%);
+}
+
+.intro-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.intro-card {
+  border: 1px solid #cbdcf1;
+  border-radius: var(--as-radius);
+  background: linear-gradient(140deg, #f8fbff 0%, #eef5ff 100%);
+  box-shadow: var(--as-shadow);
+  padding: 14px 16px;
+}
+
+.intro-card h3 {
+  margin: 0;
+  color: #0b4f95;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.intro-card p {
+  margin: 6px 0 0;
+  color: #42546a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.intro-card-soft {
+  background: linear-gradient(140deg, #fffdf8 0%, #fdf3dd 100%);
+  border-color: #f2d8aa;
 }
 
 .section-grid {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(460px, 1.1fr) minmax(340px, 0.9fr);
+  gap: 14px;
+  align-items: start;
 }
 
 .left-col,
@@ -11,13 +61,18 @@
   min-width: 0;
 }
 
-.right-col {
-  position: static;
-  margin-top: 12px;
+.form-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.form-block {
+  display: grid;
+  gap: 8px;
 }
 
 .page-header.compact-head {
-  margin: 10px 0 8px;
+  margin: 0;
   padding: 0;
   background: transparent;
   border: 0;
@@ -31,22 +86,25 @@
   margin: 0;
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1e40af;
-  font-size: 12.5px;
+  border: 1px solid #bad5f3;
+  background: #ebf4ff;
+  color: #184783;
+  font-size: 12px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.25px;
 }
 
+.section-title .material-symbols-rounded {
+  font-size: 16px;
+}
+
 .form-card {
-  background: #fff;
-  border: 1px solid #dbe8ff;
-  border-radius: 14px;
-  box-shadow: 0 8px 20px rgba(30, 64, 175, 0.07);
+  background: var(--as-surface);
+  border: 1px solid var(--as-border);
+  border-radius: var(--as-radius);
+  box-shadow: var(--as-shadow);
   padding: 16px;
-  margin-bottom: 12px;
 }
 
 .form-group {
@@ -56,9 +114,9 @@
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 800;
-  color: #334155;
+  color: #324358;
 }
 
 .required {
@@ -69,12 +127,12 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 11px;
-  background: #f8fafc;
+  border: 1px solid #c7d4e5;
+  border-radius: 10px;
+  background: #fbfdff;
   padding: 10px 12px;
   font-size: 14px;
-  color: #0f172a;
+  color: var(--as-text);
   outline: none;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
@@ -88,8 +146,8 @@ input:focus,
 select:focus,
 textarea:focus {
   background: #fff;
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
+  border-color: #79afe2;
+  box-shadow: 0 0 0 4px rgba(20, 102, 195, 0.16);
 }
 
 #sectionForm .btn-primary,
@@ -99,18 +157,17 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: auto;
   min-width: 170px;
   border: 0;
   border-radius: 11px;
   padding: 10px 14px;
-  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #1686d8 0%, #1f5fc2 100%);
   color: #fff;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.2px;
   cursor: pointer;
-  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 8px 16px rgba(31, 95, 194, 0.24);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
@@ -119,27 +176,25 @@ textarea:focus {
 #rackForm .btn-tertiary:hover,
 #centralRackForm .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 12px 22px rgba(31, 95, 194, 0.28);
   filter: brightness(1.02);
 }
 
-#sectionForm .btn-primary:active,
-#subForm .btn-secondary:active,
-#rackForm .btn-tertiary:active,
-#centralRackForm .btn-primary:active {
-  transform: translateY(0);
-}
-
 .list-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  background: var(--as-surface);
+  border: 1px solid var(--as-border);
+  border-radius: var(--as-radius);
   padding: 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--as-shadow);
 }
 
 .list-card-gap {
   margin-top: 12px;
+}
+
+.right-col {
+  position: sticky;
+  top: 84px;
 }
 
 .list-head {
@@ -160,18 +215,18 @@ textarea:focus {
 }
 
 .list-toggle {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c9d7e8;
   background: #fff;
   border-radius: 10px;
   padding: 6px 10px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 800;
   color: #334155;
   cursor: pointer;
 }
 
 .list-toggle:hover {
-  background: #f8fafc;
+  background: #f6f9fe;
 }
 
 .is-collapsed {
@@ -185,7 +240,7 @@ textarea:focus {
 }
 
 .rack-item {
-  border: 1px solid #dbeafe;
+  border: 1px solid #d8e5f6;
   border-radius: 12px;
   background: #f8fbff;
   padding: 10px 12px;
@@ -203,7 +258,7 @@ textarea:focus {
 
 .acc-item {
   background: #fff;
-  border: 1px solid #dbeafe;
+  border: 1px solid #dbe6f5;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -211,7 +266,7 @@ textarea:focus {
 .acc-head {
   width: 100%;
   border: 0;
-  background: #f8fbff;
+  background: #f7fbff;
   padding: 11px 12px;
   text-align: left;
   display: flex;
@@ -243,7 +298,7 @@ textarea:focus {
   padding: 5px 9px;
   background: #fff;
   color: #334155;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -275,7 +330,7 @@ textarea:focus {
 .acc-row h5 {
   margin: 0 0 6px;
   color: #334155;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.2px;
@@ -291,7 +346,7 @@ textarea:focus {
 }
 
 .muted-note {
-  color: #64748b;
+  color: var(--as-muted);
   font-size: 13px;
 }
 
@@ -439,9 +494,19 @@ textarea:focus {
   color: #fff;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .section-grid {
+    grid-template-columns: 1fr;
+  }
+
   .right-col {
     position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .intro-strip {
+    grid-template-columns: 1fr;
   }
 }
 

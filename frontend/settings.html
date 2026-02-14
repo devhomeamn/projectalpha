@@ -12,52 +12,71 @@
 </head>
 
 <body>
+  <div id="overlay" class="overlay"></div>
+
   <div class="dashboard-container">
     <div id="sidebar"></div>
 
     <main class="main-content">
       <div id="topbar"></div>
 
-      <section class="content">
+      <section class="content settings-page">
         <div id="pageHeaderMount"></div>
 
-        <div class="card settings-card">
-          <div class="card-head">
-            <div class="card-title">
-              <span class="material-symbols-rounded">tune</span>
-              Preferred Racks
+        <section class="settings-shell">
+          <header class="settings-head">
+            <div class="settings-title-wrap">
+              <h3 class="settings-title">
+                <span class="material-symbols-rounded">tune</span>
+                Preferred Racks
+              </h3>
+              <p class="settings-subtitle">Choose which racks should appear first in the Add Record rack dropdown.</p>
             </div>
-            <div class="card-subtitle">
-              Add Record পেজে Rack dropdown-এ কোন কোন Rack দেখাবে সেটা এখানে সিলেক্ট করুন।
-            </div>
-          </div>
 
-          <div class="card-body">
+            <div class="settings-stats">
+              <div class="stat-item">
+                <span class="stat-label">Selected</span>
+                <strong id="selectedCount">0</strong>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Visible</span>
+                <strong id="visibleCount">0</strong>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Total</span>
+                <strong id="totalCount">0</strong>
+              </div>
+            </div>
+          </header>
+
+          <div class="settings-toolbar">
+            <label class="search-wrap">
+              <span class="material-symbols-rounded" aria-hidden="true">search</span>
+              <input id="rackSearch" type="text" placeholder="Search by section or rack name" />
+            </label>
+
             <div class="settings-actions">
               <button class="btn" id="btnSelectAll" type="button">
                 <span class="material-symbols-rounded">done_all</span>
-                Select all (shown)
+                Select visible
               </button>
               <button class="btn" id="btnClearAll" type="button">
                 <span class="material-symbols-rounded">remove_done</span>
-                Clear
+                Clear visible
               </button>
               <button class="btn primary" id="btnSave" type="button">
                 <span class="material-symbols-rounded">save</span>
                 Save
               </button>
             </div>
-
-            <div class="hint">
-              Tip: যদি কিছুই সিলেক্ট না করেন, তাহলে Add Record পেজে সব Rack দেখাবে।
-            </div>
-
-            <div id="rackList" class="rack-list">
-              <div class="loading">Loading racks...</div>
-            </div>
           </div>
-        </div>
 
+          <p class="hint">Tip: if nothing is selected, all racks will remain available in Add Record.</p>
+
+          <div id="rackList" class="rack-list">
+            <div class="loading">Loading racks...</div>
+          </div>
+        </section>
       </section>
     </main>
   </div>
@@ -68,7 +87,7 @@
     renderPageHeader({
       icon: "settings",
       title: "Settings",
-      subtitle: "Customize your experience.",
+      subtitle: "Customize your preferred racks.",
       showClock: true,
     });
   </script>

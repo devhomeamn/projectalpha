@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <title>All Users</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <link rel="icon" href="images/site-icon.ico">
+  <link rel="icon" href="images/site-icon.ico">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/all-users.css">
-
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
 <body>
   <div class="dashboard-container">
@@ -15,44 +15,80 @@
     <main class="main-content">
       <div id="topbar"></div>
 
-       
-
       <section class="content">
-          <div id="pageHeaderMount"></div>
-          
+        <div id="pageHeaderMount"></div>
 
+        <section class="users-toolbar-card">
+          <div class="users-toolbar">
+            <div class="input-group input-search">
+              <span class="material-symbols-rounded" aria-hidden="true">search</span>
+              <input type="text" id="searchInput" placeholder="Search by name, username, service ID">
+            </div>
 
+            <div class="input-group">
+              <label for="roleFilter">Role</label>
+              <select id="roleFilter">
+                <option value="">All Roles</option>
+                <option value="Admin">Admin</option>
+                <option value="Master">Master</option>
+                <option value="General">General</option>
+              </select>
+            </div>
 
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="🔍 Search by username or service ID...">
+            <div class="input-group">
+              <label for="statusFilter">Status</label>
+              <select id="statusFilter">
+                <option value="">All Status</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="users-stats">
+            <article class="stat-card">
+              <p class="stat-label">Total Users</p>
+              <p class="stat-value" id="statTotal">0</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Active</p>
+              <p class="stat-value" id="statActive">0</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Inactive</p>
+              <p class="stat-value" id="statInactive">0</p>
+            </article>
+          </div>
+        </section>
+
+        <div class="table-shell">
+          <table id="usersTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Service ID</th>
+                <th>Role</th>
+                <th>Section</th>
+                <th>Status</th>
+                <th>Registered Date</th>
+                <th class="th-center">Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
 
-        <table id="usersTable">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Username</th>
-              <th>Service ID</th>
-              <th>Role</th>
-              <th>Section</th>
-              <th>Status</th>
-              <th>Registered Date</th>
-              <th style="text-align:center;">Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-
-        <!-- ================== ACCESS MODAL (Admin) ================== -->
         <div class="modal" id="accessModal" aria-hidden="true">
           <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
-            <button class="close-btn" id="accessCloseBtn" type="button">✕</button>
+            <button class="close-btn" id="accessCloseBtn" type="button" aria-label="Close">�</button>
             <h3 id="accessTitle">Update User Access</h3>
 
             <div class="modal-body">
               <div class="u-mini">
-                <div class="u-name" id="amName">—</div>
-                <div class="u-sub" id="amMeta">—</div>
+                <div class="u-name" id="amName">-</div>
+                <div class="u-sub" id="amMeta">-</div>
               </div>
 
               <div class="form-row">
@@ -68,9 +104,9 @@
                 <div class="form-group">
                   <label for="amSection">Section (General only)</label>
                   <select id="amSection">
-                    <option value="">— Select Section —</option>
+                    <option value="">Select Section</option>
                   </select>
-                  <div class="hint" id="amHint">General role হলে section লাগবে।</div>
+                  <div class="hint" id="amHint">Section is required for General role.</div>
                 </div>
               </div>
 
@@ -87,20 +123,19 @@
 
   <script src="js/auth-guard.js"></script>
 
-<script type="module">
-  import { initLayout, renderPageHeader } from "./js/layout.js";
-  initLayout("all-users.html");
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("all-users.html");
 
-  renderPageHeader({
-    icon: "group",
-    title: "All Users",
-    subtitle: "Assign Role, Section, Block/Unblock the Existing Users.",
-    showClock: true,
-  });
-</script>
+    renderPageHeader({
+      icon: "group",
+      title: "All Users",
+      subtitle: "Assign role, section, and activation status for existing users.",
+      showClock: true,
+    });
+  </script>
 
-<script src="js/confirm-util.js"></script>
-<script src="js/all-users.js"></script>
-
+  <script src="js/confirm-util.js"></script>
+  <script src="js/all-users.js"></script>
 </body>
 </html>

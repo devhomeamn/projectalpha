@@ -4,95 +4,79 @@
   <meta charset="UTF-8">
   <title>Reports</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <link rel="icon" href="images/site-icon.ico">
+  <link rel="icon" href="images/site-icon.ico">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/reports.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
   <script src="js/auth-guard.js"></script>
-
-  <!-- html2pdf (client-side pdf generator) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
+  <div id="overlay" class="overlay"></div>
 
-<div id="overlay" class="overlay"></div>
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
 
-<div class="dashboard-container">
-  <div id="sidebar"></div>
+    <main class="main-content">
+      <div id="topbar"></div>
 
-  <main class="main-content">
-    <div id="topbar"></div>
-
-    <section class="content">
+      <section class="content reports-page">
         <div id="pageHeaderMount"></div>
 
-     <div class="report-grid">
-  <button class="report-card" onclick="openReport('section')">
-    <span class="report-card__icon material-symbols-rounded">format_list_bulleted</span>
-    <span class="report-card__content">
-      <span class="report-card__title">Section Wise Records</span>
-      <span class="report-card__sub">সেকশন অনুযায়ী রেকর্ড</span>
-    </span>
-    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
-  </button>
+        <section class="reports-toolbar-card">
+          <div class="toolbar-grid">
+            <label class="toolbar-field">
+              <span>Report Type</span>
+              <select id="quickReportSelect"></select>
+            </label>
 
-  <button class="report-card" onclick="openReport('central')">
-    <span class="report-card__icon material-symbols-rounded">domain</span>
-    <span class="report-card__content">
-      <span class="report-card__title">Central Records</span>
-      <span class="report-card__sub">সেন্ট্রাল রুমের রেকর্ড</span>
-    </span>
-    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
-  </button>
+            <label class="toolbar-field toolbar-search">
+              <span>Search In Current Report</span>
+              <div class="search-wrap">
+                <span class="material-symbols-rounded" aria-hidden="true">search</span>
+                <input id="reportSearchInput" type="text" placeholder="Filter visible rows">
+              </div>
+            </label>
 
-  <button class="report-card" onclick="openReport('movement')">
-    <span class="report-card__icon material-symbols-rounded">local_shipping</span>
-    <span class="report-card__content">
-      <span class="report-card__title">Movement History</span>
-      <span class="report-card__sub">মুভমেন্ট ট্র্যাকিং</span>
-    </span>
-    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
-  </button>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshReportBtn" class="btn-primary">Refresh</button>
+              <button type="button" id="clearSearchBtn" class="btn-ghost">Clear</button>
+            </div>
+          </div>
+        </section>
 
-  <button class="report-card" onclick="openReport('user')">
-    <span class="report-card__icon material-symbols-rounded">person</span>
-    <span class="report-card__content">
-      <span class="report-card__title">User Activity</span>
-      <span class="report-card__sub">ইউজার অনুযায়ী কার্যক্রম</span>
-    </span>
-    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
-  </button>
+        <div id="reportCards" class="report-grid" aria-label="Report types"></div>
 
-  <button class="report-card" onclick="openReport('monthly')">
-    <span class="report-card__icon material-symbols-rounded">calendar_month</span>
-    <span class="report-card__content">
-      <span class="report-card__title">Monthly Summary</span>
-      <span class="report-card__sub">মাসভিত্তিক সারাংশ</span>
-    </span>
-    <span class="report-card__chev material-symbols-rounded">chevron_right</span>
-  </button>
-</div>
+        <section class="report-shell" aria-live="polite">
+          <header class="report-shell-head">
+            <div>
+              <h3 id="reportTitle">Select a report</h3>
+              <p id="reportSubtitle">Choose a report card to load analytics preview.</p>
+            </div>
+            <div class="report-actions" id="reportActions" hidden>
+              <button type="button" id="downloadPdfBtn" class="btn-primary">Download PDF</button>
+            </div>
+          </header>
 
-
-      <!-- hidden report container for pdf -->
-      <div id="reportArea" class="report-area" style="display:none;"></div>
-    </section>
-  </main>
-</div>
+          <div id="reportFeedback" class="report-feedback">No report loaded yet.</div>
+          <div id="reportPrintArea" class="report-area"></div>
+        </section>
+      </section>
+    </main>
+  </div>
 
   <script type="module">
-   
-  import { initLayout, renderPageHeader } from "./js/layout.js";
-   initLayout("reports.html");
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("reports.html");
 
-  renderPageHeader({
-    icon: "analytics",
-    title: "Reports" ,
-    subtitle: "Generate section-wise summaries and record statistics",
-    showClock: true,
-  });
+    renderPageHeader({
+      icon: "analytics",
+      title: "Reports",
+      subtitle: "Generate section-wise summaries and record statistics",
+      showClock: true,
+    });
   </script>
 
-
-<script src="js/reports.js"></script>
+  <script src="js/reports.js"></script>
 </body>
 </html>

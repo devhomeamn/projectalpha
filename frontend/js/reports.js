@@ -1,289 +1,447 @@
-// reports.js
+(() => {
+  const REPORT_DEFS = {
+    section: {
+      title: "Section Wise Records",
+      subtitle: "Records grouped by section",
+      icon: "format_list_bulleted",
+      endpoint: "/reports/section-wise",
+    },
+    central: {
+      title: "Central Records",
+      subtitle: "Records moved to central room",
+      icon: "domain",
+      endpoint: "/reports/central",
+    },
+    movement: {
+      title: "Movement History",
+      subtitle: "Movement tracking timeline",
+      icon: "local_shipping",
+      endpoint: "/reports/movement-history",
+    },
+    user: {
+      title: "User Activity",
+      subtitle: "Activity summary by user",
+      icon: "person",
+      endpoint: "/reports/user-activity",
+    },
+    monthly: {
+      title: "Monthly Summary",
+      subtitle: "Month-wise created and moved count",
+      icon: "calendar_month",
+      endpoint: "/reports/monthly-summary",
+    },
+  };
 
-let API_BASE = "";
-let configLoaded = false;
+  const state = {
+    apiBase: "",
+    configLoaded: false,
+    currentType: "",
+    search: "",
+    currentTitle: "",
+  };
 
-async function loadConfig() {
-  if (configLoaded) return;
-  try {
-    const res = await fetch("/api/config");
-    const data = await res.json();
-    API_BASE = data.apiBase
-      ? `${data.apiBase}/api`
-      : `${window.location.origin}/api`;
-  } catch {
-    API_BASE = `${window.location.origin}/api`;
-  } finally {
-    configLoaded = true;
-  }
-}
+  const ui = {};
 
-// ✅ global init (but openReport still awaits to be safe)
-loadConfig();
-
-window.openReport = async function (type) {
-  // ✅ ensure API base ready
-  await loadConfig();
-
-  const reportArea = document.getElementById("reportArea");
-  reportArea.style.display = "block";
-  reportArea.innerHTML = `<p>Loading...</p>`;
-
-  let url = "";
-  let title = "";
-
-  if (type === "section") {
-    url = `${API_BASE}/reports/section-wise`;
-    title = "Section Wise Records Report";
-  }
-  if (type === "central") {
-    url = `${API_BASE}/reports/central`;
-    title = "Central Records Report";
-  }
-  if (type === "movement") {
-    url = `${API_BASE}/reports/movement-history`;
-    title = "Movement History Report";
-  }
-  if (type === "user") {
-    url = `${API_BASE}/reports/user-activity`;
-    title = "User Activity Report";
-  }
-  if (type === "monthly") {
-    url = `${API_BASE}/reports/monthly-summary`;
-    title = "Monthly Summary Report";
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    console.log("📦 Monthly report raw response =", data);
-
-    reportArea.innerHTML = `
-      <h3>${title}</h3>
-      <div class="report-actions">
-        <button class="btn-primary" onclick="downloadPDF('${title}')">⬇️ Download PDF</button>
-      </div>
-      ${renderReportHTML(type, data)}
-    `;
-  } catch (err) {
-    console.error("Report fetch error:", err);
-    reportArea.innerHTML = `<p style="color:red;">❌ Report load failed.</p>`;
-  }
-};
-
-function renderReportHTML(type, data) {
-  if (type === "section") {
-    let html = "";
-    Object.keys(data || {}).forEach((secName) => {
-      const sec = data[secName];
-      html += `<h4>📌 ${secName} (Total: ${sec.count})</h4>`;
-      html += tableHTML(sec.items, true);
-    });
-    return html || "<p>No section data found.</p>";
+  function getToken() {
+    return localStorage.getItem("token") || "";
   }
 
-  if (type === "central") {
-    return tableHTML(data, true, true);
+  function logoutToLogin() {
+    localStorage.clear();
+    window.location.href = "login.html";
   }
 
-  if (type === "movement") {
-    return tableHTML(data, true, true, true);
+  function debounce(fn, delay = 180) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
   }
 
-  if (type === "user") {
-    const addedRows = (data.added || [])
-      .map((a) => {
-        const user = a.added_by || a.dataValues?.added_by || "Unknown";
-        const totalAdded =
-          a.total_added ??
-          a.dataValues?.total_added ??
-          a.get?.("total_added") ??
-          a.count ??
-          a.total ??
-          0;
+  async function loadConfig() {
+    if (state.configLoaded) return;
+    try {
+      const res = await fetch("/api/config");
+      const data = await res.json();
+      state.apiBase = data.apiBase ? `${data.apiBase}/api` : `${window.location.origin}/api`;
+    } catch {
+      state.apiBase = `${window.location.origin}/api`;
+    } finally {
+      state.configLoaded = true;
+    }
+  }
 
-        return `<tr><td>${user}</td><td>${totalAdded}</td></tr>`;
+  async function authFetch(url, options = {}) {
+    const token = getToken();
+    const headers = { ...(options.headers || {}) };
+
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = headers["Content-Type"] || "application/json";
+    }
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(url, { ...options, headers });
+
+    if (res.status === 401 || res.status === 403) {
+      try {
+        showConfirm({
+          title: "Session Expired",
+          message: "Your session has expired or you no longer have access.",
+          type: "success",
+          onConfirm: logoutToLogin,
+        });
+      } catch (_) {
+        logoutToLogin();
+      }
+      throw new Error(`Auth error: ${res.status}`);
+    }
+
+    return res;
+  }
+
+  function setFeedback(message, mode = "normal") {
+    if (!ui.reportFeedback) return;
+    ui.reportFeedback.classList.remove("is-error", "is-loading");
+    if (mode === "error") ui.reportFeedback.classList.add("is-error");
+    if (mode === "loading") ui.reportFeedback.classList.add("is-loading");
+    ui.reportFeedback.textContent = message;
+  }
+
+  function setReportHeader(def) {
+    ui.reportTitle.textContent = def?.title || "Select a report";
+    ui.reportSubtitle.textContent = def?.subtitle || "Choose a report card to load analytics preview.";
+  }
+
+  function renderCards() {
+    const cardsHtml = Object.entries(REPORT_DEFS)
+      .map(([type, def]) => {
+        const isActive = type === state.currentType;
+        return `
+          <button class="report-card ${isActive ? "is-active" : ""}" data-report-type="${type}" type="button">
+            <span class="report-card__icon material-symbols-rounded" aria-hidden="true">${escapeHtml(def.icon)}</span>
+            <span class="report-card__content">
+              <span class="report-card__title">${escapeHtml(def.title)}</span>
+              <span class="report-card__sub">${escapeHtml(def.subtitle)}</span>
+            </span>
+            <span class="report-card__chev material-symbols-rounded" aria-hidden="true">chevron_right</span>
+          </button>
+        `;
       })
       .join("");
 
-    const movedRows = (data.moved || [])
-      .map((m) => {
-        const user = m.moved_by || m.dataValues?.moved_by || "Unknown";
-        const totalMoved =
-          m.total_moved ??
-          m.dataValues?.total_moved ??
-          m.get?.("total_moved") ??
-          m.count ??
-          m.total ??
-          0;
+    ui.reportCards.innerHTML = cardsHtml;
+  }
 
-        return `<tr><td>${user}</td><td>${totalMoved}</td></tr>`;
+  function renderQuickSelect() {
+    const options = Object.entries(REPORT_DEFS)
+      .map(([type, def]) => `<option value="${type}">${escapeHtml(def.title)}</option>`)
+      .join("");
+
+    ui.quickReportSelect.innerHTML = options;
+    ui.quickReportSelect.value = state.currentType || "section";
+  }
+
+  function normalizeArray(data) {
+    return Array.isArray(data) ? data : [];
+  }
+
+  function tableHTML(records, options = {}) {
+    const {
+      showLocation = false,
+      showMovedMeta = false,
+      showPrevious = false,
+    } = options;
+
+    const list = normalizeArray(records);
+    if (!list.length) return '<p class="report-empty">No records found.</p>';
+
+    const rows = list
+      .map((r, idx) => {
+        const movedAt = r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "-";
+        const prevLoc = `${r.previous_location?.section_name || "-"} / ${r.previous_location?.subcategory_name || "-"} / ${r.previous_location?.rack_name || "-"}`;
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${escapeHtml(r.file_name || "-")}</td>
+            <td>${escapeHtml(r.bd_no || "-")}</td>
+            ${showLocation ? `<td>${escapeHtml(r.Section?.name || "-")}</td>` : ""}
+            ${showLocation ? `<td>${escapeHtml(r.Subcategory?.name || "-")}</td>` : ""}
+            ${showLocation ? `<td>${escapeHtml(r.Rack?.name || "-")}</td>` : ""}
+            <td>${escapeHtml(r.serial_no ?? "-")}</td>
+            ${showMovedMeta ? `<td>${escapeHtml(r.moved_by || "-")}</td>` : ""}
+            ${showMovedMeta ? `<td>${escapeHtml(movedAt)}</td>` : ""}
+            ${showPrevious ? `<td>${escapeHtml(prevLoc)}</td>` : ""}
+          </tr>
+        `;
       })
       .join("");
 
     return `
-      <h4>➕ Added By Summary</h4>
-      <table>
-        <thead><tr><th>User</th><th>Total Added</th></tr></thead>
-        <tbody>${addedRows || `<tr><td colspan="2">No data</td></tr>`}</tbody>
-      </table>
-      <br/>
-      <h4>🚚 Moved By Summary</h4>
-      <table>
-        <thead><tr><th>User</th><th>Total Moved</th></tr></thead>
-        <tbody>${movedRows || `<tr><td colspan="2">No data</td></tr>`}</tbody>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>SL</th>
+            <th>File</th>
+            <th>BD No</th>
+            ${showLocation ? "<th>Section</th><th>Subcategory</th><th>Rack</th>" : ""}
+            <th>Serial</th>
+            ${showMovedMeta ? "<th>Moved By</th><th>Moved At</th>" : ""}
+            ${showPrevious ? "<th>Previous Location</th>" : ""}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
       </table>
     `;
   }
 
-  if (type === "monthly") {
-    return renderMonthlyReport(data);
+  function renderSectionReport(data) {
+    const source = data && typeof data === "object" ? data : {};
+    const blocks = Object.keys(source).map((sectionName) => {
+      const section = source[sectionName] || {};
+      const count = Number(section.count || 0);
+      return `
+        <section class="report-block">
+          <h4>${escapeHtml(sectionName)} (Total: ${count})</h4>
+          ${tableHTML(section.items, { showLocation: true })}
+        </section>
+      `;
+    });
+    return blocks.length ? blocks.join("") : '<p class="report-empty">No section data found.</p>';
   }
 
-  return "<p>No data</p>";
-}
+  function renderUserReport(data) {
+    const added = normalizeArray(data?.added);
+    const moved = normalizeArray(data?.moved);
 
-// ✅ table helper
-function tableHTML(records, showLocation = false, showCentral = false, showPrev = false) {
-  if (!records || records.length === 0) return "<p>No records found.</p>";
+    const addedRows = added
+      .map((item) => {
+        const user = item.added_by || item.dataValues?.added_by || "Unknown";
+        const total = Number(item.total_added ?? item.dataValues?.total_added ?? item.count ?? item.total ?? 0);
+        return `<tr><td>${escapeHtml(user)}</td><td>${total}</td></tr>`;
+      })
+      .join("");
 
-  const rows = records
-    .map(
-      (r, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${r.file_name}</td>
-        <td>${r.bd_no || "-"}</td>
-        ${showLocation ? `<td>${r.Section?.name || "-"}</td>` : ""}
-        ${showLocation ? `<td>${r.Subcategory?.name || "-"}</td>` : ""}
-        ${showLocation ? `<td>${r.Rack?.name || "-"}</td>` : ""}
-        <td>${r.serial_no ?? "-"}</td>
-        ${showCentral ? `<td>${r.moved_by || "-"}</td>` : ""}
-        ${showCentral ? `<td>${r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "-"}</td>` : ""}
-        ${
-          showPrev
-            ? `<td>${r.previous_location?.section_name || "-"} / ${r.previous_location?.subcategory_name || "-"} / ${r.previous_location?.rack_name || "-"}</td>`
-            : ""
-        }
-      </tr>
-    `
-    )
-    .join("");
+    const movedRows = moved
+      .map((item) => {
+        const user = item.moved_by || item.dataValues?.moved_by || "Unknown";
+        const total = Number(item.total_moved ?? item.dataValues?.total_moved ?? item.count ?? item.total ?? 0);
+        return `<tr><td>${escapeHtml(user)}</td><td>${total}</td></tr>`;
+      })
+      .join("");
 
-  return `
-    <table>
-      <thead>
-        <tr>
-          <th>SL</th>
-          <th>File</th>
-          <th>BD No</th>
-          ${showLocation ? `<th>Section</th>` : ""}
-          ${showLocation ? `<th>Subcategory</th>` : ""}
-          ${showLocation ? `<th>Rack</th>` : ""}
-          <th>Serial</th>
-          ${showCentral ? `<th>Moved By</th>` : ""}
-          ${showCentral ? `<th>Moved At</th>` : ""}
-          ${showPrev ? `<th>Previous Location</th>` : ""}
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-// ✅ Monthly renderer (robust keys)
-function renderMonthlyReport(data) {
-  const created = Array.isArray(data?.createdByMonth) ? data.createdByMonth : [];
-  const moved = Array.isArray(data?.movedByMonth) ? data.movedByMonth : [];
-
-  const map = new Map();
-
-  // created month merge
-  created.forEach((r) => {
-    const month = r.month || r.Month || r.created_month;
-    const total = Number(
-      r.total_created ??
-        r.total_added ??
-        r.created_count ??
-        r.count ??
-        r.total ??
-        0
-    );
-    if (!month) return;
-    map.set(month, { month, total_created: total, total_moved: 0 });
-  });
-
-  // moved month merge
-  // moved month merge
-moved.forEach((r) => {
-  const month = r.month || r.Month || r.moved_month;
-
-  const total = Number(
-    r.total_moved_central ??   // ✅ NEW KEY from your backend
-    r.total_moved ??
-    r.total_central ??
-    r.moved_count ??
-    r.count ??
-    r.total ??
-    0
-  );
-
-  if (!month) return;
-
-  if (!map.has(month)) {
-    map.set(month, { month, total_created: 0, total_moved: total });
-  } else {
-    map.get(month).total_moved = total;
+    return `
+      <section class="report-block">
+        <h4>Added By Summary</h4>
+        <table class="report-table">
+          <thead><tr><th>User</th><th>Total Added</th></tr></thead>
+          <tbody>${addedRows || '<tr><td colspan="2">No data</td></tr>'}</tbody>
+        </table>
+      </section>
+      <section class="report-block">
+        <h4>Moved By Summary</h4>
+        <table class="report-table">
+          <thead><tr><th>User</th><th>Total Moved</th></tr></thead>
+          <tbody>${movedRows || '<tr><td colspan="2">No data</td></tr>'}</tbody>
+        </table>
+      </section>
+    `;
   }
-});
 
+  function renderMonthlyReport(data) {
+    const created = normalizeArray(data?.createdByMonth);
+    const moved = normalizeArray(data?.movedByMonth);
 
-  const rows = [...map.values()].sort((a, b) =>
-    String(a.month).localeCompare(String(b.month))
-  );
+    const map = new Map();
 
-  if (!rows.length) return `<p>No monthly data found</p>`;
+    created.forEach((item) => {
+      const month = item.month || item.Month || item.created_month;
+      const total = Number(item.total_created ?? item.total_added ?? item.created_count ?? item.count ?? item.total ?? 0);
+      if (!month) return;
+      map.set(month, { month, total_created: total, total_moved: 0 });
+    });
 
-  return `
-    <h4>📅 Monthly Summary</h4>
-    <table>
-      <thead>
-        <tr>
-          <th>Month</th>
-          <th>Total Created</th>
-          <th>Total Moved to Central</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows
-          .map(
-            (r) => `
-          <tr>
-            <td>${r.month}</td>
-            <td>${r.total_created}</td>
-            <td>${r.total_moved}</td>
-          </tr>
-        `
-          )
-          .join("")}
-      </tbody>
-    </table>
-  `;
-}
+    moved.forEach((item) => {
+      const month = item.month || item.Month || item.moved_month;
+      const total = Number(item.total_moved_central ?? item.total_moved ?? item.total_central ?? item.moved_count ?? item.count ?? item.total ?? 0);
+      if (!month) return;
 
-// ✅ PDF download
-window.downloadPDF = function (title) {
-  const reportArea = document.getElementById("reportArea");
+      if (!map.has(month)) {
+        map.set(month, { month, total_created: 0, total_moved: total });
+      } else {
+        map.get(month).total_moved = total;
+      }
+    });
 
-  const opt = {
-    margin: 0.4,
-    filename: `${title
-      .replace(/\s+/g, "_")
-      .toLowerCase()}_${new Date().toISOString().slice(0, 10)}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    const rows = [...map.values()].sort((a, b) => String(a.month).localeCompare(String(b.month)));
+
+    if (!rows.length) return '<p class="report-empty">No monthly data found.</p>';
+
+    return `
+      <section class="report-block">
+        <h4>Monthly Summary</h4>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Total Created</th>
+              <th>Total Moved to Central</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map((row) => `
+                <tr>
+                  <td>${escapeHtml(row.month)}</td>
+                  <td>${row.total_created}</td>
+                  <td>${row.total_moved}</td>
+                </tr>
+              `)
+              .join("")}
+          </tbody>
+        </table>
+      </section>
+    `;
+  }
+
+  const renderers = {
+    section: (data) => renderSectionReport(data),
+    central: (data) => tableHTML(data, { showLocation: true, showMovedMeta: true }),
+    movement: (data) => tableHTML(data, { showLocation: true, showMovedMeta: true, showPrevious: true }),
+    user: (data) => renderUserReport(data),
+    monthly: (data) => renderMonthlyReport(data),
   };
 
-  html2pdf().set(opt).from(reportArea).save();
-};
+  async function loadReport(type) {
+    const def = REPORT_DEFS[type];
+    if (!def) return;
+
+    state.currentType = type;
+    state.currentTitle = def.title;
+
+    setReportHeader(def);
+    renderCards();
+    ui.quickReportSelect.value = type;
+
+    ui.reportActions.hidden = true;
+    ui.reportPrintArea.innerHTML = "";
+    setFeedback("Loading report...", "loading");
+
+    try {
+      await loadConfig();
+      const res = await authFetch(`${state.apiBase}${def.endpoint}`);
+      const data = await res.json();
+
+      const renderer = renderers[type];
+      ui.reportPrintArea.innerHTML = renderer ? renderer(data) : '<p class="report-empty">No renderer found.</p>';
+
+      ui.reportActions.hidden = false;
+      setFeedback(`Showing ${def.title}.`, "normal");
+      applySearchFilter();
+    } catch (err) {
+      console.error("Report load error:", err);
+      setFeedback("Failed to load report.", "error");
+      ui.reportPrintArea.innerHTML = "";
+      ui.reportActions.hidden = true;
+    }
+  }
+
+  function applySearchFilter() {
+    const keyword = (state.search || "").toLowerCase().trim();
+    const rows = ui.reportPrintArea.querySelectorAll("table tbody tr");
+
+    if (!rows.length) return;
+
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = !keyword || text.includes(keyword) ? "" : "none";
+    });
+  }
+
+  function downloadPDF() {
+    if (!ui.reportPrintArea || !ui.reportPrintArea.innerHTML.trim()) return;
+
+    const safeTitle = (state.currentTitle || "report")
+      .replace(/\s+/g, "_")
+      .toLowerCase();
+
+    const options = {
+      margin: 0.4,
+      filename: `${safeTitle}_${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    };
+
+    html2pdf().set(options).from(ui.reportPrintArea).save();
+  }
+
+  function bindEvents() {
+    ui.reportCards.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-report-type]");
+      if (!btn) return;
+      loadReport(btn.getAttribute("data-report-type"));
+    });
+
+    ui.quickReportSelect.addEventListener("change", () => {
+      loadReport(ui.quickReportSelect.value);
+    });
+
+    ui.refreshReportBtn.addEventListener("click", () => {
+      if (state.currentType) {
+        loadReport(state.currentType);
+      } else {
+        loadReport(ui.quickReportSelect.value);
+      }
+    });
+
+    ui.clearSearchBtn.addEventListener("click", () => {
+      state.search = "";
+      ui.reportSearchInput.value = "";
+      applySearchFilter();
+    });
+
+    ui.reportSearchInput.addEventListener(
+      "input",
+      debounce(() => {
+        state.search = ui.reportSearchInput.value;
+        applySearchFilter();
+      }, 120)
+    );
+
+    ui.downloadPdfBtn.addEventListener("click", downloadPDF);
+  }
+
+  function initDomRefs() {
+    ui.reportCards = document.getElementById("reportCards");
+    ui.quickReportSelect = document.getElementById("quickReportSelect");
+    ui.reportSearchInput = document.getElementById("reportSearchInput");
+    ui.refreshReportBtn = document.getElementById("refreshReportBtn");
+    ui.clearSearchBtn = document.getElementById("clearSearchBtn");
+    ui.reportTitle = document.getElementById("reportTitle");
+    ui.reportSubtitle = document.getElementById("reportSubtitle");
+    ui.reportActions = document.getElementById("reportActions");
+    ui.downloadPdfBtn = document.getElementById("downloadPdfBtn");
+    ui.reportFeedback = document.getElementById("reportFeedback");
+    ui.reportPrintArea = document.getElementById("reportPrintArea");
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    initDomRefs();
+    renderQuickSelect();
+    renderCards();
+    bindEvents();
+    await loadConfig();
+    loadReport("section");
+  });
+})();
