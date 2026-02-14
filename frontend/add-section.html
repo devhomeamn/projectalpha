@@ -53,6 +53,13 @@
                   <textarea id="sectionDesc" placeholder="Describe this section"></textarea>
                 </div>
 
+                <div class="form-group section-rules-group">
+                  <label>Section-specific input rules</label>
+                  <label class="rule-check"><input type="checkbox" id="ruleRequireAllocate"> Require Allocate Table</label>
+                  <label class="rule-check"><input type="checkbox" id="ruleEnableAudit"> Enable Audit Objection block</label>
+                  <label class="rule-check"><input type="checkbox" id="ruleAllowDupBd"> Allow duplicate BD (when Audit Objection = Yes)</label>
+                </div>
+
                 <button type="submit" class="btn-primary">Add Section</button>
               </form>
             </section>
@@ -176,3 +183,4 @@
   </div>
 </body>
 </html>
+

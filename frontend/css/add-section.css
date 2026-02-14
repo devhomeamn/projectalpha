@@ -527,3 +527,35 @@ textarea:focus {
     min-width: 0;
   }
 }
+
+.section-rules-group {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #dbe7f7;
+  border-radius: 10px;
+  background: #f7fbff;
+}
+
+.section-rules-group > label:first-child {
+  font-size: 12px;
+  font-weight: 900;
+  color: #335070;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.rule-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2f435c;
+  margin: 0;
+}
+
+.rule-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}

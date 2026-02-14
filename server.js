@@ -6,6 +6,7 @@ const sequelize = require('./config/db');
 
 // ✅ Ensure preference models are registered before sync
 require('./models/userPreferredRackModel');
+require('./models/sectionRuleModel');
 
 dotenv.config();
 
@@ -78,4 +79,5 @@ app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 app.get('/api/config', (req, res) => {
   res.json({ apiBase: process.env.API_BASE });
 });
+
 

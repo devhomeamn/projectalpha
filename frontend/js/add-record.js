@@ -23,6 +23,7 @@ let isSubmitting = false;
 let lastBdCheckToken = 0;
 let subTouched = false;
 let subSubmitAttempted = false;
+let sectionCatalog = [];
 
 // Print-preview confirm modal state
 let lastPreviewRecord = null;
@@ -150,19 +151,76 @@ function updateDateTime() {
 }
 
 /* ================== CONDITIONAL FIELDS ================== */
-// Allocate Table for OP-1 / OP-2
-function syncAllocateTable(sectionName) {
+const DEFAULT_SECTION_RULES = {
+  requires_allocate_table: false,
+  enable_audit_objection: false,
+  allow_duplicate_bd: false,
+};
+
+function normalizeSectionName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[()]/g, "")
+    .replace(/[\s_\-]+/g, "")
+    .trim();
+}
+
+function inferLegacyRules(sectionName) {
+  const clean = normalizeSectionName(sectionName);
+  const isOP = clean.includes("officerspayop");
+  const isLALAO = clean.replace(/[\/\\]/g, "") === "lalao";
+
+  return {
+    requires_allocate_table: isOP,
+    enable_audit_objection: isLALAO,
+    allow_duplicate_bd: isLALAO,
+  };
+}
+
+function normalizeRules(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    requires_allocate_table: !!r.requires_allocate_table,
+    enable_audit_objection: !!r.enable_audit_objection,
+    allow_duplicate_bd: !!r.allow_duplicate_bd,
+  };
+}
+
+function resolveSectionRules(sectionOrName) {
+  const sectionName = typeof sectionOrName === "string" ? sectionOrName : sectionOrName?.name || "";
+  const stored = typeof sectionOrName === "object" ? sectionOrName?.form_rules : null;
+  return {
+    ...DEFAULT_SECTION_RULES,
+    ...inferLegacyRules(sectionName),
+    ...normalizeRules(stored),
+  };
+}
+
+function getSelectedSectionMeta() {
+  const sid = Number(document.getElementById("section_id")?.value || 0);
+  if (!sid) return null;
+  return sectionCatalog.find((s) => Number(s.id) === sid) || null;
+}
+
+function getSelectedSectionRules() {
+  return resolveSectionRules(getSelectedSectionMeta());
+}
+
+// Allocate Table visibility by section rules
+function syncAllocateTable(sectionOrName) {
   const group = document.getElementById("allocate_table_group");
   const input = document.getElementById("allocate_table");
   const star = document.getElementById("allocate_table_star");
 
   if (!group || !input) return;
 
-  const isOP = (sectionName || "").trim().toLowerCase().includes("officers pay (op-");
-  group.style.display = isOP ? "" : "none";
-  input.required = isOP;
-  if (star) star.style.display = isOP ? "inline" : "none";
-  if (!isOP) input.value = "";
+  const rules = resolveSectionRules(sectionOrName);
+  const required = !!rules.requires_allocate_table;
+
+  group.style.display = required ? "" : "none";
+  input.required = required;
+  if (star) star.style.display = required ? "inline" : "none";
+  if (!required) input.value = "";
 }
 
 // Closing Date visibility based on status
@@ -257,7 +315,7 @@ function initPage() {
   toggleClosingDate();
 
   // Wire audit objection toggle (safe if element exists)
-  document.getElementById("audit_objection")?.addEventListener("change", syncObjectionFields);
+  document.getElementById("audit_objection")?.addEventListener("change", () => { syncObjectionFields(); checkBdNoLive(); });
 
   // Auto uppercase file name
   document.getElementById("file_name")?.addEventListener("input", (e) => {
@@ -298,6 +356,7 @@ async function loadSections() {
     const res = await authFetch(`${API_BASE}/sections`);
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error("Invalid sections data");
+    sectionCatalog = data;
 
     const sectionSelect = document.getElementById("section_id");
     const subSelect = document.getElementById("subcategory_id");
@@ -323,8 +382,8 @@ async function loadSections() {
       subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
       rackSelect.innerHTML = '<option value="">-- Select Rack --</option>';
       serialInput.value = "";
-      syncAllocateTable(selected?.name || "");
-      syncLALAOUI(selected?.name || "");
+      syncAllocateTable(selected || null);
+      syncLALAOUI(selected || null);
 
       if (!sid) return;
 
@@ -398,11 +457,9 @@ async function checkBdNoLive() {
 
   const bdValue = bdInput?.value.trim() || "";
 
-  // Detect LA/LAO from selected option text
-  const sectionSelect = document.getElementById("section_id");
-  const selectedSectionName =
-    sectionSelect?.options?.[sectionSelect.selectedIndex]?.textContent?.trim() || "";
-  const isLALAO = (selectedSectionName || "").toLowerCase() === "la/lao";
+  const rules = getSelectedSectionRules();
+  const auditSelected = (document.getElementById("audit_objection")?.value || "").toLowerCase() === "yes";
+  const skipBdCheck = rules.allow_duplicate_bd && rules.enable_audit_objection && auditSelected;
 
   if (!bdValue || !subId) {
     bdOk = true;
@@ -410,10 +467,9 @@ async function checkBdNoLive() {
     return;
   }
 
-  // ✅ LA/LAO হলে duplicate BD allow → live uniqueness check skip
-  if (isLALAO) {
+  if (skipBdCheck) {
     bdOk = true;
-    setMsg(msg, "LA/LAO: Same BD allowed (Audit Objection multiple entry)", true, "warn");
+    setMsg(msg, "This section allows same BD when audit objection is selected.", true, "warn");
     return;
   }
 
@@ -447,15 +503,13 @@ async function onAddRecord(e) {
 
   subSubmitAttempted = true;
 
-  // ---- Detect LA/LAO from selected section name ----
-  const sectionSelect = document.getElementById("section_id");
-  const selectedSectionName =
-    sectionSelect?.options?.[sectionSelect.selectedIndex]?.textContent?.trim() || "";
-  const isLALAO = isLALAOSection(selectedSectionName);
+  const sectionRules = getSelectedSectionRules();
 
   // ---- Read Audit Objection UI values ----
   const auditSel = document.getElementById("audit_objection");
-  const auditYes = isLALAO && (auditSel?.value || "").toLowerCase() === "yes";
+  const auditYes =
+    sectionRules.enable_audit_objection && (auditSel?.value || "").toLowerCase() === "yes";
+  const skipBdCheck = sectionRules.allow_duplicate_bd && auditYes;
 
   const objectionNoEl = document.getElementById("objection_no");
   const objectionTitleEl = document.getElementById("objection_title");
@@ -477,7 +531,7 @@ async function onAddRecord(e) {
     document.getElementById("subcategory_id").value &&
     document.getElementById("rack_id").value &&
     document.getElementById("opening_date").value &&
-  (isLALAO ? true : bdOk);
+  (skipBdCheck ? true : bdOk);
 
 
   if (!isValidBase) {
@@ -580,10 +634,6 @@ async function onAddRecord(e) {
 }
 
 /* ================== LA/LAO (AUDIT OBJECTION UI) HELPERS ================== */
-function isLALAOSection(sectionName) {
-  return (sectionName || "").trim().toLowerCase() === "la/lao";
-}
-
 function clearObjectionValues() {
   ["objection_no", "objection_title", "objection_details", "attachment"].forEach((id) => {
     const el = document.getElementById(id);
@@ -614,16 +664,17 @@ function syncObjectionFields() {
   if (!yes) clearObjectionValues();
 }
 
-function syncLALAOUI(sectionName) {
+function syncLALAOUI(sectionOrName) {
   const group = document.getElementById("lalAOGroup");
   const objectionFields = document.getElementById("objectionFields");
   const auditSel = document.getElementById("audit_objection");
   if (!group || !objectionFields || !auditSel) return;
 
-  const isLALAO = isLALAOSection(sectionName);
-  group.style.display = isLALAO ? "" : "none";
+  const rules = resolveSectionRules(sectionOrName);
+  const enabled = !!rules.enable_audit_objection;
+  group.style.display = enabled ? "" : "none";
 
-  if (!isLALAO) {
+  if (!enabled) {
     auditSel.value = "no";
     objectionFields.style.display = "none";
     setObjectionRequired(false);
@@ -882,3 +933,5 @@ Description: ${safeText(record.description || "")}
     </div>
   `;
 }
+
+

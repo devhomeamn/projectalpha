@@ -666,13 +666,18 @@ async function onAddSection(e) {
   e.preventDefault();
   const name = document.getElementById("sectionName").value.trim();
   const description = document.getElementById("sectionDesc").value.trim();
+  const form_rules = {
+    requires_allocate_table: !!document.getElementById("ruleRequireAllocate")?.checked,
+    enable_audit_objection: !!document.getElementById("ruleEnableAudit")?.checked,
+    allow_duplicate_bd: !!document.getElementById("ruleAllowDupBd")?.checked,
+  };
 
   if (!name) return showToast("Section name required!", "error");
 
   try {
     const res = await authFetch(`${API_BASE}/sections/add`, {
       method: "POST",
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, form_rules }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -814,4 +819,5 @@ document.addEventListener("input", (e) => {
   el.value = el.value.toUpperCase();
   el.setSelectionRange(start, start);
 });
+
 

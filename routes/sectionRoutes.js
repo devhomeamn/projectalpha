@@ -10,26 +10,24 @@ const {
   deleteSection,
   deleteRack,
   deleteSubcategory,
+  upsertSectionRules,
 } = require('../controllers/sectionController');
 
 const { requireAuth, requireRole } = require('../middleware/auth');
 
-console.log('✅ sectionRoutes.js loaded');
+console.log('sectionRoutes.js loaded');
 
-// =========================
 // Read (Logged-in users)
-// =========================
 router.get('/', requireAuth, getSections);
 router.get('/racks/:sectionId', requireAuth, getRacksBySection);
 router.get('/:sectionId/racks', requireAuth, getRacksBySection);
 router.get('/central/racks', requireAuth, requireRole('admin','master'), getCentralRacks);
 
-// =========================
 // Write (Admin only)
-// =========================
 router.post('/add', requireAuth, requireRole('admin'), addSection);
 router.post('/add-sub', requireAuth, requireRole('admin'), addSubcategory);
 router.post('/add-rack', requireAuth, requireRole('admin'), addRack);
+router.put('/:id/rules', requireAuth, requireRole('admin'), upsertSectionRules);
 
 router.delete('/:id', requireAuth, requireRole('admin'), deleteSection);
 router.delete('/sub/:id', requireAuth, requireRole('admin'), deleteSubcategory);

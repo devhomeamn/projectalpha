@@ -3,10 +3,13 @@ const Record = require("../models/recordModel");
 const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
 const Rack = require("../models/rackModel");
+const SectionRule = require("../models/sectionRuleModel");
 const sequelize = require("../config/db"); 
+const { resolveSectionFormRules } = require("../utils/sectionRules");
 
 // helper: normalize BD
 const normalizeBd = (v) => (typeof v === "string" ? v.trim() : v);
+
 
 // helper: pick actor username safely
 function getActor(req, fallbackFromBody) {
@@ -126,17 +129,17 @@ exports.addRecord = async (req, res) => {
         return res.status(403).json({ error: "You can only add records in your assigned section" });
       }
     }
+    // Section rules (db-driven, with legacy fallback)
+    const sec = await Section.findByPk(section_id, {
+      include: [{ model: SectionRule, as: "FormRule", attributes: ["rules"], required: false }],
+    });
+    const secName = sec?.name || "";
+    const sectionRules = resolveSectionFormRules(secName, sec?.FormRule?.rules);
 
-    // ✅ Section-based rule: OP-1/OP-2 => allocate_table required
-    const sec = await Section.findByPk(section_id);
-    const secName = (sec?.name || "").toLowerCase();
-    const isOP =
-      secName === "officers pay (op-1)" || secName === "officers pay (op-2)";
-
-    if (isOP) {
+    if (sectionRules.requires_allocate_table) {
       if (!allocate_table || String(allocate_table).trim() === "") {
         return res.status(400).json({
-          error: "Allocate Table is required for Officers Pay sections",
+          error: "Allocate Table is required for this section",
         });
       }
       allocate_table = String(allocate_table).trim();
@@ -144,13 +147,14 @@ exports.addRecord = async (req, res) => {
       allocate_table = null;
     }
 
-    const isLALAO = (secName || "").trim().toLowerCase().replace(/\s+/g, "") === "la/lao";
+    const auditFeatureEnabled = !!sectionRules.enable_audit_objection;
 
     const audit_objection_raw = req.body.audit_objection;
     const audit_objection =
-      String(audit_objection_raw || "").toLowerCase() === "true" ||
-      String(audit_objection_raw || "").toLowerCase() === "yes" ||
-      String(audit_objection_raw || "").toLowerCase() === "1";
+      auditFeatureEnabled &&
+      (String(audit_objection_raw || "").toLowerCase() === "true" ||
+        String(audit_objection_raw || "").toLowerCase() === "yes" ||
+        String(audit_objection_raw || "").toLowerCase() === "1");
 
     const objection_no = (req.body.objection_no || "").trim();
     const objection_title = (req.body.objection_title || "").trim();
@@ -158,7 +162,7 @@ exports.addRecord = async (req, res) => {
 
     const f = req.file;
     // ✅ LA&LAO + Audit Objection = Yes => required fields + required attachment
-    if (isLALAO && audit_objection) {
+    if (audit_objection) {
       if (!objection_no) return res.status(400).json({ error: "Objection number is required" });
       if (!objection_title) return res.status(400).json({ error: "Objection title is required" });
       if (!objection_details) return res.status(400).json({ error: "Objection details is required" });
@@ -177,7 +181,7 @@ exports.addRecord = async (req, res) => {
 
     // ✅ BD No unique check (same subcategory)
     // Rule: LA/LAO + Audit Objection = YES → same BD allowed
-    if (!(isLALAO && audit_objection)) {
+    if (!(sectionRules.allow_duplicate_bd && audit_objection)) {
       const bdExists = await Record.findOne({
         where: { subcategory_id, bd_no },
       });
@@ -1062,3 +1066,6 @@ exports.getAuditObjectionsList = async (req, res) => {
     return res.status(500).json({ error: "Failed to load audit objection list" });
   }
 };
+
+
+
