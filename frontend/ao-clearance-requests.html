@@ -6,14 +6,11 @@
   <title>AO Clearance Requests</title>
 
   <link rel="icon" href="images/site-icon.ico" />
-
-  <!-- Same layout css used by other pages -->
   <link rel="stylesheet" href="css/layout.css" />
-
-  <!-- Optional: reuse objec.css for cards/buttons look -->
   <link rel="stylesheet" href="css/objec.css" />
+  <link rel="stylesheet" href="css/ao-clearance-requests.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
-  <!-- auth guard (if you use it across pages) -->
   <script src="js/auth-guard.js"></script>
 </head>
 
@@ -21,38 +18,32 @@
   <div id="overlay" class="overlay"></div>
 
   <div class="dashboard-container">
-    <!-- Sidebar injected here -->
     <div id="sidebar"></div>
 
     <main class="main-content">
-      <!-- Topbar injected here -->
       <div id="topbar"></div>
 
       <section class="content">
-        <!-- Header (same vibe as other pages) -->
-          <div id="pageHeaderMount"></div>
-       
-        <!-- Main card container -->
-        <div class="bdh-card">
-          <div class="bdh-top">
+        <div id="pageHeaderMount"></div>
+
+        <div class="bdh-card aoq-shell">
+          <div class="bdh-top aoq-head">
             <div class="bdh-left">
-              <div class="bdh-title">
+              <div class="bdh-title aoq-title">
                 <span class="material-symbols-rounded">filter_alt</span>
                 Filter Requests
               </div>
-              <div class="bdh-sub">
-                Status filter দিয়ে pending/approved/rejected request দেখুন। Pending থেকে approve/reject করতে পারবেন।
+              <div class="bdh-sub aoq-sub">
+                Status filter diye pending, approved, rejected request dekhun. Pending item theke approve ba reject korte parben.
               </div>
             </div>
-
-            <div class="bdh-right" id="resultInfo"></div>
+            <div class="bdh-right aoq-right" id="resultInfo">Loading...</div>
           </div>
 
-          <!-- Filter + Refresh -->
-          <div class="bdh-search">
-            <div class="bdh-input-wrap" style="min-width:240px;max-width:320px;">
+          <div class="bdh-search aoq-toolbar">
+            <div class="bdh-input-wrap aoq-filter-wrap">
               <span class="material-symbols-rounded bdh-input-icon">tune</span>
-              <select id="statusFilter" class="bdh-input" style="padding-left:40px;">
+              <select id="statusFilter" class="bdh-input aoq-input">
                 <option value="pending" selected>Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
@@ -60,43 +51,53 @@
               </select>
             </div>
 
-            <button id="refreshBtn" class="bdh-btn bdh-btn-primary" type="button">
+            <button id="refreshBtn" class="bdh-btn bdh-btn-primary aoq-refresh" type="button">
               <span class="material-symbols-rounded">refresh</span>
               Refresh
             </button>
           </div>
 
-          <!-- Error -->
+          <div class="aoq-stats">
+            <div class="aoq-stat pending">
+              <div class="aoq-stat-label">Pending</div>
+              <div class="aoq-stat-value" id="countPending">0</div>
+            </div>
+            <div class="aoq-stat approved">
+              <div class="aoq-stat-label">Approved</div>
+              <div class="aoq-stat-value" id="countApproved">0</div>
+            </div>
+            <div class="aoq-stat rejected">
+              <div class="aoq-stat-label">Rejected</div>
+              <div class="aoq-stat-value" id="countRejected">0</div>
+            </div>
+            <div class="aoq-stat total">
+              <div class="aoq-stat-label">Total</div>
+              <div class="aoq-stat-value" id="countTotal">0</div>
+            </div>
+          </div>
+
           <div id="errorBox" class="msg msg-error" style="display:none;"></div>
 
           <div class="bdh-divider"></div>
 
-          <!-- List -->
-          <div id="list" class="bdh-cards"></div>
+          <div id="list" class="bdh-cards aoq-list"></div>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- Layout init (same as your other pages) -->
- 
   <script type="module">
-   
-  import { initLayout, renderPageHeader } from "./js/layout.js";
-   initLayout("ao-clearance-requests.html");
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("ao-clearance-requests.html");
 
-  renderPageHeader({
-    icon: "filter_alt",
-    title: "AO Clearance" ,
-    subtitle: "Pending clearance request approve/reject ",
-    showClock: true,
-  });
+    renderPageHeader({
+      icon: "filter_alt",
+      title: "AO Clearance",
+      subtitle: "Pending clearance request approve/reject",
+      showClock: true,
+    });
   </script>
 
-  <!-- Admin approvals logic -->
   <script src="js/ao-clearance-requests.js"></script>
-
-  <!-- Date/time updater -->
-
 </body>
 </html>

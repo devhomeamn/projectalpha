@@ -83,16 +83,8 @@ export async function initLayout(activePage) {
     });
   }
 
-  async function getLALAOSectionIdCached() {
-    return getSectionIdCached("lalao_section_id", (normalizedName) => {
-      return normalizedName === "lalao";
-    });
-  }
-
   const chequeSectionId = await getChequeSectionIdCached();
-  const lalaoSectionId = await getLALAOSectionIdCached();
   const isChequeUser = role !== "General" || (chequeSectionId && userSectionId === Number(chequeSectionId));
-  const isLALAOUser = role === "General" && !!lalaoSectionId && userSectionId === Number(lalaoSectionId);
 
 
   // ------------------------------
@@ -149,9 +141,9 @@ export async function initLayout(activePage) {
       icon: "gavel",
       roles: ["Admin", "Master", "General"],
       children: [
-        { name: "Objection Entry", icon: "post_add", roles: ["Admin", "Master", "General"], link: "add-record.html", onlyLALAOUser: true },
-        { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html", onlyLALAOUser: true },
-        { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html", onlyLALAOUser: true },
+        { name: "Objection Entry", icon: "post_add", roles: ["Admin", "Master", "General"], link: "add-record.html" },
+        { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
+        { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html" },
         { name: "Clearance Approvals", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
       ],
     },
@@ -169,7 +161,6 @@ export async function initLayout(activePage) {
   function isAllowedByRole(item) {
     if (!(item.roles || []).includes(role)) return false;
     if (item.onlyChequeUser && !isChequeUser) return false;
-    if (item.onlyLALAOUser && !isLALAOUser) return false;
     return true;
   }
 

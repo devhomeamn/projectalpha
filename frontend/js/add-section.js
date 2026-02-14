@@ -30,6 +30,52 @@ function showToast(msg, type = "success", ms = 3000) {
   }, ms);
 }
 
+function askConfirm(message, title = "Confirm Action", okText = "Delete") {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("asConfirmModal");
+    const msgEl = document.getElementById("asConfirmMessage");
+    const titleEl = document.getElementById("asConfirmTitle");
+    const okBtn = document.getElementById("asConfirmOk");
+    const cancelBtn = document.getElementById("asConfirmCancel");
+
+    if (!modal || !msgEl || !titleEl || !okBtn || !cancelBtn) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    msgEl.textContent = message;
+    titleEl.textContent = title;
+    okBtn.textContent = okText;
+
+    const close = (val) => {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      modal.removeEventListener("click", onBackdrop);
+      document.removeEventListener("keydown", onEsc);
+      resolve(val);
+    };
+
+    const onOk = () => close(true);
+    const onCancel = () => close(false);
+    const onBackdrop = (e) => {
+      if (e.target === modal) close(false);
+    };
+    const onEsc = (e) => {
+      if (e.key === "Escape") close(false);
+    };
+
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+    modal.addEventListener("click", onBackdrop);
+    document.addEventListener("keydown", onEsc);
+
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+  });
+}
+
 /* =========================
    ✅ JWT Auth Fetch Wrapper
    - Adds Authorization header
@@ -274,7 +320,7 @@ function initSectionDelete(root) {
   root.dataset.sectionDeleteBound = "1";
 
   async function runDelete(secId) {
-    const ok = confirm("Are you sure you want to delete this section?");
+    const ok = await askConfirm("Are you sure you want to delete this section?");
     if (!ok) return;
 
     const res = await authFetch(`${API_BASE}/sections/${secId}`, { method: "DELETE" });
@@ -319,7 +365,7 @@ function initSubDelete(root) {
     e.stopPropagation();
 
     const id = btn.dataset.subid;
-    const ok = confirm("Delete this subcategory?");
+    const ok = await askConfirm("Delete this subcategory?");
     if (!ok) return;
 
     const res = await authFetch(`${API_BASE}/sections/sub/${id}`, { method: "DELETE" });
@@ -347,7 +393,7 @@ function initRackDelete(root) {
     e.stopPropagation();
 
     const id = btn.dataset.rackid;
-    const ok = confirm("Delete this rack?");
+    const ok = await askConfirm("Delete this rack?");
     if (!ok) return;
 
     const res = await authFetch(`${API_BASE}/sections/rack/${id}`, { method: "DELETE" });
@@ -439,12 +485,13 @@ function renderSectionsAccordion(sections = []) {
               ${desc ? `<small>${escapeHtml(desc)}</small>` : `<small>&nbsp;</small>`}
             </div>
 
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div class="acc-actions">
               <span class="section-delete-btn"
                     role="button"
                     tabindex="0"
-                    data-secid="${sec.id}">
-                Delete
+                    data-secid="${sec.id}"
+                    title="Delete Section">
+                <span class="material-symbols-rounded">delete</span>
               </span>
 
               <span class="rack-print-btn"
@@ -452,7 +499,7 @@ function renderSectionsAccordion(sections = []) {
                     tabindex="0"
                     data-secname="${escapeHtml(name)}"
                     data-racks="${escapeHtml(JSON.stringify(rackNamesForPrint))}">
-                Print Racks
+                <span class="material-symbols-rounded">print</span>
               </span>
 
               <span class="acc-badge">${escapeHtml(badgeText)}</span>
@@ -478,7 +525,7 @@ function renderSectionsAccordion(sections = []) {
                           </li>`
                       )
                       .join("")}</ul>`
-                  : `<div style="color:#6b7280;font-size:13px;">No subcategories</div>`
+                  : `<div class="muted-note">No subcategories</div>`
               }
             </div>
 
@@ -499,7 +546,7 @@ function renderSectionsAccordion(sections = []) {
                           </li>`
                       )
                       .join("")}</ul>`
-                  : `<div style="color:#6b7280;font-size:13px;">No racks</div>`
+                  : `<div class="muted-note">No racks</div>`
               }
             </div>
           </div>
@@ -744,7 +791,7 @@ async function fetchCentralRacks() {
           <strong>${escapeHtml(r.rack_name || r.name || "Unnamed Rack")}</strong>
           ${
             r.description
-              ? `<div style="font-size:12.5px;color:#6b7280;">${escapeHtml(r.description)}</div>`
+              ? `<small>${escapeHtml(r.description)}</small>`
               : ""
           }
         </div>

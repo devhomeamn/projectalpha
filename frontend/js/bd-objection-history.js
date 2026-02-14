@@ -29,13 +29,6 @@ function fmtDateTime(v) {
   try { return new Date(v).toLocaleString(); } catch { return "-"; }
 }
 
-function normalizeSectionName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[\/\-_]/g, "");
-}
-
 function showError(msg) {
   const el = document.getElementById("bdSearchError");
   if (!el) return;
@@ -114,49 +107,10 @@ async function getMeSafe() {
   }
 }
 
-async function ensureLALAOAccess() {
+async function ensureAuditAccess() {
   const role = String(ME_ROLE || "").toLowerCase();
-  if (role === "admin") {
-    window.location.href = "ao-clearance-requests.html";
-    return false;
-  }
-  if (role !== "general") {
-    showError("Only LA/LAO section users can access this page.");
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 900);
-    return false;
-  }
-
-  const userSectionId = Number(ME_USER?.section_id || 0);
-  if (!userSectionId) {
-    showError("Your account is not assigned to any section.");
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 900);
-    return false;
-  }
-
-  let lalaoSectionId = Number(localStorage.getItem("lalao_section_id") || 0);
-  if (!lalaoSectionId) {
-    try {
-      const rows = await apiJSON(`${API_BASE}/sections`);
-      const list = rows?.sections || rows?.data || rows || [];
-      const found = Array.isArray(list)
-        ? list.find((row) => normalizeSectionName(row?.name) === "lalao")
-        : null;
-      lalaoSectionId = Number(found?.id || 0);
-      if (lalaoSectionId) {
-        localStorage.setItem("lalao_section_id", String(lalaoSectionId));
-      }
-    } catch {
-      showError("Failed to verify section access.");
-      return false;
-    }
-  }
-
-  if (!lalaoSectionId || userSectionId !== lalaoSectionId) {
-    showError("Only LA/LAO section users can access this page.");
+  if (!["admin", "master", "general"].includes(role)) {
+    showError("You do not have access to this page.");
     setTimeout(() => {
       window.location.href = "dashboard.html";
     }, 900);
@@ -542,7 +496,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     ME_ROLE = "";
   }
 
-  const accessOk = await ensureLALAOAccess();
+  const accessOk = await ensureAuditAccess();
   if (!accessOk) return;
 
   // 3) Bind modal close + submit

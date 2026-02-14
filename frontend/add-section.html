@@ -8,6 +8,7 @@
 
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/add-section.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 </head>
 
 <body>
@@ -30,11 +31,6 @@
       </section>
 
       <section class="content section-page">
-
-        <!-- Page Header -->
-             
-
-
         <div class="section-grid">
 
           <!-- LEFT: FORMS -->
@@ -128,7 +124,7 @@
             <!-- CENTRAL RACKS (COLLAPSIBLE) -->
             <div class="list-card">
               <div class="list-head">
-                <h4 class="list-title" style="margin:0;">Existing Central Racks</h4>
+                <h4 class="list-title">Existing Central Racks</h4>
                 <button type="button" class="list-toggle" data-target="#centralRackList" aria-expanded="true">
                   Collapse
                 </button>
@@ -138,9 +134,9 @@
             </div>
 
             <!-- SECTIONS OVERVIEW (COLLAPSIBLE + ACCORDION) -->
-            <div class="list-card" style="margin-top:12px;">
+            <div class="list-card list-card-gap">
               <div class="list-head">
-                <h3 class="section-title" style="margin:0;">All Sections Overview</h3>
+                <h3 class="section-title section-title-zero">All Sections Overview</h3>
                 <button type="button" class="list-toggle" data-target="#sectionList" aria-expanded="true">
                   Collapse
                 </button>
@@ -178,5 +174,18 @@
 
   <script src="js/add-section.js"></script>
   <script src="js/auth-guard.js"></script>
+
+  <div id="asConfirmModal" class="as-modal" aria-hidden="true">
+    <div class="as-modal-card" role="dialog" aria-modal="true" aria-labelledby="asConfirmTitle">
+      <div class="as-modal-head">
+        <h3 id="asConfirmTitle">Confirm Action</h3>
+      </div>
+      <div class="as-modal-body" id="asConfirmMessage">Are you sure?</div>
+      <div class="as-modal-actions">
+        <button type="button" id="asConfirmCancel" class="as-btn">Cancel</button>
+        <button type="button" id="asConfirmOk" class="as-btn as-btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

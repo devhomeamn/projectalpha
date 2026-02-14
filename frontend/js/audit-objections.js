@@ -10,13 +10,6 @@
       .replaceAll("'", "&#039;");
   }
 
-  function normalizeSectionName(value) {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, "")
-      .replace(/[\/\-_]/g, "");
-  }
-
   function setNowDateTime() {
     const dEl = document.getElementById("currentDate");
     const tEl = document.getElementById("currentTime");
@@ -112,7 +105,7 @@
     setText("aoCountPage", items.length);
   }
 
-  async function ensureLALAOAccess() {
+  async function ensureAuditAccess() {
     const token = getToken();
     if (!token) {
       window.location.href = "login.html";
@@ -127,51 +120,8 @@
       if (!meRes.ok) throw new Error(meData?.message || "Unauthorized");
 
       const role = String(meData?.user?.role || "").toLowerCase();
-      if (role === "admin") {
-        showAccessNote("Admins can review and approve only from Clearance Approvals.");
-        setTimeout(() => {
-          window.location.href = "ao-clearance-requests.html";
-        }, 650);
-        return false;
-      }
-      if (role !== "general") {
-        showAccessNote("Only LA/LAO section users can access this module.");
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 900);
-        return false;
-      }
-
-      const userSectionId = Number(meData?.user?.section_id || 0);
-      if (!userSectionId) {
-        showAccessNote("Your account is not assigned to a section.");
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 900);
-        return false;
-      }
-
-      let lalaoSectionId = Number(localStorage.getItem("lalao_section_id") || 0);
-      if (!lalaoSectionId) {
-        const secRes = await fetch("/api/sections", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const secData = await secRes.json().catch(() => []);
-        if (!secRes.ok) throw new Error("Failed to load sections");
-
-        const rows = secData?.sections || secData?.data || secData || [];
-        const found = Array.isArray(rows)
-          ? rows.find((row) => normalizeSectionName(row?.name) === "lalao")
-          : null;
-
-        lalaoSectionId = Number(found?.id || 0);
-        if (lalaoSectionId) {
-          localStorage.setItem("lalao_section_id", String(lalaoSectionId));
-        }
-      }
-
-      if (!lalaoSectionId || userSectionId !== lalaoSectionId) {
-        showAccessNote("Only LA/LAO section users can access this module.");
+      if (!["admin", "master", "general"].includes(role)) {
+        showAccessNote("You do not have access to this module.");
         setTimeout(() => {
           window.location.href = "dashboard.html";
         }, 900);
@@ -388,7 +338,7 @@
     setNowDateTime();
     bindEvents();
 
-    ACCESS_OK = await ensureLALAOAccess();
+    ACCESS_OK = await ensureAuditAccess();
     if (!ACCESS_OK) return;
 
     const p = getParams();
