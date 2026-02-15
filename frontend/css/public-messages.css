@@ -125,6 +125,37 @@
   word-break: break-word;
 }
 
+.pm-item-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.pm-mini-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pm-mini-btn.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff7f7;
+}
+
+.pm-edited {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 700;
+}
+
 .pm-empty {
   border: 1px dashed #d1d5db;
   border-radius: 10px;

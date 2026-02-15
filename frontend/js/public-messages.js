@@ -1,5 +1,6 @@
 (function () {
   "use strict";
+  let isAdmin = false;
 
   function getToken() {
     return localStorage.getItem("token") || "";
@@ -79,14 +80,28 @@
 
     box.innerHTML = rows
       .map((m) => {
+        const canEdit = !!m.can_edit;
+        const canDelete = !!m.can_delete;
+        const edited = !!m.is_edited;
         return `
-          <article class="pm-item">
+          <article class="pm-item" data-message-id="${Number(m.id || 0)}">
             <div class="pm-meta">
               <span class="pm-author">${escapeHtml(m.author_name || "User")}</span>
               <span class="pm-role">${escapeHtml(m.author_role || "General")}</span>
               <span>${escapeHtml(fmtDate(m.createdAt))}</span>
+              ${edited ? `<span class="pm-edited">edited ${escapeHtml(fmtDate(m.updatedAt))}</span>` : ""}
             </div>
             <p class="pm-text">${escapeHtml(m.message || "")}</p>
+            ${
+              canEdit || canDelete
+                ? `
+                  <div class="pm-item-actions">
+                    ${canEdit ? `<button type="button" class="pm-mini-btn" data-action="edit">Edit</button>` : ""}
+                    ${canDelete ? `<button type="button" class="pm-mini-btn danger" data-action="delete">Delete</button>` : ""}
+                  </div>
+                `
+                : ""
+            }
           </article>
         `;
       })
@@ -102,7 +117,61 @@
       throw new Error(out?.error || "Failed to load messages");
     }
 
+    isAdmin = !!out.is_admin;
     renderMessages(out.messages || []);
+  }
+
+  function renderTraces(list) {
+    const traceCard = document.getElementById("traceCard");
+    const traceList = document.getElementById("traceList");
+    if (!traceCard || !traceList) return;
+
+    if (!isAdmin) {
+      traceCard.hidden = true;
+      return;
+    }
+
+    traceCard.hidden = false;
+    const rows = Array.isArray(list) ? list : [];
+    if (!rows.length) {
+      traceList.innerHTML = '<div class="pm-empty">No trace log yet.</div>';
+      return;
+    }
+
+    traceList.innerHTML = rows
+      .map((t) => {
+        const action = String(t.action || "").toLowerCase();
+        const actionLabel = action === "delete" ? "Deleted" : "Edited";
+        return `
+          <article class="pm-item">
+            <div class="pm-meta">
+              <span class="pm-author">${escapeHtml(t.actor_name || "User")}</span>
+              <span class="pm-role">${escapeHtml(t.actor_role || "General")}</span>
+              <span>${escapeHtml(actionLabel)} message #${escapeHtml(String(t.message_id || "-"))}</span>
+              <span>${escapeHtml(fmtDate(t.createdAt))}</span>
+            </div>
+            <p class="pm-text"><b>Owner:</b> ${escapeHtml(t.owner_name || "-")}</p>
+            <p class="pm-text"><b>Before:</b> ${escapeHtml(t.before_text || "")}</p>
+            ${
+              action === "edit"
+                ? `<p class="pm-text"><b>After:</b> ${escapeHtml(t.after_text || "")}</p>`
+                : ""
+            }
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  async function loadTraces() {
+    if (!isAdmin) return;
+    const apiBase = await getApiBase();
+    const res = await authFetch(`${apiBase}/public-messages/trace/list`);
+    const out = await res.json();
+    if (!res.ok) {
+      throw new Error(out?.error || "Failed to load trace logs");
+    }
+    renderTraces(out.traces || []);
   }
 
   async function submitMessage(e) {
@@ -130,6 +199,49 @@
     if (input) input.value = "";
     setHint("Message posted.");
     await loadMessages();
+    await loadTraces();
+  }
+
+  async function editMessage(messageId, currentText) {
+    const nextText = window.prompt("Edit your message:", currentText || "");
+    if (nextText === null) return;
+    const text = String(nextText || "").trim();
+    if (!text) {
+      setHint("Message empty রাখা যাবে না।", true);
+      return;
+    }
+
+    const apiBase = await getApiBase();
+    const res = await authFetch(`${apiBase}/public-messages/${messageId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ message: text }),
+    });
+    const out = await res.json();
+    if (!res.ok) {
+      setHint(out?.error || "Edit failed", true);
+      return;
+    }
+    setHint("Message updated.");
+    await loadMessages();
+    await loadTraces();
+  }
+
+  async function deleteMessage(messageId) {
+    const ok = window.confirm("Are you sure you want to delete this message?");
+    if (!ok) return;
+
+    const apiBase = await getApiBase();
+    const res = await authFetch(`${apiBase}/public-messages/${messageId}`, {
+      method: "DELETE",
+    });
+    const out = await res.json();
+    if (!res.ok) {
+      setHint(out?.error || "Delete failed", true);
+      return;
+    }
+    setHint("Message deleted.");
+    await loadMessages();
+    await loadTraces();
   }
 
   async function init() {
@@ -140,8 +252,28 @@
 
     document.getElementById("messageForm")?.addEventListener("submit", submitMessage);
     document.getElementById("refreshBtn")?.addEventListener("click", loadMessages);
+    document.getElementById("traceRefreshBtn")?.addEventListener("click", loadTraces);
+
+    document.getElementById("messageList")?.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+
+      const card = e.target.closest(".pm-item[data-message-id]");
+      const id = Number(card?.getAttribute("data-message-id") || 0);
+      if (!id) return;
+
+      if (btn.dataset.action === "edit") {
+        const text = card.querySelector(".pm-text")?.textContent || "";
+        await editMessage(id, text);
+      }
+
+      if (btn.dataset.action === "delete") {
+        await deleteMessage(id);
+      }
+    });
 
     await loadMessages();
+    await loadTraces();
   }
 
   document.addEventListener("DOMContentLoaded", () => {

@@ -8,6 +8,7 @@ const sequelize = require('./config/db');
 require('./models/userPreferredRackModel');
 require('./models/sectionRuleModel');
 require('./models/publicMessageModel');
+require('./models/publicMessageLogModel');
 
 dotenv.config();
 
