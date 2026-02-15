@@ -64,4 +64,6 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user }); // { id, role, email?, name? ...token payload অনুযায়ী }
 });
 
+router.post('/me/change-password', requireAuth, authController.changeMyPassword);
+
 module.exports = router;

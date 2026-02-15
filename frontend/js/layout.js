@@ -187,7 +187,7 @@ export async function initLayout(activePage) {
               const active = c.link === currentPage;
               return `
                 <li class="submenu-item ${active ? "active" : ""}">
-                  <a href="${c.link}" class="${active ? "active" : ""}">
+                  <a href="${c.link}" class="${active ? "active" : ""}" title="${c.name}">
                     <span class="material-symbols-rounded menu-icon">${c.icon}</span>
                     <span>${c.name}</span>
                   </a>
@@ -201,7 +201,7 @@ export async function initLayout(activePage) {
           const openClass = groupActive ? "open" : "";
           return `
             <li class="menu-group ${openClass}" data-group-id="${groupId}">
-              <button class="menu-group-btn" type="button" aria-expanded="${expanded}">
+              <button class="menu-group-btn" type="button" aria-expanded="${expanded}" title="${item.name}">
                 <span class="material-symbols-rounded menu-icon">${item.icon}</span>
                 <span class="menu-group-title">${item.name}</span>
                 <span class="material-symbols-rounded menu-caret">expand_more</span>
@@ -216,7 +216,7 @@ export async function initLayout(activePage) {
         const isActive = currentPage === item.link;
         return `
           <li class="menu-item ${isActive ? "active" : ""}">
-            <a href="${item.link}" class="${isActive ? "active" : ""}">
+            <a href="${item.link}" class="${isActive ? "active" : ""}" title="${item.name}">
               <span class="material-symbols-rounded menu-icon">${item.icon}</span>
               <span>${item.name}</span>
             </a>
@@ -232,6 +232,9 @@ export async function initLayout(activePage) {
     // Group toggle behavior
     menuList.querySelectorAll(".menu-group-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (document.body.classList.contains("sidebar-collapsed") && window.innerWidth > 900) {
+          return;
+        }
         const li = btn.closest(".menu-group");
         if (!li) return;
 
@@ -275,6 +278,25 @@ export async function initLayout(activePage) {
   if (umServiceIdEl) umServiceIdEl.textContent = `Service ID: ${serviceid || "—"}`;
 
   /* ------------------------------
+      Sidebar Footer Meta
+  ------------------------------ */
+  const footerYearEl = document.getElementById("footerYear");
+  const footerVersionEl = document.getElementById("footerVersion");
+  const footerUpdatedAtEl = document.getElementById("footerUpdatedAt");
+
+  const now = new Date();
+  const buildVersion = String(window.APP_BUILD_VERSION || "1.3.0");
+  const updatedAt = now.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+
+  if (footerYearEl) footerYearEl.textContent = String(now.getFullYear());
+  if (footerVersionEl) footerVersionEl.textContent = buildVersion;
+  if (footerUpdatedAtEl) footerUpdatedAtEl.textContent = updatedAt;
+
+  /* ------------------------------
       Sidebar Toggle
   ------------------------------ */
   window.toggleSidebar = function () {
@@ -282,7 +304,7 @@ export async function initLayout(activePage) {
     const overlay = document.getElementById("overlay");
     if (!sidebar) return;
 
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 900) {
       sidebar.classList.toggle("open");
       if (overlay) overlay.classList.toggle("show");
       return;

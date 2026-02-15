@@ -1,59 +1,40 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
 <aside class="sidebar" id="sidebar">
-  <!-- Header / Brand -->
   <div class="sidebar-header">
-  <div class="logo-wrap">
-  <div class="logo-dot airplane-logo">
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
-         xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M2 16l20-6-20-6 5 6-5 6z"
-        fill="white"/>
-    </svg>
+    <a href="dashboard.html" class="brand-block" aria-label="Go to dashboard">
+      <div class="logo-dot airplane-logo">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 16l20-6-20-6 5 6-5 6z" fill="white"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <div class="logo-link">SFCAIRRM</div>
+        <div class="brand-subtitle">Record Management</div>
+      </div>
+    </a>
   </div>
-  <a href="dashboard.html" class="logo-link">SFCAIRRM</a>
-</div>
 
+  <div class="sidebar-nav-head">
+    <span>Main Navigation</span>
   </div>
 
-  <!-- 
-  <div class="sidebar-profile">
-    <img
-      id="sidebarAvatar"
-      class="sidebar-avatar"
-      alt="User"
-      src="https://robohash.org/sfrms-user.png?size=80x80"
-    />
-    <div class="sidebar-user">
-      <div id="sidebarName" class="sidebar-name">Admin User</div>
-      <div id="sidebarRole" class="sidebar-role">Admin</div>
-    </div>
-  </div>
-  Profile -->
-
-  <!-- ✅ Scrollable Menu Area (only this will scroll) -->
   <div class="sidebar-scroll">
     <nav class="sidebar-menu">
-      <ul id="menuList">
-        <!-- JS দিয়ে dynamic load হলে এটা খালি রাখতে পারো -->
-        <!-- example items -->
-        <!--
-        <li class="active">
-          <a href="dashboard.html" class="active">
-            <span class="material-symbols-rounded menu-icon">dashboard</span>
-            Dashboard
-          </a>
-        </li>
-        -->
-      </ul>
+      <ul id="menuList"></ul>
     </nav>
   </div>
 
-  <!-- ✅ Footer (fixed bottom) -->
   <div class="sidebar-footer">
     <div class="footer-divider"></div>
-    <div class="footer-meta">developed by @aud_mamun_22_batch</div>
-    <div class="footer-copy">v1.1.0</div>
+    <div class="footer-badge">
+      <span class="material-symbols-rounded">verified</span>
+      <span id="footerSystemStatus">Right Reserved</span>
+    </div>
+    <div class="footer-meta">&copy; <span id="footerYear">2026</span> SFCAIR</div>
+    <div class="footer-meta">Developed by @aud_almamun_22_batch</div>
+    <div class="footer-copy">
+      Version <span id="footerVersion">1.2.0</span> • Updated <span id="footerUpdatedAt">--</span>
+    </div>
   </div>
 </aside>

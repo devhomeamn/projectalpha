@@ -17,10 +17,19 @@ function setHtml(id, html) {
   if (el) el.innerHTML = html;
 }
 
-async function apiFetchJson(url) {
+async function apiFetchJson(url, options = {}) {
   const token = localStorage.getItem("token");
+  const headers = { ...(options.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !(options.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    ...options,
+    headers,
   });
 
   const ct = res.headers.get("content-type") || "";
@@ -271,6 +280,78 @@ function updateDateTime() {
   setText("currentTime", formattedTime);
 }
 
+function initPasswordToggles() {
+  document.querySelectorAll(".pw-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-target");
+      const input = targetId ? document.getElementById(targetId) : null;
+      const icon = btn.querySelector(".material-symbols-rounded");
+      if (!input || !icon) return;
+
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      icon.textContent = isPassword ? "visibility_off" : "visibility";
+    });
+  });
+}
+
+async function onChangePasswordSubmit(e) {
+  e.preventDefault();
+
+  const form = e.currentTarget;
+  const currentPassword = document.getElementById("currentPassword")?.value || "";
+  const newPassword = document.getElementById("newPassword")?.value || "";
+  const confirmPassword = document.getElementById("confirmPassword")?.value || "";
+  const submitBtn = document.getElementById("btnChangePassword");
+  const initialBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    toast("Please fill all password fields", "error");
+    return;
+  }
+  if (newPassword.length < 6) {
+    toast("New password must be at least 6 characters", "error");
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    toast("New password and confirm password do not match", "error");
+    return;
+  }
+  if (newPassword === currentPassword) {
+    toast("New password must be different from current password", "error");
+    return;
+  }
+
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="material-symbols-rounded">hourglass_top</span> Updating...';
+    }
+
+    await apiFetchJson("/api/auth/me/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    toast("Password changed successfully", "success");
+    form.reset();
+    form.querySelectorAll(".pw-input").forEach((inp) => {
+      inp.type = "password";
+    });
+    form.querySelectorAll(".pw-toggle .material-symbols-rounded").forEach((icon) => {
+      icon.textContent = "visibility";
+    });
+  } catch (err) {
+    console.error("Change password error:", err);
+    toast(err.message || "Failed to change password", "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = initialBtnHtml;
+    }
+  }
+}
+
 // Update immediately and every minute
 
 
@@ -293,4 +374,7 @@ setInterval(updateDateTime, 60000);
     loadAssignedSectionName();
     loadMyStats();
   });
+
+  initPasswordToggles();
+  document.getElementById("changePasswordForm")?.addEventListener("submit", onChangePasswordSubmit);
 });

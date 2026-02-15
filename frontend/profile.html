@@ -88,6 +88,46 @@
                 Refresh
               </button>
             </div>
+
+            <div class="pw-section">
+              <div class="pw-title">
+                <span class="material-symbols-rounded">lock_reset</span>
+                Change Password
+              </div>
+
+              <form id="changePasswordForm" class="pw-form" autocomplete="off">
+                <label class="pw-label" for="currentPassword">Current Password</label>
+                <div class="pw-input-wrap">
+                  <input id="currentPassword" class="pw-input" type="password" required />
+                  <button class="pw-toggle" type="button" data-target="currentPassword" aria-label="Show current password">
+                    <span class="material-symbols-rounded">visibility</span>
+                  </button>
+                </div>
+
+                <label class="pw-label" for="newPassword">New Password</label>
+                <div class="pw-input-wrap">
+                  <input id="newPassword" class="pw-input" type="password" minlength="6" required />
+                  <button class="pw-toggle" type="button" data-target="newPassword" aria-label="Show new password">
+                    <span class="material-symbols-rounded">visibility</span>
+                  </button>
+                </div>
+
+                <label class="pw-label" for="confirmPassword">Confirm New Password</label>
+                <div class="pw-input-wrap">
+                  <input id="confirmPassword" class="pw-input" type="password" minlength="6" required />
+                  <button class="pw-toggle" type="button" data-target="confirmPassword" aria-label="Show confirm password">
+                    <span class="material-symbols-rounded">visibility</span>
+                  </button>
+                </div>
+
+                <div class="pw-hint">Use at least 6 characters.</div>
+
+                <button class="btn" id="btnChangePassword" type="submit">
+                  <span class="material-symbols-rounded">key</span>
+                  Update Password
+                </button>
+              </form>
+            </div>
           </div>
 
           <!-- Right: Charts + Stats + Recent -->

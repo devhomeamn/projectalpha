@@ -226,6 +226,45 @@ exports.toggleUserActive = async (req, res) => {
   }
 };
 
+exports.changeMyPassword = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const currentPassword = String(req.body?.currentPassword || "");
+    const newPassword = String(req.body?.newPassword || "");
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current and new password are required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: "New password must be different from current password" });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password || "");
+    if (!isMatch) {
+      return res.status(400).json({ error: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("changeMyPassword error:", err);
+    return res.status(500).json({ error: "Failed to change password" });
+  }
+};
+
 
 
 // ================== USER PREFERRED RACKS ==================

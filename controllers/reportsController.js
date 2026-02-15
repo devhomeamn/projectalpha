@@ -3,6 +3,12 @@ const Record = require("../models/recordModel");
 const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
 const Rack = require("../models/rackModel");
+const ChequeRegisterEntry = require("../models/chequeRegisterEntryModel");
+const User = require("../models/userModel");
+
+if (!ChequeRegisterEntry.associations?.creator) {
+  ChequeRegisterEntry.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+}
 
 // 1) Section wise records + count
 exports.sectionWiseReport = async (req, res) => {
@@ -148,6 +154,89 @@ exports.monthlySummaryReport = async (req, res) => {
     res.json({ createdByMonth, movedByMonth });
   } catch (err) {
     console.error("monthlySummaryReport error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// 6) Cheque register report (active entries)
+exports.chequeRegisterReport = async (req, res) => {
+  try {
+    const { status, q, origin_section_id, from, to } = req.query;
+
+    const where = { deleted_at: null };
+
+    if (status && status !== "all") where.status = status;
+    if (origin_section_id) where.origin_section_id = Number(origin_section_id);
+
+    if (from || to) {
+      where.received_date = {};
+      if (from) where.received_date[Op.gte] = String(from).slice(0, 10);
+      if (to) where.received_date[Op.lte] = String(to).slice(0, 10);
+    }
+
+    if (q) {
+      const term = String(q).trim();
+      if (term) {
+        where[Op.or] = [
+          { bill_ref_no: { [Op.like]: `%${term}%` } },
+          { token_no: { [Op.like]: `%${term}%` } },
+          ...(Number.isFinite(Number(term)) ? [{ entry_no: Number(term) }] : []),
+        ];
+      }
+    }
+
+    const [entries, sections] = await Promise.all([
+      ChequeRegisterEntry.findAll({
+        where,
+        include: [
+          {
+            model: User,
+            as: "creator",
+            attributes: ["id", "name", "username"],
+            required: false,
+          },
+        ],
+        order: [["received_date", "DESC"], ["entry_no", "DESC"]],
+      }),
+      Section.findAll({ attributes: ["id", "name"], raw: true }),
+    ]);
+
+    const sectionMap = new Map(sections.map((s) => [Number(s.id), s.name]));
+
+    const rows = entries.map((entry) => {
+      const item = entry.toJSON();
+      return {
+        ...item,
+        origin_section_name: sectionMap.get(Number(item.origin_section_id)) || null,
+        returned_to_section_name: sectionMap.get(Number(item.returned_to_section_id)) || null,
+        created_by_name: item.creator?.name || item.creator?.username || null,
+      };
+    });
+
+    const summary = rows.reduce(
+      (acc, item) => {
+        const amount = Number(item.amount || 0);
+        acc.total_entries += 1;
+        acc.total_amount += Number.isFinite(amount) ? amount : 0;
+
+        if (item.status === "received") acc.received += 1;
+        else if (item.status === "processing") acc.processing += 1;
+        else if (item.status === "returned") acc.returned += 1;
+
+        return acc;
+      },
+      {
+        total_entries: 0,
+        total_amount: 0,
+        received: 0,
+        processing: 0,
+        returned: 0,
+      }
+    );
+
+    res.json({ summary, entries: rows });
+  } catch (err) {
+    console.error("chequeRegisterReport error:", err);
     res.status(500).json({ error: err.message });
   }
 };
