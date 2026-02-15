@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Public Messages</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="images/site-icon.ico">
+
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/public-messages.css">
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+      <div id="pageHeaderMount"></div>
+
+      <section class="pm-wrap">
+        <div class="pm-card">
+          <div class="pm-head">
+            <h3>Write a message</h3>
+            <button id="refreshBtn" type="button" class="pm-btn ghost">Refresh</button>
+          </div>
+
+          <form id="messageForm" class="pm-form">
+            <textarea
+              id="messageInput"
+              rows="4"
+              maxlength="1000"
+              placeholder="Write something for everyone..."
+              required
+            ></textarea>
+            <div class="pm-actions">
+              <span id="formHint" class="pm-hint"></span>
+              <button type="submit" class="pm-btn primary">Post Message</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="pm-card">
+          <div class="pm-head">
+            <h3>All messages</h3>
+            <span id="messageCount" class="pm-count">0</span>
+          </div>
+          <div id="messageList" class="pm-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("public-messages.html");
+    renderPageHeader({
+      icon: "forum",
+      title: "Public Messages",
+      subtitle: "Everyone can post here and everyone can read the updates.",
+      showClock: true,
+    });
+  </script>
+  <script src="js/public-messages.js"></script>
+</body>
+</html>

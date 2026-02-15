@@ -1,0 +1,141 @@
+.pm-wrap {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.pm-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.06);
+}
+
+.pm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.pm-head h3 {
+  margin: 0;
+  font-size: 17px;
+  color: #111827;
+}
+
+.pm-count {
+  min-width: 34px;
+  text-align: center;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+  padding: 4px 10px;
+}
+
+.pm-form textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 100px;
+  font: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.pm-form textarea:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.pm-actions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pm-hint {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.pm-btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pm-btn.primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.pm-btn.ghost {
+  background: #ffffff;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.pm-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pm-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f9fafb;
+}
+
+.pm-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pm-author {
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.pm-role {
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-weight: 700;
+}
+
+.pm-text {
+  margin: 0;
+  color: #111827;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pm-empty {
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  color: #6b7280;
+  background: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .pm-wrap {
+    padding: 12px;
+  }
+}

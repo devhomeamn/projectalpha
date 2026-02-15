@@ -7,6 +7,7 @@ const sequelize = require('./config/db');
 // ✅ Ensure preference models are registered before sync
 require('./models/userPreferredRackModel');
 require('./models/sectionRuleModel');
+require('./models/publicMessageModel');
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ const chequeRegisterRoutes = require("./routes/chequeRegisterRoutes");
 app.use("/api/reports", require("./routes/reportsRoutes"));
 app.use("/api/notices", require("./routes/noticeRoutes"));
 app.use("/api/password", require("./routes/passwordRoutes"));
+app.use("/api/public-messages", require("./routes/publicMessageRoutes"));
 
 
 
@@ -79,5 +81,3 @@ app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 app.get('/api/config', (req, res) => {
   res.json({ apiBase: process.env.API_BASE });
 });
-
-
