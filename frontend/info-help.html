@@ -11,186 +11,147 @@
 
 <body>
   <div class="dashboard-container">
-    <!-- Sidebar -->
     <div id="sidebar"></div>
 
-    <!-- Main Content -->
     <main class="main-content">
-      <!-- Topbar -->
       <div id="topbar"></div>
 
-      <!-- Page Content -->
       <section class="content">
         <header class="page-header">
           <h2>Info.</h2>
         </header>
 
-        <!-- ================= HELP / INFO SECTION ================= -->
         <section class="help-section">
+          <h3>SFCAIR — Record Management System (RMS)</h3>
+          <p>
+            <strong>SFCAIR RMS</strong> একটি ওয়েব-ভিত্তিক Record Management System (RMS),
+            যা অফিসের গুরুত্বপূর্ণ ফাইল ও রেকর্ড <strong>সংরক্ষণ, খোঁজা, স্থানান্তর, Audit Objection ব্যবস্থাপনা</strong>
+            এবং <strong>রিপোর্ট/প্রিন্ট</strong> প্রক্রিয়াকে সহজ ও সুশৃঙ্খল করার জন্য তৈরি করা হয়েছে।
+          </p>
+          <p style="margin-top:8px;color:#6b7280;font-size:13.5px;">
+            লক্ষ্য: সঠিক রেকর্ড দ্রুত খুঁজে পাওয়া, সেন্ট্রাল রুম ট্র্যাকিং, এবং অডিট-সম্পর্কিত আপত্তি/ক্লিয়ারেন্স ইতিহাস সংরক্ষণ।
+          </p>
 
-          <div class="help-card">
-            <h3>SFCAIR — Record Management System (RMS)</h3>
-            <p>
-              <strong>SFCAIR RMS</strong> একটি ওয়েব-ভিত্তিক Record Management System (RMS),
-              যা অফিসের গুরুত্বপূর্ণ ফাইল ও রেকর্ড <strong>সংরক্ষণ, খোঁজা, স্থানান্তর, Audit Objection ব্যবস্থাপনা</strong>
-              এবং <strong>রিপোর্ট/প্রিন্ট</strong> প্রক্রিয়াকে সহজ ও সুশৃঙ্খল করার জন্য তৈরি করা হয়েছে।
-            </p>
-            <p style="margin-top:8px;color:#6b7280;font-size:13.5px;">
-              লক্ষ্য: সঠিক রেকর্ড দ্রুত খুঁজে পাওয়া, সেন্ট্রাল রুম ট্র্যাকিং, এবং অডিট-সম্পর্কিত আপত্তি/ক্লিয়ারেন্স ইতিহাস সংরক্ষণ।
-            </p>
-          </div>
+          <h4>User Roles, Access & Security</h4>
+          <ul>
+            <li><strong>Admin</strong>: ইউজার ম্যানেজমেন্ট, অনুমোদন/রিজেক্ট, Site Notice, Clearance/Requests, রিপোর্ট—সব নিয়ন্ত্রণ করতে পারবেন</li>
+            <li><strong>Master</strong>: নির্দিষ্ট ম্যানেজমেন্ট ফিচার/ভিউ (অ্যাডমিনের নীতিমালা অনুযায়ী)</li>
+            <li><strong>General/Auditor</strong>: রেকর্ড এন্ট্রি/ভিউ, সার্চ, নিজের Section সম্পর্কিত কাজ এবং প্রয়োজনীয় Audit Objection কাজ</li>
+            <li>JWT Token ভিত্তিক Authentication—অননুমোদিত ইউজার তথ্য দেখতে পারবে না</li>
+            <li><strong>User Deactivate/Activate</strong>: Admin “All Users” থেকে ইউজারকে সাময়িকভাবে নিষ্ক্রিয়/সক্রিয় করতে পারবেন (Deactivated ইউজার login করতে পারবে না)</li>
+            <li>Session expiry হলে পুনরায় Login প্রয়োজন হতে পারে</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>User Roles, Access & Security</h4>
-            <ul>
-              <li><strong>Admin</strong>: ইউজার ম্যানেজমেন্ট, অনুমোদন/রিজেক্ট, Site Notice, Clearance/Requests, রিপোর্ট—সব নিয়ন্ত্রণ করতে পারবেন</li>
-              <li><strong>Master</strong>: নির্দিষ্ট ম্যানেজমেন্ট ফিচার/ভিউ (অ্যাডমিনের নীতিমালা অনুযায়ী)</li>
-              <li><strong>General/Auditor</strong>: রেকর্ড এন্ট্রি/ভিউ, সার্চ, নিজের Section সম্পর্কিত কাজ এবং প্রয়োজনীয় Audit Objection কাজ</li>
-              <li>JWT Token ভিত্তিক Authentication—অননুমোদিত ইউজার তথ্য দেখতে পারবে না</li>
-              <li><strong>User Deactivate/Activate</strong>: Admin “All Users” থেকে ইউজারকে সাময়িকভাবে নিষ্ক্রিয়/সক্রিয় করতে পারবেন (Deactivated ইউজার login করতে পারবে না)</li>
-              <li>Session expiry হলে পুনরায় Login প্রয়োজন হতে পারে</li>
-            </ul>
-          </div>
+          <h4>System Structure (Record Location Model)</h4>
+          <ul>
+            <li><strong>Section</strong> – প্রধান বিভাগ</li>
+            <li><strong>Subcategory</strong> – Section-এর ভেতরের ক্যাটাগরি</li>
+            <li><strong>Rack</strong> – ফাইল সংরক্ষণের নির্দিষ্ট লোকেশন</li>
+            <li><strong>Central Room</strong> – কেন্দ্রীয় সংরক্ষণাগার (Moved Records আলাদা করে ট্র্যাক হয়)</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>System Structure (Record Location Model)</h4>
-            <ul>
-              <li><strong>Section</strong> – প্রধান বিভাগ</li>
-              <li><strong>Subcategory</strong> – Section-এর ভেতরের ক্যাটাগরি</li>
-              <li><strong>Rack</strong> – ফাইল সংরক্ষণের নির্দিষ্ট লোকেশন</li>
-              <li><strong>Central Room</strong> – কেন্দ্রীয় সংরক্ষণাগার (Moved Records আলাদা করে ট্র্যাক হয়)</li>
-            </ul>
-          </div>
+          <h4>Record Management Features</h4>
+          <ul>
+            <li>Record Add / Update / View / Search / Print</li>
+            <li><strong>BD No. ভিত্তিক সার্চ</strong> + Serial-wise listing</li>
+            <li><strong>Move to Central Room</strong>: রেকর্ড Central এ গেলে আগের Location (previous Section/Subcategory/Rack) সংরক্ষিত থাকে</li>
+            <li><strong>Own-Origin Central Access</strong>: General ইউজার নিজের Section থেকে Central-এ যাওয়া রেকর্ডগুলো দেখতে পারে</li>
+            <li>Movement history (মুভ/আপডেট লগ) রিপোর্টে ট্র্যাক করা যায়</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>Record Management Features</h4>
-            <ul>
-              <li>Record Add / Update / View / Search / Print</li>
-              <li><strong>BD No. ভিত্তিক সার্চ</strong> + Serial-wise listing</li>
-              <li><strong>Move to Central Room</strong>: রেকর্ড Central এ গেলে আগের Location (previous Section/Subcategory/Rack) সংরক্ষিত থাকে</li>
-              <li><strong>Own-Origin Central Access</strong>: General ইউজার নিজের Section থেকে Central-এ যাওয়া রেকর্ডগুলো দেখতে পারে</li>
-              <li>Movement history (মুভ/আপডেট লগ) রিপোর্টে ট্র্যাক করা যায়</li>
-            </ul>
-          </div>
+          <h4>Audit Objection Module</h4>
+          <ul>
+            <li><strong>Audit Objections List</strong>: সব Audit Objection টেবিল আকারে দেখা যায় (row expand করে বিস্তারিত দেখা যায়)</li>
+            <li><strong>BD Objection History</strong>: নির্দিষ্ট BD No. অনুযায়ী সব আপত্তির ইতিহাস serial-wise দেখা যায়</li>
+            <li><strong>Attachment Handling</strong>: আপত্তি/রিকুয়েস্টে PDF/Image attachment থাকলে “Open” লিংকে ক্লিক করে দেখা যায়</li>
+            <li>দ্রুত নেভিগেশনের জন্য View Record / History লিংক সংযুক্ত</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>Audit Objection Module</h4>
-            <ul>
-              <li><strong>Audit Objections List</strong>: সব Audit Objection টেবিল আকারে দেখা যায় (row expand করে বিস্তারিত দেখা যায়)</li>
-              <li><strong>BD Objection History</strong>: নির্দিষ্ট BD No. অনুযায়ী সব আপত্তির ইতিহাস serial-wise দেখা যায়</li>
-              <li><strong>Attachment Handling</strong>: আপত্তি/রিকুয়েস্টে PDF/Image attachment থাকলে “Open” লিংকে ক্লিক করে দেখা যায়</li>
-              <li>দ্রুত নেভিগেশনের জন্য View Record / History লিংক সংযুক্ত</li>
-            </ul>
-          </div>
+          <h4>Audit Objection Clearance & Requests</h4>
+          <ul>
+            <li><strong>AO Clearance Requests</strong>: Clearance request গুলো এক জায়গায় তালিকা আকারে দেখা/ম্যানেজ করা যায়</li>
+            <li><strong>Admin Approval Flow</strong>: Admin pending request approve/reject করতে পারে</li>
+            <li>Approve হলে সংশ্লিষ্ট রেকর্ড/অবজেকশন আপডেট/ক্লিয়ার হিসেবে গণ্য হতে পারে (নীতিমালা অনুযায়ী)</li>
+            <li>Request/Decision log এবং reason/note সংরক্ষণে সহায়তা করে</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>Audit Objection Clearance & Requests</h4>
-            <ul>
-              <li><strong>AO Clearance Requests</strong>: Clearance request গুলো এক জায়গায় তালিকা আকারে দেখা/ম্যানেজ করা যায়</li>
-              <li><strong>Admin Approval Flow</strong>: Admin pending request approve/reject করতে পারে</li>
-              <li>Approve হলে সংশ্লিষ্ট রেকর্ড/অবজেকশন আপডেট/ক্লিয়ার হিসেবে গণ্য হতে পারে (নীতিমালা অনুযায়ী)</li>
-              <li>Request/Decision log এবং reason/note সংরক্ষণে সহায়তা করে</li>
-            </ul>
-          </div>
+          <h4>AO Edit Request Workflow (Controlled Editing)</h4>
+          <ul>
+            <li>General/Master সরাসরি Record-এর Audit Objection edit না করে <strong>Edit Request</strong> জমা দেয়</li>
+            <li><strong>Admin</strong> request review করে Approve/Reject করে</li>
+            <li>Approve হলে প্রস্তাবিত পরিবর্তন Record/Audit Objection-এ apply হয়</li>
+            <li>Optional attachment সহ request সাবমিট করা যায়</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>AO Edit Request Workflow (Controlled Editing)</h4>
-            <ul>
-              <li>General/Master সরাসরি Record-এর Audit Objection edit না করে <strong>Edit Request</strong> জমা দেয়</li>
-              <li><strong>Admin</strong> request review করে Approve/Reject করে</li>
-              <li>Approve হলে প্রস্তাবিত পরিবর্তন Record/Audit Objection-এ apply হয়</li>
-              <li>Optional attachment সহ request সাবমিট করা যায়</li>
-            </ul>
-          </div>
+          <h4>Management Features (Admin)</h4>
+          <ul>
+            <li>নতুন Section, Subcategory ও Rack যোগ/আপডেট/ডিলিট</li>
+            <li>Central Room-এর জন্য আলাদা Rack/Serial ব্যবস্থাপনা</li>
+            <li>All Users তালিকা, Access Edit (Role/Section Assign), Deactivate/Activate</li>
+            <li><strong>Site Notice</strong>: Info/Warn/Urgent notice দিয়ে পুরো সাইটে ঘোষণা দেখানো যায়</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>Management Features (Admin)</h4>
-            <ul>
-              <li>নতুন Section, Subcategory ও Rack যোগ/আপডেট/ডিলিট</li>
-              <li>Central Room-এর জন্য আলাদা Rack/Serial ব্যবস্থাপনা</li>
-              <li>All Users তালিকা, Access Edit (Role/Section Assign), Deactivate/Activate</li>
-              <li><strong>Site Notice</strong>: Info/Warn/Urgent notice দিয়ে পুরো সাইটে ঘোষণা দেখানো যায়</li>
-            </ul>
-          </div>
+          <h4>Reports & Dashboard</h4>
+          <ul>
+            <li>Section-wise reports</li>
+            <li>Central reports</li>
+            <li>Movement history report</li>
+            <li>User activity / monthly summary (যদি সেটআপ থাকে)</li>
+            <li>Dashboard এ summary stats দেখা যায়</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>Reports & Dashboard</h4>
-            <ul>
-              <li>Section-wise reports</li>
-              <li>Central reports</li>
-              <li>Movement history report</li>
-              <li>User activity / monthly summary (যদি সেটআপ থাকে)</li>
-              <li>Dashboard এ summary stats দেখা যায়</li>
-            </ul>
-          </div>
+          <h4>🖨️ Print System</h4>
+          <ul>
+            <li>Record Print: নির্দিষ্ট ফরম্যাটে তথ্য প্রিন্ট (A4)</li>
+            <li><strong>Print Racks</strong>: প্রতিটি Section-এর পাশে Print Racks অপশন</li>
+            <li>Rack Label প্রিন্ট করে ফিজিক্যাল ফাইল ট্যাগিং করা যায়</li>
+            <li>থার্মাল প্রিন্টার/স্ট্যান্ডার্ড প্রিন্টার উভয়ই ব্যবহার করা যায়</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>🖨️ Print System</h4>
-            <ul>
-              <li>Record Print: নির্দিষ্ট ফরম্যাটে তথ্য প্রিন্ট (A4)</li>
-              <li><strong>Print Racks</strong>: প্রতিটি Section-এর পাশে Print Racks অপশন</li>
-              <li>Rack Label প্রিন্ট করে ফিজিক্যাল ফাইল ট্যাগিং করা যায়</li>
-              <li>থার্মাল প্রিন্টার/স্ট্যান্ডার্ড প্রিন্টার উভয়ই ব্যবহার করা যায়</li>
-            </ul>
-          </div>
+          <h4>Password & Account Recovery</h4>
+          <ul>
+            <li><strong>Forgot Password</strong> থেকে reset link/token দিয়ে password পরিবর্তন করা যায়</li>
+            <li>Reset token নির্দিষ্ট সময়ের জন্য কার্যকর (সিকিউরিটি)</li>
+            <li>একবার ব্যবহার হলে token invalid হয়ে যায়</li>
+          </ul>
 
-          <div class="help-card">
-            <h4>Password & Account Recovery</h4>
-            <ul>
-              <li><strong>Forgot Password</strong> থেকে reset link/token দিয়ে password পরিবর্তন করা যায়</li>
-              <li>Reset token নির্দিষ্ট সময়ের জন্য কার্যকর (সিকিউরিটি)</li>
-              <li>একবার ব্যবহার হলে token invalid হয়ে যায়</li>
-            </ul>
-          </div>
+          <h4>⚠️ গুরুত্বপূর্ণ সতর্কতা</h4>
+          <ul>
+            <li>Delete অপারেশন <strong>স্থায়ী</strong> (Permanent)</li>
+            <li>Section ডিলিট করলে সংশ্লিষ্ট Subcategory ও Rack প্রভাবিত হতে পারে</li>
+            <li>ডিলিট করার আগে যাচাই/অনুমোদন প্রক্রিয়া অনুসরণ করার পরামর্শ</li>
+            <li>Deactivated ইউজার login করতে পারবে না—সতর্কতার সাথে ব্যবহার করুন</li>
+          </ul>
 
-          <div class="help-card warning">
-            <h4>⚠️ গুরুত্বপূর্ণ সতর্কতা</h4>
-            <ul>
-              <li>Delete অপারেশন <strong>স্থায়ী</strong> (Permanent)</li>
-              <li>Section ডিলিট করলে সংশ্লিষ্ট Subcategory ও Rack প্রভাবিত হতে পারে</li>
-              <li>ডিলিট করার আগে যাচাই/অনুমোদন প্রক্রিয়া অনুসরণ করার পরামর্শ</li>
-              <li>Deactivated ইউজার login করতে পারবে না—সতর্কতার সাথে ব্যবহার করুন</li>
-            </ul>
-          </div>
+          <h4>🛠️ Technical Overview</h4>
+          <ul>
+            <li>Backend: Node.js + Express</li>
+            <li>Database: MySQL (Sequelize ORM)</li>
+            <li>Authentication: JWT-based</li>
+            <li>Uploads: Local filesystem (uploads/) — ভবিষ্যতে Firebase Storage এ migrate করা সম্ভব</li>
+            <li>Print System: iframe-based A4 / Label Print</li>
+            <li>Frontend: HTML/CSS/JavaScript (shared layout loader)</li>
+          </ul>
 
-          <div class="help-card tech">
-            <h4>🛠️ Technical Overview</h4>
-            <ul>
-              <li>Backend: Node.js + Express</li>
-              <li>Database: MySQL (Sequelize ORM)</li>
-              <li>Authentication: JWT-based</li>
-              <li>Uploads: Local filesystem (uploads/) — ভবিষ্যতে Firebase Storage এ migrate করা সম্ভব</li>
-              <li>Print System: iframe-based A4 / Label Print</li>
-              <li>Frontend: HTML/CSS/JavaScript (shared layout loader)</li>
-            </ul>
-          </div>
-
-          <div class="help-card support">
-            <h4>📞 Support</h4>
-            <p>
-              যেকোনো সমস্যা, ত্রুটি, অথবা উন্নয়ন সংক্রান্ত প্রস্তাবের জন্য
-              অনুগ্রহ করে <strong>System Administrator</strong> অথবা
-              <strong>SFCAIR IT Support Team (almamun)</strong>-এর সাথে যোগাযোগ করুন।
-            </p>
-            <p style="margin-top:6px;color:#6b7280;font-size:13.5px;">
-              আপনার মতামত ও পরামর্শ সিস্টেম উন্নয়নে গুরুত্বপূর্ণ ভূমিকা রাখে।
-            </p>
-          </div>
-
+          <h4>📞 Support</h4>
+          <p>
+            যেকোনো সমস্যা, ত্রুটি, অথবা উন্নয়ন সংক্রান্ত প্রস্তাবের জন্য
+            অনুগ্রহ করে <strong>System Administrator</strong> অথবা
+            <strong>SFCAIR IT Support Team (almamun)</strong>-এর সাথে যোগাযোগ করুন।
+          </p>
+          <p style="margin-top:6px;color:#6b7280;font-size:13.5px;">
+            আপনার মতামত ও পরামর্শ সিস্টেম উন্নয়নে গুরুত্বপূর্ণ ভূমিকা রাখে।
+          </p>
         </section>
-        <!-- ================= END HELP / INFO SECTION ================= -->
-
       </section>
     </main>
   </div>
 
-  <!-- ✅ Shared Layout Loader -->
   <script type="module">
     import { initLayout } from "./js/layout.js";
-    initLayout("info-help.html"); // highlight current sidebar menu
+    initLayout("info-help.html");
   </script>
 
-  <!-- Page Scripts -->
   <script src="js/auth-guard.js"></script>
   <script src="js/confirm-util.js"></script>
 </body>

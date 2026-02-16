@@ -24,6 +24,12 @@
       icon: "person",
       endpoint: "/reports/user-activity",
     },
+    user_completion: {
+      title: "User Completion",
+      subtitle: "Completed vs ongoing by user",
+      icon: "task_alt",
+      endpoint: "/reports/user-completion",
+    },
     monthly: {
       title: "Monthly Summary",
       subtitle: "Month-wise created and moved count",
@@ -318,6 +324,83 @@
     `;
   }
 
+  function renderUserCompletionReport(data) {
+    const rows = normalizeArray(data?.rows || data);
+    const summary = data?.summary || {};
+
+    const totalUsers = Number(summary.total_users ?? rows.length ?? 0);
+    const totalCompleted = Number(
+      summary.total_completed ?? rows.reduce((sum, r) => sum + (Number(r.completed_count) || 0), 0)
+    );
+    const totalOngoing = Number(
+      summary.total_ongoing ?? rows.reduce((sum, r) => sum + (Number(r.ongoing_count) || 0), 0)
+    );
+    const totalRecords = Number(
+      summary.total_records ?? rows.reduce((sum, r) => sum + (Number(r.total_count) || 0), 0)
+    );
+
+    const bodyRows = rows
+      .map((row, idx) => {
+        const completed = Number(row.completed_count || 0);
+        const ongoing = Number(row.ongoing_count || 0);
+        const total = Number(row.total_count || 0);
+        const rate = Number(row.completion_rate ?? (total ? (completed / total) * 100 : 0));
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${escapeHtml(row.user_name || "-")}</td>
+            <td>${completed}</td>
+            <td>${ongoing}</td>
+            <td>${total}</td>
+            <td>${Number.isFinite(rate) ? rate.toFixed(2) : "0.00"}%</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+      return `
+      <section class="report-block">
+        <h4>User Completion Summary</h4>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Total Users</th>
+              <th>Total Completed</th>
+              <th>Total Ongoing</th>
+              <th>Total Records</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${totalUsers}</td>
+              <td>${totalCompleted}</td>
+              <td>${totalOngoing}</td>
+              <td>${totalRecords}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="report-block">
+        <h4>User Wise Completed vs Ongoing</h4>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>SL</th>
+              <th>User</th>
+              <th>Completed</th>
+              <th>Ongoing</th>
+              <th>Total</th>
+              <th>Completion %</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRows || '<tr><td colspan="6">No user data found.</td></tr>'}</tbody>
+        </table>
+      </section>
+    `;
+  }
+
   function renderChequeReport(data) {
     const entries = normalizeArray(data?.entries);
 
@@ -405,6 +488,7 @@
     central: (data) => tableHTML(data, { showLocation: true, showMovedMeta: true }),
     movement: (data) => tableHTML(data, { showLocation: true, showMovedMeta: true, showPrevious: true }),
     user: (data) => renderUserReport(data),
+    user_completion: (data) => renderUserCompletionReport(data),
     monthly: (data) => renderMonthlyReport(data),
     cheque: (data) => renderChequeReport(data),
   };
@@ -466,8 +550,9 @@
     const maxColumns = [...ui.reportPrintArea.querySelectorAll("table thead tr")]
       .map((row) => row.querySelectorAll("th").length)
       .reduce((max, count) => Math.max(max, count), 0);
-    const orientation = maxColumns > 7 ? "landscape" : "portrait";
+    const orientation = maxColumns >= 6 ? "landscape" : "portrait";
     const generatedAt = new Date().toLocaleString();
+    const wideTable = maxColumns >= 9;
 
     const exportNode = ui.reportPrintArea.cloneNode(true);
     exportNode.style.border = "0";
@@ -475,38 +560,72 @@
     exportNode.style.background = "#fff";
     exportNode.style.overflow = "visible";
 
+    const exportStyle = document.createElement("style");
+    exportStyle.textContent = `
+      .report-block{
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 10px;
+      }
+      .report-table{
+        width: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: auto !important;
+      }
+      .report-table thead{
+        display: table-header-group;
+      }
+      .report-table tr{
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .report-table th,
+      .report-table td{
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        padding: ${wideTable ? "4px" : "6px"} !important;
+        font-size: ${wideTable ? "9px" : "10px"} !important;
+        line-height: 1.25 !important;
+      }
+    `;
+
     const header = document.createElement("div");
     header.innerHTML = `
       <h2 style="margin:0 0 4px;font-size:20px;color:#111827;">${escapeHtml(state.currentTitle || "Report")}</h2>
       <p style="margin:0 0 10px;font-size:12px;color:#64748b;">Generated: ${escapeHtml(generatedAt)}</p>
     `;
     exportNode.prepend(header);
+    exportNode.prepend(exportStyle);
 
-    exportNode.querySelectorAll(".report-table").forEach((table) => {
-      table.style.width = "100%";
-      table.style.tableLayout = "fixed";
-      table.style.fontSize = "11px";
-    });
-
-    exportNode.querySelectorAll(".report-table th, .report-table td").forEach((cell) => {
-      cell.style.whiteSpace = "normal";
-      cell.style.wordBreak = "break-word";
-      cell.style.padding = "6px";
-    });
+    // html2canvas/jsPDF edge clipping এড়াতে wrapper gutter + explicit canvas size
+    const exportWrap = document.createElement("div");
+    exportWrap.style.background = "#fff";
+    exportWrap.style.padding = orientation === "landscape" ? "12px 18px 12px 42px" : "12px 16px 12px 36px";
+    exportWrap.style.boxSizing = "border-box";
+    exportWrap.style.width = "100%";
+    exportWrap.style.transform = "none";
+    exportWrap.appendChild(exportNode);
 
     const host = document.createElement("div");
-    host.style.position = "fixed";
-    host.style.left = "0";
+    host.style.position = "absolute";
+    host.style.left = "-20000px";
     host.style.top = "0";
-    host.style.opacity = "0.01";
+    host.style.opacity = "1";
     host.style.pointerEvents = "none";
     host.style.zIndex = "-1";
-    host.style.width = orientation === "landscape" ? "1120px" : "840px";
-    host.appendChild(exportNode);
+    host.style.width = orientation === "landscape" ? "1320px" : "980px";
+    host.style.maxWidth = "none";
+    host.style.overflow = "visible";
+    host.style.background = "#fff";
+    host.appendChild(exportWrap);
     document.body.appendChild(host);
 
+    const renderWidth = Math.ceil(exportWrap.scrollWidth);
+    const renderHeight = Math.ceil(exportWrap.scrollHeight);
+
     const options = {
-      margin: [0.25, 0.25, 0.25, 0.25],
+      margin: [0.28, 0.35, 0.28, 0.35],
       filename: `${safeTitle}_${new Date().toISOString().slice(0, 10)}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: {
@@ -514,17 +633,27 @@
         useCORS: true,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: host.scrollWidth,
+        width: renderWidth,
+        height: renderHeight,
+        windowWidth: renderWidth,
+        windowHeight: renderHeight,
+        x: 0,
+        y: 0,
+        letterRendering: true,
+        backgroundColor: "#ffffff",
       },
       jsPDF: { unit: "in", format: "a4", orientation },
-      pagebreak: { mode: ["css", "legacy"] },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        avoid: ["tr", "thead", "tbody", "table", ".report-block"],
+      },
     };
 
     setFeedback("Preparing PDF...", "loading");
 
     html2pdf()
       .set(options)
-      .from(exportNode)
+      .from(exportWrap)
       .save()
       .then(() => setFeedback(`Showing ${state.currentTitle || "report"}.`, "normal"))
       .catch((err) => {

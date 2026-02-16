@@ -6,6 +6,7 @@ const {
   centralReport,
   movementHistoryReport,
   userActivityReport,
+  userCompletionReport,
   monthlySummaryReport,
   chequeRegisterReport,
 } = require("../controllers/reportsController");
@@ -16,6 +17,7 @@ router.get("/section-wise", sectionWiseReport);
 router.get("/central", centralReport);
 router.get("/movement-history", movementHistoryReport);
 router.get("/user-activity", userActivityReport);
+router.get("/user-completion", userCompletionReport);
 router.get("/monthly-summary", monthlySummaryReport);
 router.get("/cheque-register", requireAuth, chequeRegisterReport);
 

@@ -158,6 +158,60 @@ exports.monthlySummaryReport = async (req, res) => {
   }
 };
 
+// 4.1) User completion report (added_by ভিত্তিক completed vs ongoing)
+exports.userCompletionReport = async (req, res) => {
+  try {
+    const rowsRaw = await Record.findAll({
+      where: {
+        [Op.and]: [
+          { added_by: { [Op.ne]: null } },
+          { added_by: { [Op.ne]: "" } },
+        ],
+      },
+      attributes: [
+        ["added_by", "user_name"],
+        [fn("SUM", literal("CASE WHEN record_status = 'closed' THEN 1 ELSE 0 END")), "completed_count"],
+        [fn("SUM", literal("CASE WHEN record_status = 'ongoing' THEN 1 ELSE 0 END")), "ongoing_count"],
+        [fn("COUNT", col("id")), "total_count"],
+      ],
+      group: ["added_by"],
+      order: [[literal("total_count"), "DESC"], ["added_by", "ASC"]],
+    });
+
+    const rows = rowsRaw.map((item) => {
+      const plain = item.toJSON();
+      const completed = Number(plain.completed_count || 0);
+      const ongoing = Number(plain.ongoing_count || 0);
+      const total = Number(plain.total_count || 0);
+      const completion_rate = total > 0 ? Number(((completed / total) * 100).toFixed(2)) : 0;
+
+      return {
+        user_name: plain.user_name || "Unknown",
+        completed_count: completed,
+        ongoing_count: ongoing,
+        total_count: total,
+        completion_rate,
+      };
+    });
+
+    const summary = rows.reduce(
+      (acc, row) => {
+        acc.total_users += 1;
+        acc.total_completed += row.completed_count;
+        acc.total_ongoing += row.ongoing_count;
+        acc.total_records += row.total_count;
+        return acc;
+      },
+      { total_users: 0, total_completed: 0, total_ongoing: 0, total_records: 0 }
+    );
+
+    res.json({ summary, rows });
+  } catch (err) {
+    console.error("userCompletionReport error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // 6) Cheque register report (active entries)
 exports.chequeRegisterReport = async (req, res) => {
   try {
