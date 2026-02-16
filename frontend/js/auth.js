@@ -302,7 +302,7 @@ function initForms() {
 
             // IMPORTANT: innerHTML replace করবো না, span.btn-text structure intact রাখবো
             const textHost = btn.querySelector('.btn-text') || btn;
-            textHost.textContent = 'Registered ✅';
+            textHost.textContent = 'Registered ';
           }
 
           setTimeout(() => {

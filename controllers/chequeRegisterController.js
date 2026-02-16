@@ -134,7 +134,7 @@ function decorateEntry(row) {
   return j;
 }
 
-// ✅ audit log helper
+//  audit log helper
 async function writeLog({ entryId, action, oldObj, newObj, note, actorId }) {
   try {
     await ChequeRegisterLog.create({

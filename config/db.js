@@ -49,7 +49,7 @@ sequelize
   .authenticate()
   .then(() =>
     console.log(
-      `✅ Database Connected Successfully (dialect=${dbDialect}, host=${dbHost}, ssl=${useSSL})`
+      ` Database Connected Successfully (dialect=${dbDialect}, host=${dbHost}, ssl=${useSSL})`
     )
   )
   .catch((err) => console.error("❌ Database Connection Failed:", err));

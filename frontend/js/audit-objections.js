@@ -1,5 +1,6 @@
 (function () {
   let ACCESS_OK = false;
+  const OBJECTION_BY_ID = new Map();
 
   function escapeHtml(str = "") {
     return String(str)
@@ -85,6 +86,67 @@
 
     history.replaceState(null, "", `/audit-objections.html?${params.toString()}`);
     return params;
+  }
+
+  function printObjection(record) {
+    const title = escapeHtml(record?.objection_title || "-");
+    const details = escapeHtml(record?.objection_details || "-").replaceAll("\n", "<br>");
+    const objectionNo = escapeHtml(record?.objection_no || "-");
+    const bdNo = escapeHtml(record?.bd_no || "-");
+
+    const printWin = window.open("", "_blank", "width=900,height=700");
+    if (!printWin) {
+      showError("Print popup blocked. Please allow popups and try again.");
+      return;
+    }
+
+    const printHtml = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Audit Objection Print</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 28px; color: #111827; }
+          h1 { margin: 0 0 14px; font-size: 22px; }
+          .meta { margin-bottom: 10px; color: #374151; }
+          .label { font-weight: 700; display: block; margin-top: 16px; margin-bottom: 4px; }
+          .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; line-height: 1.5; }
+        </style>
+      </head>
+      <body>
+        <h1>Audit Objection</h1>
+        <div class="meta"><strong>BD No:</strong> ${bdNo}</div>
+        <div class="meta"><strong>Objection No:</strong> ${objectionNo}</div>
+        <span class="label">Title</span>
+        <div class="box">${title}</div>
+        <span class="label">Details</span>
+        <div class="box">${details}</div>
+      </body>
+      </html>
+    `;
+
+    const triggerPrint = () => {
+      printWin.focus();
+      // Give the new window a moment to render before printing.
+      setTimeout(() => {
+        try {
+          printWin.print();
+        } catch {
+          showError("Failed to start printing. Please try again.");
+        }
+      }, 120);
+    };
+
+    printWin.document.open();
+    printWin.document.write(printHtml);
+    printWin.document.close();
+
+    if (printWin.document.readyState === "complete") {
+      triggerPrint();
+    } else {
+      printWin.addEventListener("load", triggerPrint, { once: true });
+    }
   }
 
   function setSummary(items = []) {
@@ -199,6 +261,8 @@
 
     setSummary(items);
 
+    OBJECTION_BY_ID.clear();
+
     if (!items.length) {
       tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No objections found</td></tr>`;
       return;
@@ -206,6 +270,8 @@
 
     tbody.innerHTML = "";
     items.forEach((r) => {
+      OBJECTION_BY_ID.set(String(r.id), r);
+
       const section = r.Section?.name || "-";
       const sub = r.Subcategory?.name || "-";
       const rack = r.Rack?.name || "-";
@@ -249,6 +315,12 @@
                  data-tooltip="Open BD history">
                 <span class="material-symbols-rounded">history</span>
               </a>
+              <button type="button"
+                      class="ao-action-btn ao-print-btn"
+                      data-record-id="${escapeHtml(String(r.id))}"
+                      data-tooltip="Print objection">
+                <span class="material-symbols-rounded">print</span>
+              </button>
             </div>
           </td>
         </tr>
@@ -304,6 +376,18 @@
 
     const tbody = document.getElementById("aoTableBody");
     tbody?.addEventListener("click", (e) => {
+      const printBtn = e.target.closest(".ao-print-btn");
+      if (printBtn) {
+        const recordId = String(printBtn.getAttribute("data-record-id") || "");
+        const record = OBJECTION_BY_ID.get(recordId);
+        if (!record) {
+          showError("Unable to load objection data for printing.");
+          return;
+        }
+        printObjection(record);
+        return;
+      }
+
       const btn = e.target.closest(".ao-toggle");
       if (!btn) return;
 

@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 
 const User = require("../models/userModel");
 const PasswordReset = require("../models/passwordResetModel");
-const { sendResetEmail } = require("../utils/mailer"); // ✅ top-level require
+const { sendResetEmail } = require("../utils/mailer"); //  top-level require
 
 function sha256Hex(input) {
   return crypto.createHash("sha256").update(input).digest("hex");
@@ -22,7 +22,7 @@ exports.forgotPassword = async (req, res) => {
   try {
     const email = (req.body?.email || "").trim().toLowerCase();
 
-    // ✅ always same response for security
+    //  always same response for security
     const okMsg = {
       message: "যদি এই ইমেইলটি সিস্টেমে থাকে, তাহলে একটি রিসেট লিংক পাঠানো হবে।",
     };
@@ -31,7 +31,7 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ where: { email } });
 
-    // ✅ do NOT reveal if email exists
+    //  do NOT reveal if email exists
     if (!user) return res.json(okMsg);
 
     // invalidate previous unused tokens

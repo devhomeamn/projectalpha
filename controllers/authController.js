@@ -5,7 +5,7 @@ const { Op } = require('sequelize');
 const UserPreferredRack = require('../models/userPreferredRackModel');
 const Rack = require('../models/rackModel');
 
-// ✅ Register (new user = pending)
+// Register (new user = pending)
 exports.register = async (req, res) => {
   const { name, serviceid, email, username, password } = req.body;
   try {
@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
       serviceid,
       email,
       password: hashedPassword,
-      // ✅ Security: role is always General on self-register
+      //  Security: role is always General on self-register
       role: 'General',
       section_id: null,
       status: 'pending', // 👈 pending by default
@@ -40,7 +40,7 @@ exports.register = async (req, res) => {
 
     res.json({
       message:
-        '✅ Registration successful! Waiting for admin approval before login.',
+        ' Registration successful! Waiting for admin approval before login.',
       user,
     });
   } catch (err) {
@@ -48,7 +48,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ✅ Login (only approved users)
+// Login (only approved users)
 exports.login = async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
     );
 
     res.json({
-      message: '✅ Login Successful',
+      message: ' Login Successful',
       token,
       user: {
     id: user.id,
@@ -108,7 +108,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// ✅ Admin: get all pending users
+//  Admin: get all pending users
 exports.getPendingUsers = async (req, res) => {
   try {
     const users = await User.findAll({ where: { status: 'pending' } });
@@ -118,18 +118,18 @@ exports.getPendingUsers = async (req, res) => {
   }
 };
 
-// ✅ Admin: approve user
+//  Admin: approve user
 exports.approveUser = async (req, res) => {
   try {
     const { id } = req.params;
     await User.update({ status: 'approved' }, { where: { id } });
-    res.json({ message: '✅ User approved successfully' });
+    res.json({ message: ' User approved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// ✅ Admin: reject user
+//  Admin: reject user
 exports.rejectUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -140,7 +140,7 @@ exports.rejectUser = async (req, res) => {
   }
 };
 
-// ✅ Get all users (Admin only)
+//  Get all users (Admin only)
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
@@ -154,7 +154,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// ✅ Admin: update user access (role + section assignment)
+//  Admin: update user access (role + section assignment)
 exports.updateUserAccess = async (req, res) => {
   try {
     const { id } = req.params;
@@ -198,7 +198,7 @@ exports.updateUserAccess = async (req, res) => {
       attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'section_id', 'status', 'createdAt'],
     });
 
-    res.json({ message: '✅ User access updated', user });
+    res.json({ message: ' User access updated', user });
   } catch (err) {
     console.error('updateUserAccess error:', err);
     res.status(500).json({ error: 'Failed to update user access' });
@@ -305,7 +305,7 @@ exports.setPreferredRacks = async (req, res) => {
     if (!Array.isArray(rackIds)) rackIds = [];
     rackIds = [...new Set(rackIds.map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n > 0))];
 
-    // ✅ Safety: General user can only save racks from their assigned section
+    //  Safety: General user can only save racks from their assigned section
     if (role === "general") {
       if (!userSectionId) {
         await t.rollback();
@@ -333,7 +333,7 @@ exports.setPreferredRacks = async (req, res) => {
     }
 
     await t.commit();
-    return res.json({ message: "✅ Preferred racks saved", rack_ids: rackIds });
+    return res.json({ message: " Preferred racks saved", rack_ids: rackIds });
   } catch (err) {
     await t.rollback();
     console.error("setPreferredRacks error:", err);

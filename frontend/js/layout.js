@@ -141,7 +141,6 @@ export async function initLayout(activePage) {
       icon: "gavel",
       roles: ["Admin", "Master", "General"],
       children: [
-        { name: "Objection Entry", icon: "post_add", roles: ["Admin", "Master", "General"], link: "add-record.html" },
         { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
         { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html" },
         { name: "Clearance Approvals", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },

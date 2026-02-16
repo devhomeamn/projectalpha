@@ -21,7 +21,7 @@ function esc(s) {
 function shortText(s, n = 280) {
   const t = String(s || "").trim();
   if (!t) return "-";
-  return t.length > n ? t.slice(0, n) + "…" : t;
+  return t.length > n ? t.slice(0, n) + "..." : t;
 }
 
 function fmtDateTime(v) {
@@ -245,38 +245,43 @@ function renderCards(rows, bdNo) {
   const cards = document.getElementById("cards");
   const info = document.getElementById("resultInfo");
 
-  if (info) info.textContent = `Found ${rows.length} objection(s) for BD: ${bdNo}`;
+  if (info) {
+    info.innerHTML = `
+      <span class="material-symbols-rounded" aria-hidden="true">insights</span>
+      <strong>${rows.length}</strong> objection(s) for BD <b>${esc(bdNo)}</b>
+    `;
+  }
 
   if (!rows.length) {
-    cards.innerHTML = `<div class="muted">No Audit Objection found for this BD.</div>`;
+    cards.innerHTML = `
+      <div class="bdh-empty">
+        <span class="material-symbols-rounded" aria-hidden="true">search_off</span>
+        No audit objection found for this BD.
+      </div>
+    `;
     return;
   }
 
   cards.innerHTML = rows.map((r) => {
     const st = getStatus(r.ao_status);
 
-    // Core
     const serial = r.serial_no ?? "-";
     const no = r.objection_no || "-";
     const title = r.objection_title || "Audit Objection";
 
-    // Details
     const detailsRaw = (r.objection_details || r.description || "").trim() || "-";
     const detailsShort = shortText(detailsRaw, 280);
 
-    // Others
     const sec = r.Section?.name || "-";
     const sub = r.Subcategory?.name || "-";
     const rack = r.Rack?.name || "-";
     const openDate = r.opening_date || "-";
     const createdAt = fmtDateTime(r.createdAt);
 
-    // Attachment
     const hasFile = !!r.attachment_path;
     const fileName = r.attachment_name || "Attachment";
     const mime = (r.attachment_mime || "").toLowerCase();
 
-    // Clearance button (general/master)
     const canRequest = (ME_ROLE === "general" || ME_ROLE === "master") && st.cls !== "cleared";
     const reqDisabled = st.cls === "requested";
 
@@ -287,15 +292,14 @@ function renderCards(rows, bdNo) {
         data-attach-mime="${esc(mime)}"
         data-attach-name="${esc(fileName)}">
 
-        <!-- TITLE -->
         <div class="ob-head">
           <div class="ob-head-left">
             <div class="ob-title">
-              <span class="ob-no">AO • ${esc(no)}</span>
+              <span class="ob-no">AO #${esc(no)}</span>
               <span class="ob-title-text">${esc(title)}</span>
             </div>
             <div class="ob-subtitle">
-              BD: <b>${esc(r.bd_no || "")}</b> • Serial: <b>${esc(serial)}</b> • Record: <b>${esc(r.id)}</b>
+              BD: <b>${esc(r.bd_no || "")}</b> | Serial: <b>${esc(serial)}</b> | Record: <b>${esc(r.id)}</b>
             </div>
           </div>
 
@@ -306,9 +310,10 @@ function renderCards(rows, bdNo) {
               ${
                 canRequest
                   ? `<button
+                        type="button"
                         class="ob-btn ${reqDisabled ? "" : "primary"} js-ao-clear-btn"
                         data-record-id="${esc(r.id)}"
-                        data-bd-no="${esc(r.bd_no || "")}"
+                        data-bd-no="${esc(r.bd_no || "")}" 
                         data-serial="${esc(serial)}"
                         ${reqDisabled ? "disabled" : ""}>
                         ${reqDisabled ? "Clearance Requested" : "Request Clearance"}
@@ -319,7 +324,6 @@ function renderCards(rows, bdNo) {
           </div>
         </div>
 
-        <!-- DETAILS (always visible) -->
         <div class="ob-section">
           <div class="ob-sec-title">Details</div>
           <div class="ob-details">
@@ -327,9 +331,8 @@ function renderCards(rows, bdNo) {
           </div>
         </div>
 
-        <!-- OTHERS (expand) -->
         <details class="ob-more">
-          <summary>More (Full details • Location • Dates • Attachment • Clearance)</summary>
+          <summary>More: full details | location | dates | attachment | clearance</summary>
 
           <div class="ob-more-body">
 
@@ -351,11 +354,17 @@ function renderCards(rows, bdNo) {
 
             <div class="ob-sec-title" style="margin-top:12px;">Attachment</div>
             <div class="ob-attach">
-              <span class="attach-chip">${hasFile ? "📎 " + esc(fileName) : "📎 None"}</span>
+              <span class="attach-chip">
+                ${
+                  hasFile
+                    ? `<span class="material-symbols-rounded" aria-hidden="true">attach_file</span>${esc(fileName)}`
+                    : `<span class="material-symbols-rounded" aria-hidden="true">attach_file</span>None`
+                }
+              </span>
 
               ${
                 hasFile
-                  ? `<a class="attach-open" href="${r.attachment_path}" target="_blank" rel="noopener">Open Attachment</a>
+                  ? `<a class="attach-open" href="${esc(r.attachment_path)}" target="_blank" rel="noopener">Open Attachment</a>
                      <button class="ob-btn" type="button" data-preview-toggle="${esc(r.id)}">Show Preview</button>`
                   : ""
               }
@@ -376,7 +385,6 @@ function renderCards(rows, bdNo) {
     `;
   }).join("");
 
-  // bind clearance request buttons
   cards.querySelectorAll(".js-ao-clear-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const record_id = Number(btn.getAttribute("data-record-id"));
@@ -386,7 +394,6 @@ function renderCards(rows, bdNo) {
     });
   });
 
-  // bind preview toggle
   cards.querySelectorAll("[data-preview-toggle]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-preview-toggle");
@@ -414,11 +421,11 @@ function renderCards(rows, bdNo) {
 }
 
 /* ------------------ search ------------------ */
-async function searchBD() {
+async function searchBD(bdNoFromArg = "") {
   hideError();
 
   const bdInput = document.getElementById("bdInput");
-  const bdNo = (bdInput?.value || "").trim();
+  const bdNo = String(bdNoFromArg || (bdInput?.value || "")).trim();
   const cards = document.getElementById("cards");
   const info = document.getElementById("resultInfo");
 
@@ -427,30 +434,28 @@ async function searchBD() {
     return;
   }
 
-  cards.innerHTML = `<div class="muted">Loading...</div>`;
+  cards.innerHTML = `
+    <div class="bdh-loading">
+      <span class="material-symbols-rounded" aria-hidden="true">progress_activity</span>
+      Loading objection history...
+    </div>
+  `;
   if (info) info.textContent = "";
 
-  // ✅ তোমার project এ working endpoint এটাই:
   const url = `${API_BASE}/records/by-bd?bd_no=${encodeURIComponent(bdNo)}&only_ao=1&limit=300`;
 
   try {
     const res = await authFetch(url);
 
-    // JSON parse safe
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      // Better error message
-      const msg =
-        data?.message ||
-        data?.error ||
-        `Request failed (HTTP ${res.status})`;
+      const msg = data?.message || data?.error || `Request failed (HTTP ${res.status})`;
       throw new Error(msg);
     }
 
-    let rows = Array.isArray(data?.data) ? data.data : [];
+    const rows = Array.isArray(data?.data) ? data.data : [];
 
-    // ✅ Serial-wise ASC
     rows.sort((a, b) => {
       const sa = a?.serial_no ?? Number.POSITIVE_INFINITY;
       const sb = b?.serial_no ?? Number.POSITIVE_INFINITY;
@@ -509,7 +514,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnSearch = document.getElementById("btnSearch");
   const btnClear = document.getElementById("btnClear");
 
-  // 5) 🔹 If user comes via clickable link (?bd_no=...)
+  // 5) If user comes via clickable link (?bd_no=...)
   const params = new URLSearchParams(window.location.search);
   const bdFromUrl = (params.get("bd_no") || "").trim();
 
@@ -523,7 +528,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // 6) 🔹 Search button click
+  // 6) Search button click
   if (btnSearch) {
     btnSearch.addEventListener("click", () => {
       const bd = bdInput.value.trim();
@@ -543,14 +548,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // 7) 🔹 Enter key = Search
+  // 7) Enter key = Search
   if (bdInput) {
     bdInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") btnSearch.click();
     });
   }
 
-  // 8) 🔹 Clear button
+  // 8) Clear button
   if (btnClear) {
     btnClear.addEventListener("click", () => {
       bdInput.value = "";
@@ -563,3 +568,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 });
+

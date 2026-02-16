@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const sequelize = require('./config/db');
 
-// ✅ Ensure preference models are registered before sync
+//  Ensure preference models are registered before sync
 require('./models/userPreferredRackModel');
 require('./models/sectionRuleModel');
 require('./models/publicMessageModel');
@@ -22,7 +22,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Import routes
+// Import routes
 const authRoutes = require('./routes/authRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
 const recordRoutes = require('./routes/recordRoutes');
@@ -45,9 +45,9 @@ app.use("/api/ao-clearance-requests", aoClearanceRoutes);
 
 
 
- // ✅ must come BEFORE static serve
+ // must come BEFORE static serve
 
-// ✅ API routes অবশ্যই প্রথমে রাখো
+//  API routes অবশ্যই প্রথমে রাখো
 app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use("/api/records", recordRoutes);
@@ -60,19 +60,19 @@ app.use("/api/dashboard", dashboardRoutes);
 
 
 
-// ✅ Static serve (সবচেয়ে শেষে)
+//  Static serve (সবচেয়ে শেষে)
 app.use(express.static(path.join(__dirname, 'frontend')));
-// ✅ serve uploaded files
+//  serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ✅ Root page
+//  Root page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
 });
 
-// ✅ Database sync
+//  Database sync
 sequelize.sync()
-  .then(() => console.log("✅ Database synced with approval system"))
+  .then(() => console.log(" Database synced with approval system"))
   .catch(console.error);
 
 

@@ -2,9 +2,9 @@ const { Op } = require("sequelize");
 const Section = require("../models/sectionModel");
 const Subcategory = require("../models/subcategoryModel");
 const Record = require("../models/recordModel");
-const User = require("../models/userModel"); // ✅ adjust path if different
+const User = require("../models/userModel"); //  adjust path if different
 
-console.log("✅ dashboardController.js loaded");
+console.log(" dashboardController.js loaded");
 
 exports.getDashboardSummary = async (req, res) => {
   try {
