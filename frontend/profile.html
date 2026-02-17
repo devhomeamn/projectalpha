@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>My Activity</title>  <!-- ✅ Fixed -->
+  <title>My Profile & Activity</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <link rel="stylesheet" href="css/layout.css" />
@@ -29,11 +29,11 @@
           <div class="header-content">
             <div class="header-main">
               <h1 class="header-title">
-                <span class="material-symbols-rounded header-icon">dashboard</span>
-                My Activity
+                <span class="material-symbols-rounded header-icon">person</span>
+                My Profile & Activity
               </h1>
               <p class="header-subtitle">
-                আপনার এন্ট্রি করা রেকর্ডসমূহের বিস্তারিত সামারি ও পরিসংখ্যান
+                Track your profile details, record statistics, and recent activity in one place.
               </p>
             </div>
 
@@ -139,7 +139,9 @@
                   <span class="material-symbols-rounded">pie_chart</span>
                   Entry Status Distribution
                 </div>
-                <canvas id="statusChart" height="280"></canvas>
+                <div class="chart-wrap">
+                  <canvas id="statusChart"></canvas>
+                </div>
               </div>
 
               <div class="card">
@@ -147,7 +149,9 @@
                   <span class="material-symbols-rounded">bar_chart</span>
                   Monthly Activity (Last 6 Months)
                 </div>
-                <canvas id="monthlyChart" height="280"></canvas>
+                <div class="chart-wrap">
+                  <canvas id="monthlyChart"></canvas>
+                </div>
               </div>
             </div>
 
@@ -204,7 +208,8 @@
     import { initLayout } from "./js/layout.js";
     import "./js/profile.js";
     initLayout("profile");
-    // ✅ Charts & DateTime handled by profile.js - no duplicate code
+    // Charts and date/time are handled by profile.js
   </script>
 </body>
 </html>
+

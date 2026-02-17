@@ -114,7 +114,7 @@ function renderRecent(recent) {
       return `
         <div class="item">
           <span class="badge">${action}</span>
-          BD: <b>${bd}</b> — ${fn}
+          BD: <b>${bd}</b> - ${fn}
           ${when}
         </div>
       `;
@@ -219,12 +219,12 @@ function updateCharts(data) {
 
 async function loadMyStats() {
   // Loading states
-  setText("stAdded", "…");
-  setText("stMoved", "…");
-  setText("stOngoing", "…");
-  setText("stClosed", "…");
-  setText("stInSection", "…");
-  setText("stInCentral", "…");
+  setText("stAdded", "...");
+  setText("stMoved", "...");
+  setText("stOngoing", "...");
+  setText("stClosed", "...");
+  setText("stInSection", "...");
+  setText("stInCentral", "...");
   setHtml("stRecent", "Loading...");
 
   try {
@@ -246,10 +246,10 @@ async function loadMyStats() {
       updateCharts(data);
     }
 
-    toast("✅ Stats updated successfully");
+    toast("Stats updated successfully");
   } catch (err) {
     console.error("Stats load error:", err);
-    toast("❌ Failed to load stats", "error");
+    toast("Failed to load stats", "error");
 
     // Reset to zero on error
     setText("stAdded", 0);
@@ -268,7 +268,7 @@ function updateDateTime() {
   const now = new Date();
 
   const optionsDate = { day: '2-digit', month: 'long', year: 'numeric' };
-  const formattedDate = now.toLocaleDateString('bn-BD', optionsDate); // বাংলায়: ০৩ জানুয়ারি ২০২৬
+  const formattedDate = now.toLocaleDateString('bn-BD', optionsDate);
 
   const formattedTime = now.toLocaleTimeString('bn-BD', { 
     hour: '2-digit', 
@@ -378,3 +378,4 @@ setInterval(updateDateTime, 60000);
   initPasswordToggles();
   document.getElementById("changePasswordForm")?.addEventListener("submit", onChangePasswordSubmit);
 });
+
