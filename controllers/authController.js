@@ -5,13 +5,25 @@ const { Op } = require('sequelize');
 const UserPreferredRack = require('../models/userPreferredRackModel');
 const Rack = require('../models/rackModel');
 
+function normalizeBdMobile(raw = '') {
+  const digits = String(raw).replace(/\D+/g, '');
+  if (/^01[3-9]\d{8}$/.test(digits)) return digits;
+  if (/^8801[3-9]\d{8}$/.test(digits)) return `0${digits.slice(3)}`;
+  return '';
+}
+
 // Register (new user = pending)
 exports.register = async (req, res) => {
-  const { name, serviceid, email, username, password } = req.body;
+  const { name, serviceid, email, username, password, mobile } = req.body;
   try {
+    const normalizedMobile = normalizeBdMobile(mobile);
+    if (!normalizedMobile) {
+      return res.status(400).json({ error: 'Invalid Bangladesh mobile number' });
+    }
+
     const existingUser = await User.findOne({
       where: {
-        [Op.or]: [{ username }, { serviceid }, { email }],
+        [Op.or]: [{ username }, { serviceid }, { email }, { mobile: normalizedMobile }],
       },
     });
 
@@ -22,6 +34,8 @@ exports.register = async (req, res) => {
             ? 'Username already exists'
             : existingUser.serviceid === Number(serviceid)
             ? 'Service ID already exists'
+            : existingUser.mobile === normalizedMobile
+            ? 'Mobile number already exists'
             : 'Email already exists',
       });
 
@@ -31,6 +45,7 @@ exports.register = async (req, res) => {
       username,
       serviceid,
       email,
+      mobile: normalizedMobile,
       password: hashedPassword,
       //  Security: role is always General on self-register
       role: 'General',
@@ -84,6 +99,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         serviceid: user.serviceid,
+        mobile: user.mobile,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
@@ -98,6 +114,7 @@ exports.login = async (req, res) => {
     username: user.username,
     serviceid: user.serviceid,
     email: user.email,
+    mobile: user.mobile,
     role: user.role,
     section_id: user.section_id,
     status: user.status,
@@ -144,7 +161,7 @@ exports.rejectUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
-      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'section_id', 'status', 'createdAt'],
+      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'mobile', 'role', 'section_id', 'status', 'createdAt'],
       order: [['createdAt', 'DESC']]
     });
     res.json(users);
@@ -195,7 +212,7 @@ exports.updateUserAccess = async (req, res) => {
     }
 
     const user = await User.findByPk(id, {
-      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'role', 'section_id', 'status', 'createdAt'],
+      attributes: ['id', 'name', 'username', 'serviceid', 'email', 'mobile', 'role', 'section_id', 'status', 'createdAt'],
     });
 
     res.json({ message: ' User access updated', user });

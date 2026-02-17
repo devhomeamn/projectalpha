@@ -94,6 +94,7 @@ function persistUserSession(data) {
   if (u.username !== undefined) localStorage.setItem('username', u.username || '');
   if (u.name !== undefined) localStorage.setItem('name', u.name || '');
   if (u.email !== undefined) localStorage.setItem('email', u.email || '');
+  if (u.mobile !== undefined) localStorage.setItem('mobile', u.mobile || '');
   if (u.serviceid !== undefined) localStorage.setItem('serviceid', String(u.serviceid ?? ''));
 
   // ✅ NEW: section_id save (important for General profile assigned section)
@@ -223,9 +224,16 @@ function initForms() {
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
     const serviceIdEl = document.getElementById('serviceid');
+    const mobileEl = document.getElementById('mobile');
     const usernameEl = document.getElementById('username');
     const passEl = document.getElementById('password');
     const confirmEl = document.getElementById('confirmPassword');
+    const normalizeBdMobile = (value = '') => {
+      const digits = String(value).replace(/\D+/g, '');
+      if (/^01[3-9]\d{8}$/.test(digits)) return digits;
+      if (/^8801[3-9]\d{8}$/.test(digits)) return `0${digits.slice(3)}`;
+      return '';
+    };
 
     // Live sanitize: username থেকে spaces remove
     if (usernameEl && !usernameEl.dataset.noSpaceBound) {
@@ -245,11 +253,22 @@ function initForms() {
       });
     }
 
+    // Live sanitize: mobile field only digits
+    if (mobileEl && !mobileEl.dataset.onlyNumBound) {
+      mobileEl.dataset.onlyNumBound = "1";
+      mobileEl.addEventListener('input', () => {
+        const cleaned = mobileEl.value.replace(/\D+/g, '').slice(0, 13);
+        if (cleaned !== mobileEl.value) mobileEl.value = cleaned;
+      });
+    }
+
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const name = document.getElementById('name')?.value || '';
       const serviceid = (serviceIdEl ? serviceIdEl.value : document.getElementById('serviceid')?.value || '').trim();
+      const mobileRaw = (mobileEl ? mobileEl.value : document.getElementById('mobile')?.value || '');
+      const mobile = normalizeBdMobile(mobileRaw);
 
       const emailEl = document.getElementById('email');
       const email = emailEl ? emailEl.value.trim() : '';
@@ -271,6 +290,11 @@ function initForms() {
         return;
       }
 
+      if (!mobile) {
+        showToast('Use a valid Bangladesh mobile number (01XXXXXXXXX or 8801XXXXXXXXX).', 'error');
+        return;
+      }
+
       if (!confirmEl) {
         showToast('Confirm Password field not found. Please add it to register.html', 'error');
         return;
@@ -287,7 +311,7 @@ function initForms() {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, serviceid, email, username, password }),
+          body: JSON.stringify({ name, serviceid, mobile, email, username, password }),
         });
 
         const data = await res.json();

@@ -22,6 +22,12 @@ const User = sequelize.define('User', {
     allowNull: false,
     validate: { isEmail: true },
   },
+  mobile: {
+    type: DataTypes.STRING(15),
+    unique: true,
+    allowNull: true,
+    validate: { is: /^01[3-9]\d{8}$/ },
+  },
   password: {
     type: DataTypes.STRING,
     allowNull: false,
