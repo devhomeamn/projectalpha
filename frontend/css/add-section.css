@@ -107,6 +107,10 @@
   padding: 16px;
 }
 
+.form-block .form-card + .form-card {
+  margin-top: 10px;
+}
+
 .form-group {
   margin-bottom: 12px;
 }
@@ -153,7 +157,9 @@ textarea:focus {
 #sectionForm .btn-primary,
 #subForm .btn-secondary,
 #rackForm .btn-tertiary,
-#centralRackForm .btn-primary {
+#centralRackForm .btn-primary,
+#officeOptionForm .btn-secondary,
+#forwardOptionForm .btn-tertiary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -174,7 +180,9 @@ textarea:focus {
 #sectionForm .btn-primary:hover,
 #subForm .btn-secondary:hover,
 #rackForm .btn-tertiary:hover,
-#centralRackForm .btn-primary:hover {
+#centralRackForm .btn-primary:hover,
+#officeOptionForm .btn-secondary:hover,
+#forwardOptionForm .btn-tertiary:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 22px rgba(31, 95, 194, 0.28);
   filter: brightness(1.02);
@@ -244,6 +252,28 @@ textarea:focus {
   border-radius: 12px;
   background: #f8fbff;
   padding: 10px 12px;
+}
+
+.option-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.option-item-main {
+  min-width: 0;
+}
+
+.option-delete-btn {
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 8px;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .rack-item strong {
@@ -522,7 +552,9 @@ textarea:focus {
   #sectionForm .btn-primary,
   #subForm .btn-secondary,
   #rackForm .btn-tertiary,
-  #centralRackForm .btn-primary {
+  #centralRackForm .btn-primary,
+  #officeOptionForm .btn-secondary,
+  #forwardOptionForm .btn-tertiary {
     width: 100%;
     min-width: 0;
   }

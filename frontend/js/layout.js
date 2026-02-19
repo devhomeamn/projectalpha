@@ -135,6 +135,7 @@ export async function initLayout(activePage) {
     { name: "View Record",    icon: "visibility",    roles: ["Admin", "Master", "General"], link: "view-record.html" },
     { name: "Central Record", icon: "folder",        roles: ["Admin", "Master", "General"], link: "central-record.html" },
     { name: "Cheque Register", icon: "receipt_long", roles: ["Admin", "Master", "General"], link: "cheque-register.html", onlyChequeUser: true },
+    { name: "Record Section", icon: "inventory",     roles: ["Admin", "Master", "General"], link: "record-section.html" },
     {
       group: true,
       name: "Audit Objections",

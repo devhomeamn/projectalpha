@@ -11,6 +11,10 @@ require('./models/userPreferredRackModel');
 require('./models/sectionRuleModel');
 require('./models/publicMessageModel');
 require('./models/publicMessageLogModel');
+require('./models/recordSectionEntryModel');
+require('./models/recordSectionLogModel');
+require('./models/recordSectionOfficeOptionModel');
+require('./models/recordSectionForwardOptionModel');
 
 dotenv.config();
 
@@ -30,6 +34,7 @@ const recordRoutes = require('./routes/recordRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const aoClearanceRoutes = require('./routes/aoClearanceRoutes');
 const chequeRegisterRoutes = require('./routes/chequeRegisterRoutes');
+const recordSectionRoutes = require('./routes/recordSectionRoutes');
 
 app.use('/api/reports', require('./routes/reportsRoutes'));
 app.use('/api/notices', require('./routes/noticeRoutes'));
@@ -42,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/records', recordRoutes);
 app.use('/api/cheque-register', chequeRegisterRoutes);
+app.use('/api/record-sections', recordSectionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Static serve
@@ -70,10 +76,41 @@ async function ensureUserMobileColumn() {
   }
 }
 
+async function ensureRecordSectionEntryColumns() {
+  const qi = sequelize.getQueryInterface();
+  let columns;
+
+  try {
+    columns = await qi.describeTable("record_section_entries");
+  } catch {
+    return;
+  }
+
+  if (!columns.forward_to_type) {
+    await qi.addColumn("record_section_entries", "forward_to_type", {
+      type: DataTypes.ENUM("section", "custom"),
+      allowNull: true,
+    });
+  }
+  if (!columns.forward_to_custom_id) {
+    await qi.addColumn("record_section_entries", "forward_to_custom_id", {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    });
+  }
+  if (!columns.forward_to_label) {
+    await qi.addColumn("record_section_entries", "forward_to_label", {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+    });
+  }
+}
+
 async function startServer() {
   try {
     await sequelize.sync();
     await ensureUserMobileColumn();
+    await ensureRecordSectionEntryColumns();
     console.log('Database synced with approval system');
 
     const PORT = process.env.PORT || 4000;

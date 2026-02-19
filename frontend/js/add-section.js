@@ -612,11 +612,14 @@ function initPage() {
   document.getElementById("subForm")?.addEventListener("submit", onAddSubcategory);
   document.getElementById("rackForm")?.addEventListener("submit", onAddRack);
   document.getElementById("centralRackForm")?.addEventListener("submit", onAddCentralRack);
+  document.getElementById("officeOptionForm")?.addEventListener("submit", onAddOfficeOption);
+  document.getElementById("forwardOptionForm")?.addEventListener("submit", onAddForwardOption);
 
   initListCollapse();
 
   fetchSections();
   fetchCentralRacks();
+  fetchRecordSectionOptions();
 }
 
 /* =========================
@@ -807,6 +810,133 @@ async function fetchCentralRacks() {
     console.error("fetchCentralRacks error:", err);
   }
 }
+
+/* =========================
+   RECORD SECTION OPTIONS
+========================= */
+function renderOptionList(containerId, rows = [], deleteType) {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    list.innerHTML = "<p>No options yet.</p>";
+    return;
+  }
+
+  list.innerHTML = rows
+    .map((row) => {
+      const name = row.name || row.label || "-";
+      const desc = row.description || "";
+      return `
+        <div class="rack-item option-item">
+          <div class="option-item-main">
+            <strong>${escapeHtml(name)}</strong>
+            ${desc ? `<small>${escapeHtml(desc)}</small>` : ""}
+          </div>
+          <button class="option-delete-btn" data-type="${escapeHtml(deleteType)}" data-id="${Number(row.id)}" type="button">Delete</button>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+async function fetchRecordSectionOptions() {
+  try {
+    const [officeRes, forwardRes] = await Promise.all([
+      authFetch(`${API_BASE}/record-sections/options/offices`),
+      authFetch(`${API_BASE}/record-sections/options/forward-targets?include_sections=0`),
+    ]);
+
+    const officeData = await officeRes.json().catch(() => []);
+    const forwardData = await forwardRes.json().catch(() => ({}));
+
+    if (!officeRes.ok) throw new Error(officeData.message || "Failed to load office options");
+    if (!forwardRes.ok) throw new Error(forwardData.message || "Failed to load forward options");
+
+    const offices = Array.isArray(officeData) ? officeData : [];
+    const customForwards = Array.isArray(forwardData.custom_options) ? forwardData.custom_options : [];
+
+    renderOptionList("officeOptionList", offices, "office");
+    renderOptionList(
+      "forwardOptionList",
+      customForwards.map((x) => ({ id: x.custom_id, name: x.label })),
+      "forward"
+    );
+  } catch (err) {
+    console.error("fetchRecordSectionOptions error:", err);
+  }
+}
+
+async function onAddOfficeOption(e) {
+  e.preventDefault();
+  const name = document.getElementById("officeOptionName")?.value?.trim();
+  const description = document.getElementById("officeOptionDesc")?.value?.trim();
+
+  if (!name) return showToast("Office option name required!", "error");
+
+  try {
+    const res = await authFetch(`${API_BASE}/record-sections/options/offices`, {
+      method: "POST",
+      body: JSON.stringify({ name, description }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Failed");
+
+    showToast(data.message || "Office option added");
+    e.target.reset();
+    fetchRecordSectionOptions();
+  } catch (err) {
+    showToast(err.message || "Failed", "error");
+  }
+}
+
+async function onAddForwardOption(e) {
+  e.preventDefault();
+  const name = document.getElementById("forwardOptionName")?.value?.trim();
+  if (!name) return showToast("Forward option name required!", "error");
+
+  try {
+    const res = await authFetch(`${API_BASE}/record-sections/options/forward-targets`, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Failed");
+
+    showToast(data.message || "Forward option added");
+    e.target.reset();
+    fetchRecordSectionOptions();
+  } catch (err) {
+    showToast(err.message || "Failed", "error");
+  }
+}
+
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".option-delete-btn");
+  if (!btn) return;
+
+  const id = Number(btn.getAttribute("data-id") || 0);
+  const type = btn.getAttribute("data-type");
+  if (!id || !type) return;
+
+  const ok = await askConfirm("Delete this option?", "Confirm Action", "Delete");
+  if (!ok) return;
+
+  try {
+    const path =
+      type === "office"
+        ? `${API_BASE}/record-sections/options/offices/${id}`
+        : `${API_BASE}/record-sections/options/forward-targets/${id}`;
+    const res = await authFetch(path, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Delete failed");
+
+    showToast(data.message || "Option deleted");
+    fetchRecordSectionOptions();
+  } catch (err) {
+    showToast(err.message || "Delete failed", "error");
+  }
+});
 
 document.addEventListener("DOMContentLoaded", loadConfig);
 

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Record Section Register</title>
+
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/record-section.css" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content record-section-page">
+        <div id="pageHeaderMount"></div>
+
+        <div class="rs-card">
+          <div class="rs-toolbar">
+            <label class="rs-field">
+              <span>Status</span>
+              <select id="statusFilter" class="rs-input">
+                <option value="all">All</option>
+                <option value="received">Received</option>
+                <option value="forwarded">Forwarded</option>
+                <option value="forward_received">Forward Received</option>
+              </select>
+            </label>
+
+            <label class="rs-field">
+              <span>Current Section</span>
+              <select id="sectionFilter" class="rs-input">
+                <option value="">All Sections</option>
+              </select>
+            </label>
+
+            <label class="rs-field rs-field-wide">
+              <span>Search</span>
+              <input id="searchBox" class="rs-input" placeholder="Diary / Memo / Topic" />
+            </label>
+
+            <div class="rs-actions">
+              <button id="btnSearch" class="rs-btn" type="button">Search</button>
+              <button id="btnClear" class="rs-btn rs-btn-light" type="button">Clear</button>
+              <button id="btnNew" class="rs-btn" type="button">New Entry</button>
+            </div>
+          </div>
+
+          <div class="rs-kpi-grid">
+            <article class="rs-kpi-card">
+              <div class="rs-kpi-label">Lifetime Entered</div>
+              <div class="rs-kpi-value" id="kpiLifetimeEntered">0</div>
+            </article>
+            <article class="rs-kpi-card">
+              <div class="rs-kpi-label">Lifetime Forwarded</div>
+              <div class="rs-kpi-value" id="kpiLifetimeForwarded">0</div>
+            </article>
+            <article class="rs-kpi-card">
+              <div class="rs-kpi-label">Today Entered</div>
+              <div class="rs-kpi-value" id="kpiTodayEntered">0</div>
+            </article>
+            <article class="rs-kpi-card">
+              <div class="rs-kpi-label">Today Forwarded</div>
+              <div class="rs-kpi-value" id="kpiTodayForwarded">0</div>
+            </article>
+          </div>
+
+          <div class="rs-stats">
+            <div class="rs-stat-pill">
+              Daily Summary (<span id="todayDateLabel">-</span>)
+            </div>
+            <div id="dailyStatsList" class="rs-stat-list"></div>
+          </div>
+
+          <div class="rs-table-wrap">
+            <table class="rs-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Received From Office</th>
+                  <th>Received Date</th>
+                  <th>Diary SL No</th>
+                  <th>Memo No</th>
+                  <th>Memo Date</th>
+                  <th>Topic</th>
+                  <th>Current Section</th>
+                  <th>Forward To</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+
+          <div class="rs-pagination">
+            <button id="prevBtn" class="rs-btn rs-btn-light" type="button">Prev</button>
+            <div id="pageInfo" class="rs-page-info">Page 1</div>
+            <button id="nextBtn" class="rs-btn rs-btn-light" type="button">Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="entryModal" class="rs-modal" style="display:none;">
+    <div class="rs-modal-card">
+      <div class="rs-modal-head">
+        <h3 id="entryModalTitle">New Entry</h3>
+        <button id="entryModalClose" class="rs-close" type="button">&times;</button>
+      </div>
+      <form id="entryForm" class="rs-form">
+        <input id="entryId" type="hidden" />
+
+        <label id="sourceSectionWrap" class="rs-field" style="display:none;">
+          <span>Source Section *</span>
+          <select id="sourceSection" class="rs-input"></select>
+        </label>
+
+        <label class="rs-field">
+          <span>Received From Office *</span>
+          <select id="receivedFromOffice" class="rs-input" required></select>
+        </label>
+
+        <label class="rs-field">
+          <span>Forward To *</span>
+          <select id="forwardTo" class="rs-input" required></select>
+        </label>
+
+        <label class="rs-field">
+          <span>Received Date *</span>
+          <input id="receivedDate" type="date" class="rs-input" required />
+        </label>
+
+        <label class="rs-field">
+          <span>Diary SL No *</span>
+          <input id="diarySlNo" class="rs-input" required />
+        </label>
+
+        <label class="rs-field">
+          <span>Memo No</span>
+          <input id="memoNo" class="rs-input" />
+        </label>
+
+        <label class="rs-field">
+          <span>Memo Date</span>
+          <input id="memoDate" type="date" class="rs-input" />
+        </label>
+
+        <label class="rs-field rs-field-full">
+          <span>Topic *</span>
+          <textarea id="topic" class="rs-input" rows="3" required></textarea>
+        </label>
+
+        <div class="rs-modal-actions">
+          <button id="entryCancel" type="button" class="rs-btn rs-btn-light">Cancel</button>
+          <button id="entrySave" type="submit" class="rs-btn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="forwardModal" class="rs-modal" style="display:none;">
+    <div class="rs-modal-card">
+      <div class="rs-modal-head">
+        <h3>Forward Entry</h3>
+        <button id="forwardModalClose" class="rs-close" type="button">&times;</button>
+      </div>
+      <form id="forwardForm" class="rs-form">
+        <input id="forwardEntryId" type="hidden" />
+
+        <label class="rs-field">
+          <span>Forward To *</span>
+          <select id="forwardToOption" class="rs-input" required></select>
+        </label>
+
+        <label class="rs-field">
+          <span>Forward Note (optional)</span>
+          <input id="forwardNote" class="rs-input" placeholder="Optional note" />
+        </label>
+
+        <div class="rs-modal-actions">
+          <button id="forwardCancel" type="button" class="rs-btn rs-btn-light">Cancel</button>
+          <button id="forwardSave" type="submit" class="rs-btn">Forward</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="logsModal" class="rs-modal" style="display:none;">
+    <div class="rs-modal-card rs-modal-card-wide">
+      <div class="rs-modal-head">
+        <h3>Entry Logs</h3>
+        <button id="logsModalClose" class="rs-close" type="button">&times;</button>
+      </div>
+      <div id="logsBody" class="rs-logs"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+    initLayout("record-section.html");
+    renderPageHeader({
+      icon: "inventory",
+      title: "Record Section Register",
+      subtitle: "Receive office records, forward between sections, and mark section receive.",
+      showClock: true,
+    });
+  </script>
+  <script src="js/record-section.js"></script>
+</body>
+</html>
