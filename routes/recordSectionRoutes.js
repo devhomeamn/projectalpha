@@ -25,6 +25,7 @@ router.get("/sections", recordSectionController.listSections);
 router.get("/context", recordSectionController.getContext);
 router.get("/section-users/:sectionId", recordSectionController.listSectionUsers);
 router.get("/stats/daily", recordSectionController.dailyCounts);
+router.get("/suggestions/memo-nos", recordSectionController.listMemoNoSuggestions);
 router.get("/reports/forwarded-by-date", recordSectionController.forwardedByDateReport);
 
 router.post("/", recordSectionController.createEntry);

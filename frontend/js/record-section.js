@@ -12,6 +12,8 @@
     limit: 20,
     total: 0,
     rows: [],
+    memoSuggestionTimer: null,
+    memoSuggestionFetchToken: 0,
   };
 
   function byId(id) {
@@ -179,6 +181,56 @@
       parts.push(`<option value="${escapeHtml(item.key)}">${escapeHtml(prefix + item.label)}</option>`);
     });
     selectEl.innerHTML = parts.join("");
+  }
+
+  function renderMemoNoSuggestions(items) {
+    const listEl = byId("memoNoSuggestions");
+    if (!listEl) return;
+    const values = Array.isArray(items) ? items : [];
+    listEl.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+  }
+
+  async function fetchMemoNoSuggestions(query = "") {
+    const params = new URLSearchParams();
+    const q = String(query || "").trim();
+    if (q) params.set("q", q);
+    params.set("limit", "12");
+
+    const res = await authFetch(`/record-sections/suggestions/memo-nos?${params.toString()}`);
+    const out = await res.json();
+    if (!res.ok) throw new Error(out?.message || "Failed to load memo suggestions");
+    return Array.isArray(out?.items) ? out.items : [];
+  }
+
+  async function loadMemoNoSuggestions(query = "") {
+    const requestToken = ++state.memoSuggestionFetchToken;
+    try {
+      const items = await fetchMemoNoSuggestions(query);
+      if (requestToken !== state.memoSuggestionFetchToken) return;
+      renderMemoNoSuggestions(items);
+    } catch (err) {
+      console.error("record-section memo suggestion error:", err);
+    }
+  }
+
+  function queueMemoNoSuggestions(query = "") {
+    if (state.memoSuggestionTimer) clearTimeout(state.memoSuggestionTimer);
+    state.memoSuggestionTimer = setTimeout(() => {
+      state.memoSuggestionTimer = null;
+      loadMemoNoSuggestions(query);
+    }, 180);
+  }
+
+  function bindMemoNoSuggestionEvents() {
+    const memoInput = byId("memoNo");
+    if (!memoInput) return;
+
+    memoInput.addEventListener("focus", () => {
+      loadMemoNoSuggestions(memoInput.value || "");
+    });
+    memoInput.addEventListener("input", () => {
+      queueMemoNoSuggestions(memoInput.value || "");
+    });
   }
 
   async function loadSections() {
@@ -417,6 +469,7 @@
     const title = byId("entryModalTitle");
     if (title) title.textContent = "New Entry";
     openModal("entryModal");
+    loadMemoNoSuggestions("");
   }
 
   function buildForwardKeyFromRow(row) {
@@ -454,6 +507,7 @@
       const title = byId("entryModalTitle");
       if (title) title.textContent = "Edit Entry";
       openModal("entryModal");
+      loadMemoNoSuggestions(row.memo_no || "");
     } catch (err) {
       console.error(err);
       alert(err.message || "Failed");
@@ -862,6 +916,7 @@
 
     byId("entryForm")?.addEventListener("submit", submitEntryForm);
     byId("entryCancel")?.addEventListener("click", () => closeModal("entryModal"));
+    bindMemoNoSuggestionEvents();
 
     byId("forwardForm")?.addEventListener("submit", submitForwardForm);
     byId("forwardCancel")?.addEventListener("click", () => closeModal("forwardModal"));

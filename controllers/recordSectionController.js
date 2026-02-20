@@ -730,6 +730,55 @@ exports.listEntries = async (req, res) => {
   }
 };
 
+exports.listMemoNoSuggestions = async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const requestedLimit = Number(req.query.limit || 8);
+    const limit = Math.min(25, Math.max(1, Number.isFinite(requestedLimit) ? Math.trunc(requestedLimit) : 8));
+
+    const where = {
+      memo_no: {
+        [Op.not]: null,
+        [Op.ne]: "",
+      },
+    };
+
+    if (q) {
+      where.memo_no = {
+        ...where.memo_no,
+        [Op.like]: `%${q}%`,
+      };
+    }
+
+    if (!isAdminOrMaster(req)) addAndWhere(where, buildGeneralVisibilityClause(req));
+
+    const rows = await RecordSectionEntry.findAll({
+      attributes: ["memo_no"],
+      where,
+      order: [["id", "DESC"]],
+      limit: Math.max(100, limit * 20),
+      raw: true,
+    });
+
+    const seen = new Set();
+    const items = [];
+    for (const row of rows) {
+      const value = String(row?.memo_no || "").trim();
+      if (!value) continue;
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(value);
+      if (items.length >= limit) break;
+    }
+
+    return res.json({ items });
+  } catch (err) {
+    console.error("recordSection.listMemoNoSuggestions error:", err);
+    return res.status(500).json({ message: "Failed to load memo suggestions" });
+  }
+};
+
 exports.getEntry = async (req, res) => {
   try {
     ensureAssociations();
