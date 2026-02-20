@@ -49,6 +49,7 @@
             <div class="rs-actions">
               <button id="btnSearch" class="rs-btn" type="button">Search</button>
               <button id="btnClear" class="rs-btn rs-btn-light" type="button">Clear</button>
+              <button id="btnForwardReport" class="rs-btn rs-btn-light" type="button">Forward Report</button>
               <button id="btnNew" class="rs-btn" type="button">New Entry</button>
             </div>
           </div>
@@ -201,6 +202,25 @@
         <button id="logsModalClose" class="rs-close" type="button">&times;</button>
       </div>
       <div id="logsBody" class="rs-logs"></div>
+    </div>
+  </div>
+
+  <div id="forwardReportModal" class="rs-modal" style="display:none;">
+    <div class="rs-modal-card">
+      <div class="rs-modal-head">
+        <h3>Forward Report</h3>
+        <button id="forwardReportClose" class="rs-close" type="button">&times;</button>
+      </div>
+      <form id="forwardReportForm" class="rs-form rs-form-single">
+        <label class="rs-field">
+          <span>Select Date *</span>
+          <input id="forwardReportDate" type="date" class="rs-input" required />
+        </label>
+        <div class="rs-modal-actions">
+          <button id="forwardReportCancel" type="button" class="rs-btn rs-btn-light">Cancel</button>
+          <button id="forwardReportGo" type="submit" class="rs-btn">Go</button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -1,4 +1,4 @@
-const { Op, fn, col } = require("sequelize");
+const { Op, fn, col, where: sqlWhere } = require("sequelize");
 const Section = require("../models/sectionModel");
 const User = require("../models/userModel");
 const RecordSectionEntry = require("../models/recordSectionEntryModel");
@@ -114,6 +114,18 @@ function getUserSectionId(req) {
 function parseDateOnlyOrNull(value) {
   if (!value) return null;
   return String(value).slice(0, 10);
+}
+
+function parseDateOnlyStrict(value) {
+  const date = parseDateOnlyOrNull(value);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+
+  const [y, m, d] = date.split("-").map((part) => Number(part));
+  const probe = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(probe.getTime())) return null;
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() + 1 !== m || probe.getUTCDate() !== d) return null;
+
+  return date;
 }
 
 function parsePositiveIntOrNull(value) {
@@ -617,6 +629,54 @@ exports.dailyCounts = async (req, res) => {
   } catch (err) {
     console.error("recordSection.dailyCounts error:", err);
     return res.status(500).json({ message: "Failed to load daily counts" });
+  }
+};
+
+exports.forwardedByDateReport = async (req, res) => {
+  try {
+    ensureAssociations();
+
+    const reportDate = parseDateOnlyStrict(req.query.report_date);
+    if (!reportDate) {
+      return res.status(400).json({ message: "Valid report_date (YYYY-MM-DD) is required" });
+    }
+
+    const where = {
+      forwarded_at: { [Op.ne]: null },
+    };
+
+    addAndWhere(where, sqlWhere(fn("DATE", col("forwarded_at")), reportDate));
+    if (!isAdminOrMaster(req)) addAndWhere(where, buildGeneralVisibilityClause(req));
+
+    const rows = await RecordSectionEntry.findAll({
+      where,
+      include: ENTRY_INCLUDE,
+      order: [["forwarded_at", "ASC"], ["id", "ASC"]],
+    });
+
+    const entries = rows.map((row) => {
+      const item = normalizeEntry(row);
+      return {
+        id: Number(item.id),
+        received_date: parseDateOnlyOrNull(item.received_date),
+        diary_sl_no: item.diary_sl_no || "",
+        memo_no: item.memo_no || "",
+        topic: item.topic || "",
+        current_section_name: item.current_section_name || "-",
+        forward_to_name: item.forward_to_name || "-",
+        status: item.status || "-",
+        forwarded_at: item.forwarded_at || null,
+      };
+    });
+
+    return res.json({
+      report_date: reportDate,
+      total_forwarded: entries.length,
+      entries,
+    });
+  } catch (err) {
+    console.error("recordSection.forwardedByDateReport error:", err);
+    return res.status(500).json({ message: "Failed to load forwarded report" });
   }
 };
 

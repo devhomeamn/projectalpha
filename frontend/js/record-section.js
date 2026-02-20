@@ -101,6 +101,12 @@
     return { type: m[1], id: Number(m[2]) };
   }
 
+  function parseDateOnly(value) {
+    const text = String(value || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+    return text;
+  }
+
   function sectionNameById(id) {
     const key = Number(id);
     if (!Number.isFinite(key)) return "-";
@@ -627,6 +633,205 @@
     }
   }
 
+  function reportHeaderHtml(title) {
+    return `
+      <div class="rsr-head">
+        <div class="rsr-head-line rsr-head-main">Office of the Senior Finance Controller (Air Force)</div>
+        <div class="rsr-head-line">Dhaka Cantonment, Dhaka-1206</div>
+        <div class="rsr-head-line">Record Section</div>
+        <div class="rsr-head-title">${escapeHtml(title || "Forwarded Report")}</div>
+      </div>
+    `;
+  }
+
+  function openPrintWindowHtml({ bodyHtml, docTitle }) {
+    const w = window.open("", "_blank", "width=1100,height=820");
+    if (!w) {
+      alert("Pop-up blocked! Please allow pop-ups for printing.");
+      return;
+    }
+
+    const html = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(docTitle || "Forwarded Report")}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 16px; color:#111; }
+          .print-btn { margin-bottom: 12px; }
+          @media print { .print-btn { display:none; } body { padding: 10px; } }
+
+          .page { page-break-after: always; }
+          .page:last-child { page-break-after: auto; }
+          @media print {
+            .page { page-break-after: always; }
+            .page:last-child { page-break-after: auto; }
+          }
+
+          .rsr-head { text-align: center; margin-bottom: 10px; }
+          .rsr-head-line { line-height: 1.35; font-weight: 700; }
+          .rsr-head-main { font-size: 24px; font-style: italic; }
+          .rsr-head-title { margin-top: 8px; font-size: 24px; font-weight: 800; font-style: italic; text-decoration: underline; }
+
+          .rsr-meta { margin-top: 12px; margin-bottom: 12px; font-size: 12px; line-height: 1.75; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th, td { border: 1px solid #cfcfcf; padding: 8px; font-size: 12px; text-align: left; vertical-align: top; }
+          th { background: #f6f6f6; font-weight: 700; }
+          .rsr-topic { max-width: 360px; overflow-wrap: anywhere; }
+          .signature { margin-top: 18px; text-align: right; font-size: 12px; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <button class="print-btn" onclick="window.print()">Print</button>
+        ${bodyHtml}
+      </body>
+      </html>
+    `;
+
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  async function fetchForwardedReportByDate(reportDate) {
+    const params = new URLSearchParams({ report_date: reportDate });
+    const res = await authFetch(`/record-sections/reports/forwarded-by-date?${params.toString()}`);
+    const out = await res.json();
+    if (!res.ok) throw new Error(out?.message || "Failed to load forwarded report");
+    return out;
+  }
+
+  function openForwardReportModal() {
+    const dateInput = byId("forwardReportDate");
+    if (dateInput) dateInput.value = toLocalISODate(new Date());
+    openModal("forwardReportModal");
+  }
+
+  async function submitForwardReportForm(e) {
+    e.preventDefault();
+    const reportDate = parseDateOnly(byId("forwardReportDate")?.value || "");
+    if (!reportDate) {
+      alert("Please select a valid date");
+      return;
+    }
+
+    const btn = byId("forwardReportGo");
+    const oldText = btn?.textContent || "Go";
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Loading...";
+    }
+
+    try {
+      const out = await fetchForwardedReportByDate(reportDate);
+      const entries = Array.isArray(out?.entries) ? out.entries : [];
+      const totalForwarded = Number(out?.total_forwarded || entries.length || 0);
+      const printedAt = new Date().toLocaleString();
+
+      const groupMap = new Map();
+      entries.forEach((row) => {
+        const groupName = String(row?.forward_to_name || "").trim() || "Unknown";
+        if (!groupMap.has(groupName)) groupMap.set(groupName, []);
+        groupMap.get(groupName).push(row);
+      });
+
+      const orderedGroups = Array.from(groupMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+      const pagesHtml = orderedGroups
+        .map(([groupName, rows]) => {
+          const rowsHtml = rows
+            .map(
+              (row, idx) => `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td>${escapeHtml(row.diary_sl_no || "-")}</td>
+                  <td>${escapeHtml(row.memo_no || "-")}</td>
+                  <td>${escapeHtml(formatDate(row.received_date))}</td>
+                  <td class="rsr-topic">${escapeHtml(row.topic || "-")}</td>
+                  <td>${escapeHtml(String(row.status || "-").replace(/_/g, " "))}</td>
+                </tr>
+              `
+            )
+            .join("");
+
+          return `
+            <div class="page">
+              ${reportHeaderHtml("Forwarded Record Report")}
+              <div class="rsr-meta">
+                <div>Report Date: <b>${escapeHtml(reportDate)}</b></div>
+                <div>Forward To Section: <b>${escapeHtml(groupName)}</b></div>
+                <div>Printed at: <b>${escapeHtml(printedAt)}</b></div>
+                <div>Section Total Forwarded: <b>${escapeHtml(String(rows.length))}</b></div>
+                <div>All Total Forwarded: <b>${escapeHtml(String(totalForwarded))}</b></div>
+              </div>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:55px;">SL</th>
+                    <th>Diary SL No</th>
+                    <th>Memo No</th>
+                    <th>Received Date</th>
+                    <th>Topic</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml || '<tr><td colspan="6" style="text-align:center;color:#666;">No forwarded data found for this section</td></tr>'}
+                </tbody>
+              </table>
+
+              <div class="signature">Signature</div>
+            </div>
+          `;
+        })
+        .join("");
+
+      const bodyHtml =
+        pagesHtml ||
+        `
+          <div class="page">
+            ${reportHeaderHtml("Forwarded Record Report")}
+            <div class="rsr-meta">
+              <div>Report Date: <b>${escapeHtml(reportDate)}</b></div>
+              <div>Printed at: <b>${escapeHtml(printedAt)}</b></div>
+              <div>Total Forwarded: <b>0</b></div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:55px;">SL</th>
+                  <th>Diary SL No</th>
+                  <th>Memo No</th>
+                  <th>Received Date</th>
+                  <th>Topic</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" style="text-align:center;color:#666;">No forwarded data found for selected date</td></tr>
+              </tbody>
+            </table>
+            <div class="signature">Signature</div>
+          </div>
+        `;
+
+      closeModal("forwardReportModal");
+      openPrintWindowHtml({
+        docTitle: `Forwarded_Report_${reportDate}`,
+        bodyHtml,
+      });
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to generate forwarded report");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    }
+  }
+
   function bindModalClose(modalId, closeBtnId) {
     const modal = byId(modalId);
     const closeBtn = byId(closeBtnId);
@@ -647,6 +852,7 @@
       refresh(1);
     });
     byId("btnNew")?.addEventListener("click", openAddModal);
+    byId("btnForwardReport")?.addEventListener("click", openForwardReportModal);
 
     byId("statusFilter")?.addEventListener("change", () => refresh(1));
     byId("sectionFilter")?.addEventListener("change", () => refresh(1));
@@ -659,6 +865,8 @@
 
     byId("forwardForm")?.addEventListener("submit", submitForwardForm);
     byId("forwardCancel")?.addEventListener("click", () => closeModal("forwardModal"));
+    byId("forwardReportForm")?.addEventListener("submit", submitForwardReportForm);
+    byId("forwardReportCancel")?.addEventListener("click", () => closeModal("forwardReportModal"));
 
     byId("prevBtn")?.addEventListener("click", () => {
       if (state.page > 1) refresh(state.page - 1);
@@ -698,6 +906,7 @@
     bindModalClose("entryModal", "entryModalClose");
     bindModalClose("forwardModal", "forwardModalClose");
     bindModalClose("logsModal", "logsModalClose");
+    bindModalClose("forwardReportModal", "forwardReportClose");
   }
 
   function applySectionAccessGuards() {

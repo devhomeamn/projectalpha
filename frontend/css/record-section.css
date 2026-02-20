@@ -279,6 +279,10 @@
   gap: 10px;
 }
 
+.rs-form-single {
+  grid-template-columns: 1fr;
+}
+
 .rs-field-full {
   grid-column: 1 / -1;
 }
