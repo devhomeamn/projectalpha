@@ -1,9 +1,12 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const { Op } = require("sequelize");
 
 const User = require("../models/userModel");
 const PasswordReset = require("../models/passwordResetModel");
 const { sendResetEmail } = require("../utils/mailer"); //  top-level require
+
+const RESET_TOKEN_EXPIRES_MINUTES = 30;
 
 function sha256Hex(input) {
   return crypto.createHash("sha256").update(input).digest("hex");
@@ -11,6 +14,12 @@ function sha256Hex(input) {
 
 function addMinutes(mins) {
   return new Date(Date.now() + mins * 60 * 1000);
+}
+
+function getForgotThrottleSeconds() {
+  const raw = Number(process.env.FORGOT_PASSWORD_THROTTLE_SECONDS || 60);
+  if (!Number.isFinite(raw)) return 60;
+  return Math.max(0, Math.floor(raw));
 }
 
 /**
@@ -34,6 +43,28 @@ exports.forgotPassword = async (req, res) => {
     //  do NOT reveal if email exists
     if (!user) return res.json(okMsg);
 
+    // Optional throttle to avoid repeated email sends in short time
+    const throttleSeconds = getForgotThrottleSeconds();
+    if (throttleSeconds > 0) {
+      const maxThrottleSeconds = RESET_TOKEN_EXPIRES_MINUTES * 60;
+      const safeThrottleSeconds = Math.min(throttleSeconds, maxThrottleSeconds);
+      const throttleCutoff = new Date(
+        Date.now() + (maxThrottleSeconds - safeThrottleSeconds) * 1000
+      );
+
+      const recentPendingReset = await PasswordReset.findOne({
+        where: {
+          user_id: user.id,
+          used_at: null,
+          expires_at: { [Op.gt]: throttleCutoff },
+        },
+      });
+
+      if (recentPendingReset) {
+        return res.json(okMsg);
+      }
+    }
+
     // invalidate previous unused tokens
     await PasswordReset.update(
       { used_at: new Date() },
@@ -46,7 +77,7 @@ exports.forgotPassword = async (req, res) => {
     await PasswordReset.create({
       user_id: user.id,
       token_hash,
-      expires_at: addMinutes(30), // 30 minutes
+      expires_at: addMinutes(RESET_TOKEN_EXPIRES_MINUTES), // 30 minutes
       used_at: null,
     });
 
