@@ -273,9 +273,12 @@ async function saveDraftFlow({ submitAfter = false } = {}) {
 
     if (submitAfter) {
       if (!requisitionId) throw new Error("Failed to resolve requisition id");
-      await fetchJson(`/inventory/requisitions/${requisitionId}/submit`, { method: "POST" });
+      const submitOut = await fetchJson(`/inventory/requisitions/${requisitionId}/submit`, {
+        method: "POST",
+      });
+      const submittedId = toPositiveInt(submitOut?.data?.id) || requisitionId;
       showToast("Requisition submitted successfully", "success");
-      window.location.href = "my-requisitions.html";
+      window.location.href = `requisition-application.html?id=${submittedId}&auto_print=1`;
       return;
     }
 

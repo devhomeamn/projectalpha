@@ -253,9 +253,6 @@ function bindEvents() {
   });
   byId("itemCancelBtn")?.addEventListener("click", () => modalOpen(false));
   byId("itemModalClose")?.addEventListener("click", () => modalOpen(false));
-  byId("itemModal")?.addEventListener("click", (e) => {
-    if (e.target?.id === "itemModal") modalOpen(false);
-  });
   byId("itemForm")?.addEventListener("submit", submitForm);
 
   byId("itemRows")?.addEventListener("click", (e) => {
@@ -287,4 +284,3 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(err.message || "Failed to initialize inventory items", "error");
   });
 });
-

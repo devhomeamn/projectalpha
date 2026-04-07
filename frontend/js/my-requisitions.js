@@ -17,6 +17,14 @@ const state = {
   total: 0,
 };
 
+function openApplicationPage(id, { autoPrint = false } = {}) {
+  const reqId = Number(id);
+  if (!Number.isFinite(reqId) || reqId <= 0) return;
+  const params = new URLSearchParams({ id: String(Math.trunc(reqId)) });
+  if (autoPrint) params.set("auto_print", "1");
+  window.location.href = `requisition-application.html?${params.toString()}`;
+}
+
 function detailModalOpen(open) {
   const modal = byId("myReqModal");
   if (!modal) return;
@@ -50,6 +58,7 @@ function renderRows() {
       const statusCls = normalizeStatusClass(row.status);
       const canSubmit = Boolean(row.can_submit);
       const canEdit = row.status === "Draft";
+      const canPrint = row.status !== "Draft";
 
       return `
         <tr>
@@ -79,6 +88,13 @@ function renderRows() {
                   ? `<button class="inv-mini-btn" type="button" data-action="submit" data-id="${Number(
                       row.id
                     )}">Submit</button>`
+                  : ""
+              }
+              ${
+                canPrint
+                  ? `<button class="inv-mini-btn" type="button" data-action="print" data-id="${Number(
+                      row.id
+                    )}">Application</button>`
                   : ""
               }
             </div>
@@ -181,9 +197,10 @@ async function submitDraft(id) {
   const ok = window.confirm("Submit this draft requisition?");
   if (!ok) return;
   try {
-    await fetchJson(`/inventory/requisitions/${id}/submit`, { method: "POST" });
+    const out = await fetchJson(`/inventory/requisitions/${id}/submit`, { method: "POST" });
+    const submittedId = Number(out?.data?.id || id);
     showToast("Requisition submitted");
-    await loadRows(state.page);
+    openApplicationPage(submittedId, { autoPrint: true });
   } catch (err) {
     showToast(err.message || "Failed to submit requisition", "error");
   }
@@ -227,6 +244,10 @@ function bindEvents() {
     }
     if (action === "submit") {
       submitDraft(id);
+      return;
+    }
+    if (action === "print") {
+      openApplicationPage(id, { autoPrint: true });
     }
   });
 

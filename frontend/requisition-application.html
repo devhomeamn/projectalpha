@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Requisition Application</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/requisition-application.css" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <div class="app-toolbar no-print">
+      <a class="app-btn secondary" href="my-requisitions.html">Back to My Requisitions</a>
+      <button id="appPrintBtn" class="app-btn" type="button">Print Preview</button>
+    </div>
+
+    <div id="appErrorBox" class="app-error" hidden></div>
+
+    <article class="app-paper" id="appPaper">
+      <header class="app-header">
+        <div class="line office-1">Office of the Senior Finance Controller (Air Force)</div>
+        <div class="line office-2">Dhaka Cantonment, Dhaka-1206</div>
+        <div class="line office-3">
+          <span class="quote">&ldquo;</span>
+          <span id="appSectionName" class="uline">Section Name</span>
+          <span class="quote">&rdquo;</span>
+          <span class="uline">Section</span>
+        </div>
+      </header>
+
+      <section class="app-meta">
+        <div class="meta-row">
+          <div class="meta-left"><strong>Application Date:</strong> <span id="appDate">-</span></div>
+          <div class="meta-right"><strong>Requisition No:</strong> <span id="appReqNo">-</span></div>
+        </div>
+        <div class="meta-row">
+          <div class="meta-left"></div>
+          <div class="meta-right"><strong>Requested Month/Year:</strong> <span id="appMonthYear">-</span></div>
+        </div>
+      </section>
+
+      <section class="app-address">
+        <p class="line">To</p>
+        <p class="line"><strong>Joint Finance Controller</strong></p>
+        <p class="line">Office of the Senior Finance Controller (Air Force)</p>
+        <p class="line">Dhaka Cantonment, Dhaka.</p>
+      </section>
+
+      <section class="app-subject">
+        <strong>Subject:</strong>
+        <span id="appSubjectLine">Prayer for approval of requisitioned inventory items.</span>
+      </section>
+
+      <section class="app-body">
+        <p id="appBodyLine">
+          With due respect, I request approval for issuing the following inventory items for official use.
+        </p>
+      </section>
+
+      <section class="app-table-wrap">
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th style="width: 42px;">SL</th>
+              <th style="width: 120px;">Item Code</th>
+              <th>Item Name</th>
+              <th style="width: 90px;">Unit</th>
+              <th style="width: 100px;">Qty</th>
+              <th style="width: 180px;">Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="appItemsRows"></tbody>
+          <tfoot>
+            <tr>
+              <th colspan="4" class="right">Total</th>
+              <th id="appTotalQty" class="right">0.00</th>
+              <th id="appItemCount">0 item(s)</th>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <section class="app-footer-text">
+        <p>
+          Kindly take necessary action for approval and issue of the above items from available stock.
+        </p>
+      </section>
+
+      <footer class="app-signatures">
+        <div class="sig-right">SAS Superintendent</div>
+      </footer>
+    </article>
+  </main>
+
+  <script type="module" src="js/requisition-application.js"></script>
+</body>
+</html>

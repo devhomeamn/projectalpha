@@ -45,6 +45,7 @@
     "inventory-approval.html": ["admin", "inventory manager"],
     "inventory-issue.html": ["admin", "inventory manager"],
     "inventory-reports.html": ["admin", "inventory manager"],
+    "requisition-application.html": ["admin", "general", "master", "inventory manager"],
   };
 
   const allowedRoles = pageRoles[page];

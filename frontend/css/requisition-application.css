@@ -1,0 +1,259 @@
+:root {
+  --app-bg: #d8d8d8;
+  --app-paper-border: #bfc4cc;
+  --app-text: #0f172a;
+  --app-primary: #0f4c81;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.app-toolbar {
+  max-width: 210mm;
+  margin: 0 auto 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-btn {
+  border: 1px solid var(--app-primary);
+  background: var(--app-primary);
+  color: #fff;
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-btn.secondary {
+  background: #fff;
+  color: #111827;
+  border-color: #b6c4d5;
+}
+
+.app-paper {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 13mm 14mm 14mm;
+  background: #fff;
+  border: 1px solid var(--app-paper-border);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+}
+
+.app-header {
+  text-align: center;
+}
+
+.app-header .line {
+  line-height: 1.45;
+}
+
+.app-header .office-1,
+.app-header .office-2 {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.app-header .office-3 {
+  margin-top: 8px;
+  font-size: 19px;
+}
+
+.app-header .quote {
+  font-weight: 700;
+}
+
+.app-header .uline {
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.app-meta {
+  margin-top: 18px;
+  font-size: 14px;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 26px;
+}
+
+.meta-left,
+.meta-right {
+  min-width: 0;
+}
+
+.meta-right {
+  text-align: right;
+}
+
+.app-address {
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.app-address .line {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.app-subject {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.app-body {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.app-body p {
+  margin: 0;
+  text-align: left;
+}
+
+.app-table-wrap {
+  margin-top: 10px;
+}
+
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.app-table th,
+.app-table td {
+  border: 1px solid #111827;
+  padding: 7px 8px;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.app-table thead th {
+  font-weight: 700;
+}
+
+.app-table .right {
+  text-align: right;
+}
+
+.app-table tfoot th {
+  font-weight: 700;
+}
+
+.app-footer-text {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.app-footer-text p {
+  margin: 0;
+}
+
+.app-signatures {
+  margin-top: 96px;
+  text-align: right;
+}
+
+.sig-right {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.app-error {
+  width: min(700px, calc(100% - 32px));
+  margin: 0 auto 12px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding: 10px;
+  }
+
+  .app-paper {
+    width: 100%;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .app-header .office-1,
+  .app-header .office-2 {
+    font-size: 18px;
+  }
+
+  .app-header .office-3 {
+    font-size: 15px;
+  }
+
+  .meta-row {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 0;
+  }
+
+  .meta-right {
+    text-align: left;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .no-print,
+  .app-error {
+    display: none !important;
+  }
+
+  .app-shell {
+    padding: 0;
+    min-height: auto;
+  }
+
+  .app-paper {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
