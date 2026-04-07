@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Requisitions</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content inventory-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="inv-card">
+          <div class="inv-toolbar">
+            <label class="inv-field inv-field-wide">
+              <span>Search Requisition No</span>
+              <input id="myReqSearch" class="inv-input" placeholder="REQ-YYYYMM-XXXX" />
+            </label>
+
+            <label class="inv-field">
+              <span>Status</span>
+              <select id="myReqStatus" class="inv-select">
+                <option value="all">All</option>
+                <option value="Draft">Draft</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Forwarded">Forwarded</option>
+                <option value="Approved">Approved</option>
+                <option value="Partially Approved">Partially Approved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Issued">Issued</option>
+              </select>
+            </label>
+
+            <label class="inv-field">
+              <span>Month</span>
+              <input id="myReqMonth" class="inv-input" type="number" min="1" max="12" placeholder="1-12" />
+            </label>
+
+            <label class="inv-field">
+              <span>Year</span>
+              <input id="myReqYear" class="inv-input" type="number" min="2000" max="2100" placeholder="2026" />
+            </label>
+
+            <div class="inv-actions">
+              <button id="myReqSearchBtn" class="inv-btn secondary" type="button">Search</button>
+              <button id="myReqClearBtn" class="inv-btn secondary" type="button">Clear</button>
+              <a class="inv-btn" href="create-requisition.html">Create New</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Requisition No</th>
+                  <th>Section</th>
+                  <th>Month/Year</th>
+                  <th>Status</th>
+                  <th>Requested Qty</th>
+                  <th>Approved Qty</th>
+                  <th>Issued Qty</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="myReqRows"></tbody>
+            </table>
+          </div>
+
+          <div class="inv-pagination">
+            <button id="myReqPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="myReqPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="myReqNextBtn" class="inv-btn secondary" type="button">Next</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="myReqModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card">
+      <div class="inv-modal-head">
+        <h4>Requisition Details</h4>
+        <button id="myReqModalClose" class="inv-close" type="button">&times;</button>
+      </div>
+
+      <div class="inv-detail-grid" id="myReqDetailGrid"></div>
+
+      <div class="inv-table-wrap">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>SL</th>
+              <th>Item</th>
+              <th>Requested</th>
+              <th>Approved</th>
+              <th>Issued</th>
+              <th>Line Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="myReqDetailRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("my-requisitions.html");
+    renderPageHeader({
+      icon: "list_alt",
+      title: "My Requisitions",
+      subtitle: "Track drafts, submissions, approvals, and issued quantities.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/my-requisitions.js"></script>
+</body>
+</html>
+

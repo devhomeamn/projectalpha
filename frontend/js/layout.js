@@ -34,9 +34,12 @@ export async function initLayout(activePage) {
 
   if (!token) return (window.location.href = "login.html");
 
-  role = role
-    ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
-    : "";
+  role = String(role || "")
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : ""))
+    .join(" ");
 
   // Section-based visibility helpers
   const userSectionId = Number(localStorage.getItem("section_id") || 0);
@@ -130,30 +133,161 @@ export async function initLayout(activePage) {
   //  - single item: { name, icon, roles, link }
   //  - group item : { group: true, name, icon, roles, children:[...] }
   const menuItems = [
-    { name: "Dashboard",      icon: "dashboard",     roles: ["Admin", "Master", "General"], link: "dashboard.html" },
-    { name: "Add Record",     icon: "library_add",   roles: ["Admin", "Master", "General"], link: "add-record.html" },
-    { name: "View Record",    icon: "visibility",    roles: ["Admin", "Master", "General"], link: "view-record.html" },
-    { name: "Central Record", icon: "folder",        roles: ["Admin", "Master", "General"], link: "central-record.html" },
-    { name: "Cheque Register", icon: "receipt_long", roles: ["Admin", "Master", "General"], link: "cheque-register.html", onlyChequeUser: true },
-    { name: "Record Section", icon: "inventory",     roles: ["Admin", "Master", "General"], link: "record-section.html" },
+    {
+      name: "Dashboard",
+      icon: "dashboard",
+      roles: ["Admin", "Master", "General", "Inventory Manager"],
+      link: "dashboard.html",
+    },
+    {
+      name: "Add Record",
+      icon: "library_add",
+      roles: ["Admin", "Master", "General"],
+      link: "add-record.html",
+    },
+    {
+      name: "View Record",
+      icon: "visibility",
+      roles: ["Admin", "Master", "General"],
+      link: "view-record.html",
+    },
+    {
+      name: "Central Record",
+      icon: "folder",
+      roles: ["Admin", "Master", "General"],
+      link: "central-record.html",
+    },
+    {
+      name: "Cheque Register",
+      icon: "receipt_long",
+      roles: ["Admin", "Master", "General"],
+      link: "cheque-register.html",
+      onlyChequeUser: true,
+    },
+    {
+      name: "Record Section",
+      icon: "inventory",
+      roles: ["Admin", "Master", "General"],
+      link: "record-section.html",
+    },
     {
       group: true,
       name: "Audit Objections",
       icon: "gavel",
       roles: ["Admin", "Master", "General"],
       children: [
-        { name: "BD History",     icon: "history",  roles: ["Admin", "Master", "General"], link: "bd-objection-history.html" },
-        { name: "All Objections", icon: "list_alt", roles: ["Admin", "Master", "General"], link: "audit-objections.html" },
-        { name: "Clearance Approvals", icon: "task", roles: ["Admin"], link: "ao-clearance-requests.html" },
+        {
+          name: "BD History",
+          icon: "history",
+          roles: ["Admin", "Master", "General"],
+          link: "bd-objection-history.html",
+        },
+        {
+          name: "All Objections",
+          icon: "list_alt",
+          roles: ["Admin", "Master", "General"],
+          link: "audit-objections.html",
+        },
+        {
+          name: "Clearance Approvals",
+          icon: "task",
+          roles: ["Admin"],
+          link: "ao-clearance-requests.html",
+        },
       ],
     },
-    { name: "Add Section",    icon: "add_circle",    roles: ["Admin", "Master"],            link: "add-section.html" },
-    { name: "Approve User",   icon: "verified_user", roles: ["Admin"],                        link: "approve-user.html" },
-    { name: "All Users",      icon: "group",         roles: ["Admin"],                        link: "all-users.html" },
-    { name: "Reports",        icon: "bar_chart",     roles: ["Admin", "Master", "General"], link: "reports.html" },
-    { name: "Public Messages", icon: "forum",        roles: ["Admin", "Master", "General"], link: "public-messages.html" },
-    { name: "Admin Notice",   icon: "campaign",      roles: ["Admin"],                        link: "admin-notice.html" },
-    { name: "Help",           icon: "help",          roles: ["Admin", "Master", "General"], link: "info-help.html" },
+    {
+      group: true,
+      name: "Inventory",
+      icon: "inventory_2",
+      roles: ["Admin", "Master", "General", "Inventory Manager"],
+      children: [
+        {
+          name: "Inventory Items",
+          icon: "inventory_2",
+          roles: ["Admin", "Inventory Manager"],
+          link: "inventory-items.html",
+        },
+        {
+          name: "Create Requisition",
+          icon: "post_add",
+          roles: ["Admin", "General"],
+          link: "create-requisition.html",
+        },
+        {
+          name: "My Requisitions",
+          icon: "list_alt",
+          roles: ["Admin", "General"],
+          link: "my-requisitions.html",
+        },
+        {
+          name: "Requisition Review",
+          icon: "fact_check",
+          roles: ["Admin", "Master"],
+          link: "requisition-review.html",
+        },
+        {
+          name: "Inventory Approval",
+          icon: "verified",
+          roles: ["Admin", "Inventory Manager"],
+          link: "inventory-approval.html",
+        },
+        {
+          name: "Issue Items",
+          icon: "local_shipping",
+          roles: ["Admin", "Inventory Manager"],
+          link: "inventory-issue.html",
+        },
+        {
+          name: "Inventory Reports",
+          icon: "analytics",
+          roles: ["Admin", "Inventory Manager"],
+          link: "inventory-reports.html",
+        },
+      ],
+    },
+    {
+      name: "Add Section",
+      icon: "add_circle",
+      roles: ["Admin", "Master"],
+      link: "add-section.html",
+    },
+    {
+      name: "Approve User",
+      icon: "verified_user",
+      roles: ["Admin"],
+      link: "approve-user.html",
+    },
+    {
+      name: "All Users",
+      icon: "group",
+      roles: ["Admin"],
+      link: "all-users.html",
+    },
+    {
+      name: "Reports",
+      icon: "bar_chart",
+      roles: ["Admin", "Master", "General"],
+      link: "reports.html",
+    },
+    {
+      name: "Public Messages",
+      icon: "forum",
+      roles: ["Admin", "Master", "General", "Inventory Manager"],
+      link: "public-messages.html",
+    },
+    {
+      name: "Admin Notice",
+      icon: "campaign",
+      roles: ["Admin"],
+      link: "admin-notice.html",
+    },
+    {
+      name: "Help",
+      icon: "help",
+      roles: ["Admin", "Master", "General", "Inventory Manager"],
+      link: "info-help.html",
+    },
   ];
 
   const menuList = document.getElementById("menuList");

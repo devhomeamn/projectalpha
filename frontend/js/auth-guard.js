@@ -31,17 +31,24 @@
     return;
   }
 
-  // ✅ admin-only pages list
+  // ✅ page-wise access map
   const page = location.pathname.split("/").pop();
-  const adminOnly = new Set([
-    "approve-user.html",
-    "all-users.html",
-    "add-section.html",
-    "ao-clearance-requests.html",
-  ]);
+  const pageRoles = {
+    "approve-user.html": ["admin"],
+    "all-users.html": ["admin"],
+    "add-section.html": ["admin", "master"],
+    "ao-clearance-requests.html": ["admin"],
+    "inventory-items.html": ["admin", "inventory manager"],
+    "create-requisition.html": ["admin", "general"],
+    "my-requisitions.html": ["admin", "general"],
+    "requisition-review.html": ["admin", "master"],
+    "inventory-approval.html": ["admin", "inventory manager"],
+    "inventory-issue.html": ["admin", "inventory manager"],
+    "inventory-reports.html": ["admin", "inventory manager"],
+  };
 
-  if (adminOnly.has(page) && role !== "admin") {
-    // admin না হলে ঢুকতেই দেবে না
+  const allowedRoles = pageRoles[page];
+  if (Array.isArray(allowedRoles) && !allowedRoles.includes(role)) {
     window.location.replace("dashboard.html");
     return;
   }

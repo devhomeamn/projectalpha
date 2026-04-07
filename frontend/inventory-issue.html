@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Issue Items</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content inventory-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="inv-card">
+          <div class="inv-toolbar">
+            <label class="inv-field inv-field-wide">
+              <span>Search Requisition</span>
+              <input id="isSearch" class="inv-input" placeholder="REQ-..." />
+            </label>
+
+            <label class="inv-field">
+              <span>Status</span>
+              <select id="isStatus" class="inv-select">
+                <option value="Approved">Approved</option>
+                <option value="Partially Approved">Partially Approved</option>
+                <option value="Issued">Issued</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+
+            <div class="inv-actions">
+              <button id="isSearchBtn" class="inv-btn secondary" type="button">Search</button>
+              <button id="isClearBtn" class="inv-btn secondary" type="button">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Requisition No</th>
+                  <th>Section</th>
+                  <th>Status</th>
+                  <th>Approved Qty</th>
+                  <th>Issued Qty</th>
+                  <th>Approved At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="isRows"></tbody>
+            </table>
+          </div>
+
+          <div class="inv-pagination">
+            <button id="isPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="isPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="isNextBtn" class="inv-btn secondary" type="button">Next</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="isDetailModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card">
+      <div class="inv-modal-head">
+        <h4>Requisition Details</h4>
+        <button id="isDetailClose" class="inv-close" type="button">&times;</button>
+      </div>
+      <div class="inv-detail-grid" id="isDetailGrid"></div>
+      <div class="inv-table-wrap">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>SL</th>
+              <th>Item</th>
+              <th>Requested</th>
+              <th>Approved</th>
+              <th>Issued</th>
+              <th>Line Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="isDetailRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="isIssueModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card">
+      <div class="inv-modal-head">
+        <h4>Issue Items</h4>
+        <button id="isIssueClose" class="inv-close" type="button">&times;</button>
+      </div>
+
+      <form id="isIssueForm">
+        <input id="isIssueId" type="hidden" />
+
+        <div class="inv-table-wrap">
+          <table class="inv-table">
+            <thead>
+              <tr>
+                <th>SL</th>
+                <th>Item</th>
+                <th>Approved</th>
+                <th>Already Issued</th>
+                <th>Remaining</th>
+                <th>Current Stock</th>
+                <th>Issue Qty</th>
+              </tr>
+            </thead>
+            <tbody id="isIssueRows"></tbody>
+          </table>
+        </div>
+
+        <label class="inv-field full" style="margin-top:10px;">
+          <span>Issue Remarks</span>
+          <textarea id="isIssueRemarks" class="inv-textarea" rows="2"></textarea>
+        </label>
+
+        <div class="inv-form-actions">
+          <button id="isIssueCancel" class="inv-btn secondary" type="button">Cancel</button>
+          <button id="isIssueSubmit" class="inv-btn success" type="submit">Confirm Issue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("inventory-issue.html");
+    renderPageHeader({
+      icon: "local_shipping",
+      title: "Issue Items",
+      subtitle: "Issue approved quantities and auto-update stock balance.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/inventory-issue.js"></script>
+</body>
+</html>
+

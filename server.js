@@ -15,6 +15,10 @@ require('./models/recordSectionEntryModel');
 require('./models/recordSectionLogModel');
 require('./models/recordSectionOfficeOptionModel');
 require('./models/recordSectionForwardOptionModel');
+require("./models/inventoryItemModel");
+require("./models/inventoryRequisitionModel");
+require("./models/inventoryRequisitionItemModel");
+require("./models/inventoryTransactionModel");
 
 dotenv.config();
 
@@ -35,6 +39,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const aoClearanceRoutes = require('./routes/aoClearanceRoutes');
 const chequeRegisterRoutes = require('./routes/chequeRegisterRoutes');
 const recordSectionRoutes = require('./routes/recordSectionRoutes');
+const inventoryRoutes = require("./routes/inventoryRoutes");
 
 app.use('/api/reports', require('./routes/reportsRoutes'));
 app.use('/api/notices', require('./routes/noticeRoutes'));
@@ -49,6 +54,7 @@ app.use('/api/records', recordRoutes);
 app.use('/api/cheque-register', chequeRegisterRoutes);
 app.use('/api/record-sections', recordSectionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use("/api/inventory", inventoryRoutes);
 
 // Static serve
 app.use(express.static(path.join(__dirname, 'frontend')));
@@ -73,6 +79,21 @@ async function ensureUserMobileColumn() {
       allowNull: true,
     });
     console.log('Added missing Users.mobile column');
+  }
+}
+
+async function ensureUserRoleEnum() {
+  const qi = sequelize.getQueryInterface();
+  const tableName = User.getTableName();
+
+  try {
+    await qi.changeColumn(tableName, "role", {
+      type: DataTypes.ENUM("Admin", "Master", "General", "Inventory Manager"),
+      allowNull: false,
+      defaultValue: "General",
+    });
+  } catch (err) {
+    console.warn("Could not update Users.role enum:", err.message);
   }
 }
 
@@ -110,6 +131,7 @@ async function startServer() {
   try {
     await sequelize.sync();
     await ensureUserMobileColumn();
+    await ensureUserRoleEnum();
     await ensureRecordSectionEntryColumns();
     console.log('Database synced with approval system');
 

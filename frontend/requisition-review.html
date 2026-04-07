@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Requisition Review</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content inventory-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="inv-card">
+          <div class="inv-toolbar">
+            <label class="inv-field inv-field-wide">
+              <span>Search Requisition</span>
+              <input id="rvSearch" class="inv-input" placeholder="REQ-..." />
+            </label>
+
+            <label class="inv-field">
+              <span>Status</span>
+              <select id="rvStatus" class="inv-select">
+                <option value="Submitted">Submitted</option>
+                <option value="Forwarded">Forwarded</option>
+                <option value="Approved">Approved</option>
+                <option value="Partially Approved">Partially Approved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Issued">Issued</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+
+            <div class="inv-actions">
+              <button id="rvSearchBtn" class="inv-btn secondary" type="button">Search</button>
+              <button id="rvClearBtn" class="inv-btn secondary" type="button">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Requisition No</th>
+                  <th>Section</th>
+                  <th>Requested By</th>
+                  <th>Status</th>
+                  <th>Requested Qty</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rvRows"></tbody>
+            </table>
+          </div>
+
+          <div class="inv-pagination">
+            <button id="rvPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="rvPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="rvNextBtn" class="inv-btn secondary" type="button">Next</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="rvDetailModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card">
+      <div class="inv-modal-head">
+        <h4>Requisition Details</h4>
+        <button id="rvDetailClose" class="inv-close" type="button">&times;</button>
+      </div>
+
+      <div class="inv-detail-grid" id="rvDetailGrid"></div>
+
+      <div class="inv-table-wrap">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>SL</th>
+              <th>Item</th>
+              <th>Requested</th>
+              <th>Approved</th>
+              <th>Issued</th>
+              <th>Line Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="rvDetailRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="rvForwardModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card narrow">
+      <div class="inv-modal-head">
+        <h4>Forward Requisition</h4>
+        <button id="rvForwardClose" class="inv-close" type="button">&times;</button>
+      </div>
+      <form id="rvForwardForm">
+        <input type="hidden" id="rvForwardId" />
+        <label class="inv-field full">
+          <span>Forward Remarks (optional)</span>
+          <textarea id="rvForwardRemarks" class="inv-textarea" rows="3"></textarea>
+        </label>
+
+        <div class="inv-form-actions">
+          <button id="rvForwardCancel" class="inv-btn secondary" type="button">Cancel</button>
+          <button id="rvForwardSubmit" class="inv-btn" type="submit">Forward</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("requisition-review.html");
+    renderPageHeader({
+      icon: "fact_check",
+      title: "Requisition Review",
+      subtitle: "Master review queue for submitted requisitions before manager approval.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/requisition-review.js"></script>
+</body>
+</html>
+

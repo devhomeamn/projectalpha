@@ -178,12 +178,12 @@ exports.updateUserAccess = async (req, res) => {
     const roleRaw = (req.body.role || '').toString().trim();
     const sectionRaw = req.body.section_id;
 
-    const allowedRoles = ['Admin', 'Master', 'General'];
+    const allowedRoles = ['Admin', 'Master', 'General', 'Inventory Manager'];
     if (!allowedRoles.includes(roleRaw)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // section_id: null/empty allowed for Admin/Master; required for General
+    // section_id: null/empty allowed for non-General roles; required for General
     let section_id = null;
     if (sectionRaw !== null && sectionRaw !== undefined && `${sectionRaw}`.trim() !== '') {
       const n = parseInt(sectionRaw, 10);
@@ -197,7 +197,7 @@ exports.updateUserAccess = async (req, res) => {
       return res.status(400).json({ error: 'General user must have a section assigned' });
     }
 
-    // For Admin/Master, force section_id null
+    // For non-General roles, force section_id null
     if (roleRaw !== 'General') {
       section_id = null;
     }

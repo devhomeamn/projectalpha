@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventory Reports</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content inventory-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="inv-card">
+          <div class="inv-toolbar">
+            <label class="inv-field">
+              <span>Report Month</span>
+              <input id="rpMonth" class="inv-input" type="number" min="1" max="12" />
+            </label>
+
+            <label class="inv-field">
+              <span>Report Year</span>
+              <input id="rpYear" class="inv-input" type="number" min="2000" max="2100" />
+            </label>
+
+            <label class="inv-field">
+              <span>Transaction From</span>
+              <input id="rpFrom" class="inv-input" type="date" />
+            </label>
+
+            <label class="inv-field">
+              <span>Transaction To</span>
+              <input id="rpTo" class="inv-input" type="date" />
+            </label>
+
+            <label class="inv-field inv-field-wide">
+              <span>Stock Search</span>
+              <input id="rpStockSearch" class="inv-input" placeholder="Code / name / category" />
+            </label>
+
+            <label class="inv-field">
+              <span>Stock Status</span>
+              <select id="rpStockStatus" class="inv-select">
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+
+            <div class="inv-actions">
+              <button id="rpRefreshBtn" class="inv-btn" type="button">Refresh Reports</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="inv-kpi-grid">
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Stock Items</p>
+            <p class="inv-kpi-value" id="rpKpiItems">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Low Stock Items</p>
+            <p class="inv-kpi-value" id="rpKpiLowStock">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Monthly Requisitions</p>
+            <p class="inv-kpi-value" id="rpKpiMonthlyReq">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Recent Transactions</p>
+            <p class="inv-kpi-value" id="rpKpiTxn">0</p>
+          </article>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-card-head">
+            <div>
+              <h3>Stock Summary</h3>
+              <p class="inv-card-sub">Current stock and minimum stock threshold.</p>
+            </div>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Code</th>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Stock</th>
+                  <th>Minimum</th>
+                  <th>Status</th>
+                  <th>Low Stock</th>
+                </tr>
+              </thead>
+              <tbody id="rpStockRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-card-head">
+            <div>
+              <h3>Monthly Requisition Report</h3>
+              <p class="inv-card-sub">Status and section summary for selected month/year.</p>
+            </div>
+          </div>
+          <div id="rpMonthlySummary" class="inv-chip-row" style="margin-bottom:10px;"></div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Section</th>
+                  <th>Requisitions</th>
+                  <th>Requested Qty</th>
+                  <th>Approved Qty</th>
+                  <th>Issued Qty</th>
+                </tr>
+              </thead>
+              <tbody id="rpMonthlyRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-card-head">
+            <div>
+              <h3>Section-wise Report</h3>
+              <p class="inv-card-sub">Overall requisition and issue by section.</p>
+            </div>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Section</th>
+                  <th>Requisitions</th>
+                  <th>Requested Qty</th>
+                  <th>Approved Qty</th>
+                  <th>Issued Qty</th>
+                  <th>Status Mix</th>
+                </tr>
+              </thead>
+              <tbody id="rpSectionRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="inv-card">
+          <div class="inv-card-head">
+            <div>
+              <h3>Transaction History</h3>
+              <p class="inv-card-sub">Opening, issue, and adjustment logs.</p>
+            </div>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Date/Time</th>
+                  <th>Item</th>
+                  <th>Type</th>
+                  <th>Qty</th>
+                  <th>Balance After</th>
+                  <th>Section</th>
+                  <th>Done By</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="rpTxnRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("inventory-reports.html");
+    renderPageHeader({
+      icon: "analytics",
+      title: "Inventory Reports",
+      subtitle: "Stock summary, monthly analysis, section usage, and transaction history.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/inventory-reports.js"></script>
+</body>
+</html>
+

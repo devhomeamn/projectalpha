@@ -33,7 +33,7 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('Admin', 'Master', 'General'),
+    type: DataTypes.ENUM('Admin', 'Master', 'General', 'Inventory Manager'),
     defaultValue: 'General',
   },
   // ✅ Assigned section for General users (null for Admin/Master)

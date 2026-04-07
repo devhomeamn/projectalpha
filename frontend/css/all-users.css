@@ -191,6 +191,11 @@
   color: #374151;
 }
 
+.role-inventory-manager {
+  background: rgba(14, 165, 233, 0.16);
+  color: #0c4a6e;
+}
+
 .status.approved {
   background: #10b981;
   color: #fff;

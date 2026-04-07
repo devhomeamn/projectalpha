@@ -1,0 +1,136 @@
+const router = require("express").Router();
+const { requireAuth } = require("../middleware/auth");
+const {
+  INVENTORY_PERMISSIONS,
+  requireInventoryPermission,
+} = require("../middleware/inventoryAuth");
+const inventoryController = require("../controllers/inventoryController");
+
+router.use(requireAuth);
+
+router.get(
+  "/items",
+  requireInventoryPermission(
+    INVENTORY_PERMISSIONS.inventory_item_manage,
+    INVENTORY_PERMISSIONS.inventory_request_create,
+    INVENTORY_PERMISSIONS.inventory_request_view_own,
+    INVENTORY_PERMISSIONS.inventory_request_review,
+    INVENTORY_PERMISSIONS.inventory_request_forward,
+    INVENTORY_PERMISSIONS.inventory_request_approve,
+    INVENTORY_PERMISSIONS.inventory_issue,
+    INVENTORY_PERMISSIONS.inventory_report_view
+  ),
+  inventoryController.listItems
+);
+router.get(
+  "/items/:id",
+  requireInventoryPermission(
+    INVENTORY_PERMISSIONS.inventory_item_manage,
+    INVENTORY_PERMISSIONS.inventory_request_create,
+    INVENTORY_PERMISSIONS.inventory_request_view_own,
+    INVENTORY_PERMISSIONS.inventory_request_review,
+    INVENTORY_PERMISSIONS.inventory_request_forward,
+    INVENTORY_PERMISSIONS.inventory_request_approve,
+    INVENTORY_PERMISSIONS.inventory_issue,
+    INVENTORY_PERMISSIONS.inventory_report_view
+  ),
+  inventoryController.getItemById
+);
+router.post(
+  "/items",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_item_manage),
+  inventoryController.createItem
+);
+router.put(
+  "/items/:id",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_item_manage),
+  inventoryController.updateItem
+);
+router.patch(
+  "/items/:id/status",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_item_manage),
+  inventoryController.patchItemStatus
+);
+
+router.get(
+  "/requisitions",
+  requireInventoryPermission(
+    INVENTORY_PERMISSIONS.inventory_request_create,
+    INVENTORY_PERMISSIONS.inventory_request_view_own,
+    INVENTORY_PERMISSIONS.inventory_request_review,
+    INVENTORY_PERMISSIONS.inventory_request_forward,
+    INVENTORY_PERMISSIONS.inventory_request_approve,
+    INVENTORY_PERMISSIONS.inventory_issue
+  ),
+  inventoryController.listRequisitions
+);
+router.post(
+  "/requisitions",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_request_create),
+  inventoryController.createRequisition
+);
+router.get(
+  "/requisitions/:id",
+  requireInventoryPermission(
+    INVENTORY_PERMISSIONS.inventory_request_create,
+    INVENTORY_PERMISSIONS.inventory_request_view_own,
+    INVENTORY_PERMISSIONS.inventory_request_review,
+    INVENTORY_PERMISSIONS.inventory_request_forward,
+    INVENTORY_PERMISSIONS.inventory_request_approve,
+    INVENTORY_PERMISSIONS.inventory_issue
+  ),
+  inventoryController.getRequisitionById
+);
+router.put(
+  "/requisitions/:id",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_request_create),
+  inventoryController.updateRequisition
+);
+router.post(
+  "/requisitions/:id/submit",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_request_create),
+  inventoryController.submitRequisition
+);
+router.post(
+  "/requisitions/:id/forward",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_request_forward),
+  inventoryController.forwardRequisition
+);
+router.post(
+  "/requisitions/:id/approve",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_request_approve),
+  inventoryController.approveRequisition
+);
+router.post(
+  "/requisitions/:id/reject",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_request_approve),
+  inventoryController.rejectRequisition
+);
+router.post(
+  "/requisitions/:id/issue",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_issue),
+  inventoryController.issueRequisition
+);
+
+router.get(
+  "/transactions",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.listTransactions
+);
+router.get(
+  "/stock-summary",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.stockSummary
+);
+router.get(
+  "/reports/monthly",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.monthlyReport
+);
+router.get(
+  "/reports/section-wise",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.sectionWiseReport
+);
+
+module.exports = router;

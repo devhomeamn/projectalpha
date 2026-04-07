@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Requisition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content inventory-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="inv-card">
+          <div class="inv-card-head">
+            <div>
+              <h3>Create Requisition</h3>
+              <p class="inv-card-sub">Create draft requisition and submit to master review.</p>
+            </div>
+            <div class="inv-chip-row">
+              <span class="inv-chip" id="reqModeChip">New Draft</span>
+              <span class="inv-chip" id="reqNoChip">REQ: -</span>
+            </div>
+          </div>
+
+          <form id="reqForm">
+            <div class="inv-form-grid">
+              <label class="inv-field" id="reqSectionWrap">
+                <span>Section *</span>
+                <select id="reqSection" class="inv-select" required></select>
+              </label>
+
+              <label class="inv-field">
+                <span>Month *</span>
+                <select id="reqMonth" class="inv-select" required></select>
+              </label>
+
+              <label class="inv-field">
+                <span>Year *</span>
+                <input id="reqYear" class="inv-input" type="number" min="2000" max="2100" required />
+              </label>
+
+              <label class="inv-field full">
+                <span>Remarks</span>
+                <textarea id="reqRemarks" class="inv-textarea" rows="3" placeholder="Optional remarks"></textarea>
+              </label>
+            </div>
+
+            <div class="inv-lines-head">
+              <h5>Requisition Items</h5>
+              <button id="reqAddLineBtn" class="inv-btn secondary" type="button">Add Row</button>
+            </div>
+
+            <div class="inv-table-wrap">
+              <table class="inv-table">
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">SL</th>
+                    <th>Item *</th>
+                    <th style="width: 180px;">Requested Qty *</th>
+                    <th>Line Remarks</th>
+                    <th style="width: 120px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reqLineRows"></tbody>
+              </table>
+            </div>
+
+            <div class="inv-form-actions">
+              <button id="reqResetBtn" class="inv-btn secondary" type="button">Reset</button>
+              <button id="reqSaveDraftBtn" class="inv-btn" type="submit">Save Draft</button>
+              <button id="reqSubmitBtn" class="inv-btn success" type="button">Submit</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("create-requisition.html");
+    renderPageHeader({
+      icon: "post_add",
+      title: "Create Requisition",
+      subtitle: "General users can create requisitions for their assigned section only.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/create-requisition.js"></script>
+</body>
+</html>
+

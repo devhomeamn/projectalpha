@@ -23,6 +23,23 @@ document.addEventListener("DOMContentLoaded", () => {
   let sectionsById = new Map();
   let activeUserId = null;
 
+  function ensureRoleOption(selectEl, roleValue) {
+    if (!selectEl) return;
+    const exists = Array.from(selectEl.options || []).some(
+      (opt) => String(opt.value || "").toLowerCase() === String(roleValue || "").toLowerCase()
+    );
+    if (exists) return;
+    const opt = document.createElement("option");
+    opt.value = roleValue;
+    opt.textContent = roleValue;
+    selectEl.appendChild(opt);
+  }
+
+  function ensureInventoryRoleOptions() {
+    ensureRoleOption(roleFilter, "Inventory Manager");
+    ensureRoleOption(amRole, "Inventory Manager");
+  }
+
   function getToken() {
     return localStorage.getItem("token") || "";
   }
@@ -145,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const status = (u.status || "").toLowerCase();
         const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-";
         const role = String(u.role || "");
-        const roleClass = role.toLowerCase();
+        const roleClass = role.toLowerCase().replace(/\s+/g, "-");
         const sectionName = u.section_id
           ? sectionsById.get(Number(u.section_id)) || `#${u.section_id}`
           : "-";
@@ -409,5 +426,6 @@ document.addEventListener("DOMContentLoaded", () => {
   roleFilter?.addEventListener("change", renderView);
   statusFilter?.addEventListener("change", renderView);
 
+  ensureInventoryRoleOptions();
   loadSections().then(loadUsers);
 });
