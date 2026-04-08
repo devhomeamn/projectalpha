@@ -123,6 +123,36 @@ router.get(
   inventoryController.stockSummary
 );
 router.get(
+  "/reports/monthly-summary",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.reportMonthlySummary
+);
+router.get(
+  "/reports/requisition-status",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.reportRequisitionStatus
+);
+router.get(
+  "/reports/monthly-issues",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.reportMonthlyIssues
+);
+router.get(
+  "/reports/section-consumption",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.reportSectionConsumption
+);
+router.get(
+  "/reports/item-consumption",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.reportItemConsumption
+);
+router.get(
+  "/reports/stock-movement",
+  requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
+  inventoryController.reportStockMovement
+);
+router.get(
   "/reports/monthly",
   requireInventoryPermission(INVENTORY_PERMISSIONS.inventory_report_view),
   inventoryController.monthlyReport

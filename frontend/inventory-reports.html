@@ -19,75 +19,132 @@
     <main class="main-content">
       <div id="topbar"></div>
 
-      <section class="content inventory-page">
+      <section class="content inventory-page inventory-reports-page">
         <div id="pageHeaderMount"></div>
 
         <section class="inv-card">
           <div class="inv-toolbar">
             <label class="inv-field">
-              <span>Report Month</span>
-              <input id="rpMonth" class="inv-input" type="number" min="1" max="12" />
+              <span>Month</span>
+              <select id="rpMonth" class="inv-select"></select>
             </label>
 
             <label class="inv-field">
-              <span>Report Year</span>
-              <input id="rpYear" class="inv-input" type="number" min="2000" max="2100" />
+              <span>Year</span>
+              <select id="rpYear" class="inv-select"></select>
             </label>
 
             <label class="inv-field">
-              <span>Transaction From</span>
-              <input id="rpFrom" class="inv-input" type="date" />
-            </label>
-
-            <label class="inv-field">
-              <span>Transaction To</span>
-              <input id="rpTo" class="inv-input" type="date" />
-            </label>
-
-            <label class="inv-field inv-field-wide">
-              <span>Stock Search</span>
-              <input id="rpStockSearch" class="inv-input" placeholder="Code / name / category" />
-            </label>
-
-            <label class="inv-field">
-              <span>Stock Status</span>
-              <select id="rpStockStatus" class="inv-select">
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+              <span>Section</span>
+              <select id="rpSection" class="inv-select">
+                <option value="all">All Sections</option>
               </select>
             </label>
 
+            <label class="inv-field">
+              <span>Status</span>
+              <select id="rpStatus" class="inv-select">
+                <option value="all">All Status</option>
+                <option value="Draft">Draft</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Forwarded">Forwarded</option>
+                <option value="Approved">Approved</option>
+                <option value="Partially Approved">Partially Approved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Issued">Issued</option>
+              </select>
+            </label>
+
+            <label class="inv-field inv-field-wide">
+              <span>Search</span>
+              <input id="rpSearch" class="inv-input" placeholder="Requisition no / item / section" />
+            </label>
+
             <div class="inv-actions">
-              <button id="rpRefreshBtn" class="inv-btn" type="button">Refresh Reports</button>
+              <button id="rpApplyBtn" class="inv-btn" type="button">Apply Filter</button>
+              <button id="rpResetBtn" class="inv-btn secondary" type="button">Reset</button>
+              <button id="rpExportBtn" class="inv-btn secondary" type="button">Export CSV</button>
+              <button id="rpPrintBtn" class="inv-btn secondary" type="button">Print</button>
             </div>
           </div>
         </section>
 
-        <section class="inv-kpi-grid">
+        <section class="inv-kpi-grid inv-kpi-grid-reports">
           <article class="inv-kpi-card">
-            <p class="inv-kpi-label">Stock Items</p>
-            <p class="inv-kpi-value" id="rpKpiItems">0</p>
+            <p class="inv-kpi-label">Requisitions Created</p>
+            <p class="inv-kpi-value" id="rpKpiCreated">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Forwarded</p>
+            <p class="inv-kpi-value" id="rpKpiForwarded">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Approved</p>
+            <p class="inv-kpi-value" id="rpKpiApproved">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Partially Approved</p>
+            <p class="inv-kpi-value" id="rpKpiPartiallyApproved">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Rejected</p>
+            <p class="inv-kpi-value" id="rpKpiRejected">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Issued</p>
+            <p class="inv-kpi-value" id="rpKpiIssued">0</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Total Issued Qty</p>
+            <p class="inv-kpi-value" id="rpKpiIssuedQty">0.00</p>
+          </article>
+          <article class="inv-kpi-card">
+            <p class="inv-kpi-label">Active Inventory Items</p>
+            <p class="inv-kpi-value" id="rpKpiActiveItems">0</p>
           </article>
           <article class="inv-kpi-card">
             <p class="inv-kpi-label">Low Stock Items</p>
             <p class="inv-kpi-value" id="rpKpiLowStock">0</p>
           </article>
-          <article class="inv-kpi-card">
-            <p class="inv-kpi-label">Monthly Requisitions</p>
-            <p class="inv-kpi-value" id="rpKpiMonthlyReq">0</p>
-          </article>
-          <article class="inv-kpi-card">
-            <p class="inv-kpi-label">Recent Transactions</p>
-            <p class="inv-kpi-value" id="rpKpiTxn">0</p>
-          </article>
         </section>
 
         <section class="inv-card">
+          <div class="inv-report-tabs" id="rpTabs">
+            <button class="inv-tab-btn is-active" type="button" data-tab="summary">Summary</button>
+            <button class="inv-tab-btn" type="button" data-tab="requisition">Requisition Status</button>
+            <button class="inv-tab-btn" type="button" data-tab="issues">Monthly Issues</button>
+            <button class="inv-tab-btn" type="button" data-tab="section">Section-wise</button>
+            <button class="inv-tab-btn" type="button" data-tab="item">Item-wise</button>
+            <button class="inv-tab-btn" type="button" data-tab="movement">Stock Movement</button>
+          </div>
+        </section>
+
+        <section id="rpPanelSummary" class="inv-card inv-report-panel is-active" data-panel="summary">
           <div class="inv-card-head">
             <div>
-              <h3>Stock Summary</h3>
-              <p class="inv-card-sub">Current stock and minimum stock threshold.</p>
+              <h3>Monthly Summary</h3>
+              <p class="inv-card-sub">Operational monthly overview for inventory workflow.</p>
+            </div>
+          </div>
+          <div id="rpSummaryMeta" class="inv-chip-row" style="margin-bottom:10px;"></div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id="rpSummaryRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="rpPanelRequisition" class="inv-card inv-report-panel" data-panel="requisition">
+          <div class="inv-card-head">
+            <div>
+              <h3>Monthly Requisition Status Report</h3>
+              <p class="inv-card-sub">Requisitions created in selected month/year with workflow dates.</p>
             </div>
           </div>
           <div class="inv-table-wrap">
@@ -95,50 +152,36 @@
               <thead>
                 <tr>
                   <th>SL</th>
-                  <th>Code</th>
-                  <th>Item</th>
-                  <th>Category</th>
-                  <th>Stock</th>
-                  <th>Minimum</th>
+                  <th>Requisition No</th>
+                  <th>Section</th>
+                  <th>Requested By</th>
                   <th>Status</th>
-                  <th>Low Stock</th>
+                  <th>Submitted Date</th>
+                  <th>Forwarded Date</th>
+                  <th>Approved Date</th>
+                  <th>Issued Date</th>
                 </tr>
               </thead>
-              <tbody id="rpStockRows"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="inv-card">
-          <div class="inv-card-head">
-            <div>
-              <h3>Monthly Requisition Report</h3>
-              <p class="inv-card-sub">Status and section summary for selected month/year.</p>
-            </div>
-          </div>
-          <div id="rpMonthlySummary" class="inv-chip-row" style="margin-bottom:10px;"></div>
-          <div class="inv-table-wrap">
-            <table class="inv-table">
-              <thead>
+              <tbody id="rpReqRows"></tbody>
+              <tfoot>
                 <tr>
-                  <th>SL</th>
-                  <th>Section</th>
-                  <th>Requisitions</th>
-                  <th>Requested Qty</th>
-                  <th>Approved Qty</th>
-                  <th>Issued Qty</th>
+                  <td colspan="9">Total Requisitions: <strong id="rpReqTotal">0</strong></td>
                 </tr>
-              </thead>
-              <tbody id="rpMonthlyRows"></tbody>
+              </tfoot>
             </table>
+          </div>
+          <div class="inv-pagination">
+            <button id="rpReqPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="rpReqPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="rpReqNextBtn" class="inv-btn secondary" type="button">Next</button>
           </div>
         </section>
 
-        <section class="inv-card">
+        <section id="rpPanelIssues" class="inv-card inv-report-panel" data-panel="issues">
           <div class="inv-card-head">
             <div>
-              <h3>Section-wise Report</h3>
-              <p class="inv-card-sub">Overall requisition and issue by section.</p>
+              <h3>Monthly Issue Report</h3>
+              <p class="inv-card-sub">Issued lines and quantities for selected month/year.</p>
             </div>
           </div>
           <div class="inv-table-wrap">
@@ -146,24 +189,74 @@
               <thead>
                 <tr>
                   <th>SL</th>
+                  <th>Requisition No</th>
                   <th>Section</th>
-                  <th>Requisitions</th>
+                  <th>Item</th>
+                  <th>Unit</th>
                   <th>Requested Qty</th>
                   <th>Approved Qty</th>
                   <th>Issued Qty</th>
-                  <th>Status Mix</th>
+                  <th>Issue Date</th>
+                  <th>Issued By</th>
+                </tr>
+              </thead>
+              <tbody id="rpIssueRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="7">Grand Total Issued Qty</td>
+                  <td colspan="3"><strong id="rpIssueGrandTotal">0.00</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="inv-pagination">
+            <button id="rpIssuePrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="rpIssuePageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="rpIssueNextBtn" class="inv-btn secondary" type="button">Next</button>
+          </div>
+        </section>
+
+        <section id="rpPanelSection" class="inv-card inv-report-panel" data-panel="section">
+          <div class="inv-card-head">
+            <div>
+              <h3>Section-wise Monthly Consumption</h3>
+              <p class="inv-card-sub">Issued quantity summary grouped by section.</p>
+            </div>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Section</th>
+                  <th>Total Requisitions</th>
+                  <th>Total Issued Qty</th>
+                  <th>Distinct Items</th>
                 </tr>
               </thead>
               <tbody id="rpSectionRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2">Total</td>
+                  <td><strong id="rpSectionReqTotal">0</strong></td>
+                  <td><strong id="rpSectionIssuedTotal">0.00</strong></td>
+                  <td>-</td>
+                </tr>
+              </tfoot>
             </table>
+          </div>
+          <div class="inv-pagination">
+            <button id="rpSectionPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="rpSectionPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="rpSectionNextBtn" class="inv-btn secondary" type="button">Next</button>
           </div>
         </section>
 
-        <section class="inv-card">
+        <section id="rpPanelItem" class="inv-card inv-report-panel" data-panel="item">
           <div class="inv-card-head">
             <div>
-              <h3>Transaction History</h3>
-              <p class="inv-card-sub">Opening, issue, and adjustment logs.</p>
+              <h3>Item-wise Monthly Consumption</h3>
+              <p class="inv-card-sub">Requested, approved, and issued quantity summary by item.</p>
             </div>
           </div>
           <div class="inv-table-wrap">
@@ -171,18 +264,66 @@
               <thead>
                 <tr>
                   <th>SL</th>
-                  <th>Date/Time</th>
                   <th>Item</th>
-                  <th>Type</th>
+                  <th>Unit</th>
+                  <th>Requested Qty</th>
+                  <th>Approved Qty</th>
+                  <th>Issued Qty</th>
+                  <th>Current Stock</th>
+                  <th>Minimum Stock</th>
+                  <th>Stock Status</th>
+                </tr>
+              </thead>
+              <tbody id="rpItemRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3">Total</td>
+                  <td><strong id="rpItemRequestedTotal">0.00</strong></td>
+                  <td><strong id="rpItemApprovedTotal">0.00</strong></td>
+                  <td><strong id="rpItemIssuedTotal">0.00</strong></td>
+                  <td colspan="3">-</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="inv-pagination">
+            <button id="rpItemPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="rpItemPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="rpItemNextBtn" class="inv-btn secondary" type="button">Next</button>
+          </div>
+        </section>
+
+        <section id="rpPanelMovement" class="inv-card inv-report-panel" data-panel="movement">
+          <div class="inv-card-head">
+            <div>
+              <h3>Monthly Stock Movement</h3>
+              <p class="inv-card-sub">Stock transaction logs for selected month/year.</p>
+            </div>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Date</th>
+                  <th>Item</th>
+                  <th>Transaction Type</th>
                   <th>Qty</th>
                   <th>Balance After</th>
+                  <th>Reference Type</th>
+                  <th>Reference ID</th>
                   <th>Section</th>
                   <th>Done By</th>
                   <th>Remarks</th>
                 </tr>
               </thead>
-              <tbody id="rpTxnRows"></tbody>
+              <tbody id="rpMovementRows"></tbody>
             </table>
+          </div>
+          <div class="inv-pagination">
+            <button id="rpMovementPrevBtn" class="inv-btn secondary" type="button">Prev</button>
+            <div id="rpMovementPageInfo" class="inv-page-info">Page 1 / 1</div>
+            <button id="rpMovementNextBtn" class="inv-btn secondary" type="button">Next</button>
           </div>
         </section>
       </section>
@@ -196,7 +337,7 @@
     renderPageHeader({
       icon: "analytics",
       title: "Inventory Reports",
-      subtitle: "Stock summary, monthly analysis, section usage, and transaction history.",
+      subtitle: "Monthly inventory workflow and stock movement analytics.",
       showClock: true,
     });
   </script>
@@ -204,4 +345,3 @@
   <script type="module" src="js/inventory-reports.js"></script>
 </body>
 </html>
-

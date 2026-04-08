@@ -187,6 +187,36 @@ function toMonthYear(rawMonth, rawYear) {
   return { month, year };
 }
 
+function toMonthYearStrict(rawMonth, rawYear) {
+  const monthText = String(rawMonth ?? "").trim();
+  const yearText = String(rawYear ?? "").trim();
+  if (!monthText || !yearText) return null;
+
+  const month = toSafeInt(monthText, null);
+  const year = toSafeInt(yearText, null);
+  if (!month || month < 1 || month > 12) return null;
+  if (!year || year < 2000 || year > 2100) return null;
+
+  return { month, year };
+}
+
+function getMonthDateRange(month, year) {
+  const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const end = new Date(year, month, 1, 0, 0, 0, 0);
+  return { start, end };
+}
+
+function toFixedQty(value) {
+  return Number(toNumber(value).toFixed(2));
+}
+
+function parseOptionalId(rawValue) {
+  const text = String(rawValue ?? "").trim();
+  if (!text || text.toLowerCase() === "all") return { value: null, invalid: false };
+  const id = toPositiveInt(text);
+  return { value: id, invalid: !id };
+}
+
 function parsePagination(req, defaultLimit = 20) {
   const page = Math.max(1, toSafeInt(req.query.page, 1));
   const limit = Math.min(100, Math.max(5, toSafeInt(req.query.limit, defaultLimit)));
@@ -1670,5 +1700,635 @@ exports.sectionWiseReport = async (req, res) => {
   } catch (err) {
     console.error("inventory.sectionWiseReport error:", err);
     return res.status(500).json({ message: "Failed to load section-wise report" });
+  }
+};
+
+exports.reportMonthlySummary = async (req, res) => {
+  try {
+    ensureAssociations();
+    const monthYear = toMonthYearStrict(req.query.month, req.query.year);
+    if (!monthYear) return res.status(400).json({ message: "Valid month/year required" });
+
+    const sectionFilter = parseOptionalId(req.query.section);
+    if (sectionFilter.invalid) return res.status(400).json({ message: "Invalid section filter" });
+    const requisitionBaseWhere = {};
+    if (sectionFilter.value) requisitionBaseWhere.section_id = sectionFilter.value;
+
+    const { start, end } = getMonthDateRange(monthYear.month, monthYear.year);
+    const createdRange = { [Op.gte]: start, [Op.lt]: end };
+
+    const createdCountPromise = InventoryRequisition.count({
+      where: { ...requisitionBaseWhere, createdAt: createdRange },
+    });
+    const forwardedCountPromise = InventoryRequisition.count({
+      where: { ...requisitionBaseWhere, forwarded_at: createdRange },
+    });
+    const issuedCountPromise = InventoryRequisition.count({
+      where: { ...requisitionBaseWhere, issued_at: createdRange },
+    });
+    const activeItemsCountPromise = InventoryItem.count({ where: { status: "active" } });
+    const lowStockCountPromise = InventoryItem.count({
+      where: {
+        status: "active",
+        [Op.and]: [
+          sequelize.where(sequelize.col("current_stock"), {
+            [Op.lte]: sequelize.col("minimum_stock"),
+          }),
+        ],
+      },
+    });
+
+    const approvedRowsPromise = InventoryRequisition.findAll({
+      where: { ...requisitionBaseWhere, approved_at: createdRange },
+      attributes: ["id"],
+      include: [
+        {
+          model: InventoryRequisitionItem,
+          as: "items",
+          attributes: ["requested_qty", "approved_qty"],
+          required: false,
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+
+    const issuedRowsPromise = InventoryRequisition.findAll({
+      where: { ...requisitionBaseWhere, issued_at: createdRange },
+      attributes: ["id"],
+      include: [
+        {
+          model: InventoryRequisitionItem,
+          as: "items",
+          attributes: ["issued_qty"],
+          required: false,
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+
+    const [
+      createdCount,
+      forwardedCount,
+      issuedCount,
+      activeItemsCount,
+      lowStockCount,
+      approvedRows,
+      issuedRows,
+    ] = await Promise.all([
+      createdCountPromise,
+      forwardedCountPromise,
+      issuedCountPromise,
+      activeItemsCountPromise,
+      lowStockCountPromise,
+      approvedRowsPromise,
+      issuedRowsPromise,
+    ]);
+
+    let totalApproved = 0;
+    let totalPartiallyApproved = 0;
+    let totalRejected = 0;
+
+    approvedRows.forEach((row) => {
+      const requisition = row.toJSON();
+      const lines = Array.isArray(requisition.items) ? requisition.items : [];
+      const requestedQty = lines.reduce((sum, line) => sum + toNumber(line.requested_qty), 0);
+      const approvedQty = lines.reduce((sum, line) => sum + toNumber(line.approved_qty), 0);
+
+      if (approvedQty <= 0.0001) {
+        totalRejected += 1;
+      } else if (approvedQty + 0.0001 < requestedQty) {
+        totalPartiallyApproved += 1;
+      } else {
+        totalApproved += 1;
+      }
+    });
+
+    const totalItemsIssuedQty = issuedRows.reduce((sum, row) => {
+      const lines = Array.isArray(row.items) ? row.items : [];
+      const lineTotal = lines.reduce((inner, line) => inner + toNumber(line.issued_qty), 0);
+      return sum + lineTotal;
+    }, 0);
+
+    return res.json({
+      month: monthYear.month,
+      year: monthYear.year,
+      summary: {
+        total_requisitions_created: Number(createdCount || 0),
+        total_forwarded: Number(forwardedCount || 0),
+        total_approved: Number(totalApproved || 0),
+        total_partially_approved: Number(totalPartiallyApproved || 0),
+        total_rejected: Number(totalRejected || 0),
+        total_issued: Number(issuedCount || 0),
+        total_items_issued_qty: toFixedQty(totalItemsIssuedQty),
+        total_active_inventory_items: Number(activeItemsCount || 0),
+        low_stock_items_count: Number(lowStockCount || 0),
+      },
+    });
+  } catch (err) {
+    console.error("inventory.reportMonthlySummary error:", err);
+    return res.status(500).json({ message: "Failed to load monthly summary report" });
+  }
+};
+
+exports.reportRequisitionStatus = async (req, res) => {
+  try {
+    ensureAssociations();
+    const monthYear = toMonthYearStrict(req.query.month, req.query.year);
+    if (!monthYear) return res.status(400).json({ message: "Valid month/year required" });
+
+    const { start, end } = getMonthDateRange(monthYear.month, monthYear.year);
+    const { page, limit, offset } = parsePagination(req, 20);
+
+    const where = {
+      createdAt: { [Op.gte]: start, [Op.lt]: end },
+    };
+
+    const sectionFilter = parseOptionalId(req.query.section);
+    if (sectionFilter.invalid) return res.status(400).json({ message: "Invalid section filter" });
+    if (sectionFilter.value) where.section_id = sectionFilter.value;
+
+    const statusRaw = String(req.query.status || "").trim();
+    const status = normalizeHeaderStatus(statusRaw);
+    if (statusRaw && statusRaw.toLowerCase() !== "all" && !status) {
+      return res.status(400).json({ message: "Invalid status filter" });
+    }
+    if (status) where.status = status;
+
+    const q = String(req.query.q || "").trim();
+    if (q) {
+      where.requisition_no = { [Op.like]: `%${q}%` };
+    }
+
+    const { rows, count } = await InventoryRequisition.findAndCountAll({
+      where,
+      include: [
+        { model: Section, as: "section", attributes: ["id", "name"], required: false },
+        { model: User, as: "requester", attributes: ["id", "name", "username"], required: false },
+      ],
+      order: [["createdAt", "DESC"], ["id", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const data = rows.map((row) => {
+      const item = row.toJSON();
+      return {
+        id: Number(item.id),
+        requisition_no: item.requisition_no || "-",
+        section_id: item.section_id || null,
+        section_name: item.section?.name || "-",
+        requested_by: item.requester?.name || item.requester?.username || "-",
+        status: item.status || "-",
+        submitted_at: item.submitted_at || null,
+        forwarded_at: item.forwarded_at || null,
+        approved_at: item.approved_at || null,
+        issued_at: item.issued_at || null,
+        month: item.month || null,
+        year: item.year || null,
+      };
+    });
+
+    return res.json({
+      month: monthYear.month,
+      year: monthYear.year,
+      data,
+      total: Number(count || 0),
+      page,
+      limit,
+    });
+  } catch (err) {
+    console.error("inventory.reportRequisitionStatus error:", err);
+    return res.status(500).json({ message: "Failed to load requisition status report" });
+  }
+};
+
+exports.reportMonthlyIssues = async (req, res) => {
+  try {
+    ensureAssociations();
+    const monthYear = toMonthYearStrict(req.query.month, req.query.year);
+    if (!monthYear) return res.status(400).json({ message: "Valid month/year required" });
+
+    const { start, end } = getMonthDateRange(monthYear.month, monthYear.year);
+    const { page, limit, offset } = parsePagination(req, 20);
+    const where = { issued_at: { [Op.gte]: start, [Op.lt]: end } };
+
+    const sectionFilter = parseOptionalId(req.query.section);
+    if (sectionFilter.invalid) return res.status(400).json({ message: "Invalid section filter" });
+    if (sectionFilter.value) where.section_id = sectionFilter.value;
+
+    const q = String(req.query.q || "").trim().toLowerCase();
+
+    const requisitions = await InventoryRequisition.findAll({
+      where,
+      attributes: ["id", "requisition_no", "section_id", "issued_at", "issued_by"],
+      include: [
+        { model: Section, as: "section", attributes: ["id", "name"], required: false },
+        { model: User, as: "issuer", attributes: ["id", "name", "username"], required: false },
+        {
+          model: InventoryRequisitionItem,
+          as: "items",
+          attributes: ["id", "item_id", "requested_qty", "approved_qty", "issued_qty"],
+          include: [
+            {
+              model: InventoryItem,
+              as: "item",
+              attributes: ["id", "item_code", "item_name", "unit"],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+      order: [["issued_at", "DESC"], ["id", "DESC"]],
+    });
+
+    const rows = [];
+    requisitions.forEach((row) => {
+      const requisition = row.toJSON();
+      const sectionName = requisition.section?.name || "-";
+      const issuedBy = requisition.issuer?.name || requisition.issuer?.username || "-";
+      const lines = Array.isArray(requisition.items) ? requisition.items : [];
+
+      lines.forEach((line) => {
+        const issuedQty = toNumber(line.issued_qty);
+        if (issuedQty <= 0) return;
+
+        const itemCode = line.item?.item_code || "";
+        const itemName = line.item?.item_name || "";
+        const qMatch =
+          !q ||
+          String(requisition.requisition_no || "").toLowerCase().includes(q) ||
+          String(sectionName).toLowerCase().includes(q) ||
+          String(itemCode).toLowerCase().includes(q) ||
+          String(itemName).toLowerCase().includes(q) ||
+          String(issuedBy).toLowerCase().includes(q);
+        if (!qMatch) return;
+
+        rows.push({
+          requisition_id: Number(requisition.id),
+          requisition_no: requisition.requisition_no || "-",
+          section_id: requisition.section_id || null,
+          section_name: sectionName,
+          item_id: Number(line.item_id || 0) || null,
+          item_code: itemCode || "-",
+          item_name: itemName || "-",
+          unit: line.item?.unit || "-",
+          requested_qty: toFixedQty(line.requested_qty),
+          approved_qty: toFixedQty(line.approved_qty),
+          issued_qty: toFixedQty(issuedQty),
+          issue_date: requisition.issued_at || null,
+          issued_by: issuedBy,
+        });
+      });
+    });
+
+    rows.sort((a, b) => {
+      const aTime = a.issue_date ? new Date(a.issue_date).getTime() : 0;
+      const bTime = b.issue_date ? new Date(b.issue_date).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    const total = rows.length;
+    const grandTotalIssuedQty = rows.reduce((sum, row) => sum + toNumber(row.issued_qty), 0);
+    const data = rows.slice(offset, offset + limit);
+
+    return res.json({
+      month: monthYear.month,
+      year: monthYear.year,
+      data,
+      total,
+      page,
+      limit,
+      grand_total_issued_qty: toFixedQty(grandTotalIssuedQty),
+    });
+  } catch (err) {
+    console.error("inventory.reportMonthlyIssues error:", err);
+    return res.status(500).json({ message: "Failed to load monthly issue report" });
+  }
+};
+
+exports.reportSectionConsumption = async (req, res) => {
+  try {
+    ensureAssociations();
+    const monthYear = toMonthYearStrict(req.query.month, req.query.year);
+    if (!monthYear) return res.status(400).json({ message: "Valid month/year required" });
+
+    const { start, end } = getMonthDateRange(monthYear.month, monthYear.year);
+    const { page, limit, offset } = parsePagination(req, 20);
+    const where = { issued_at: { [Op.gte]: start, [Op.lt]: end } };
+
+    const sectionFilter = parseOptionalId(req.query.section);
+    if (sectionFilter.invalid) return res.status(400).json({ message: "Invalid section filter" });
+    if (sectionFilter.value) where.section_id = sectionFilter.value;
+
+    const requisitions = await InventoryRequisition.findAll({
+      where,
+      attributes: ["id", "section_id"],
+      include: [
+        { model: Section, as: "section", attributes: ["id", "name"], required: false },
+        {
+          model: InventoryRequisitionItem,
+          as: "items",
+          attributes: ["item_id", "issued_qty"],
+          required: false,
+        },
+      ],
+      order: [["issued_at", "DESC"], ["id", "DESC"]],
+    });
+
+    const sectionMap = new Map();
+    requisitions.forEach((row) => {
+      const requisition = row.toJSON();
+      const sectionId = Number(requisition.section_id || 0);
+      const key = sectionId || 0;
+      const sectionName = requisition.section?.name || (sectionId ? `Section #${sectionId}` : "N/A");
+
+      if (!sectionMap.has(key)) {
+        sectionMap.set(key, {
+          section_id: sectionId || null,
+          section_name: sectionName,
+          requisition_ids: new Set(),
+          item_ids: new Set(),
+          total_issued_qty: 0,
+        });
+      }
+
+      const entry = sectionMap.get(key);
+      entry.requisition_ids.add(Number(requisition.id));
+
+      const lines = Array.isArray(requisition.items) ? requisition.items : [];
+      lines.forEach((line) => {
+        const issuedQty = toNumber(line.issued_qty);
+        if (issuedQty <= 0) return;
+        if (line.item_id) entry.item_ids.add(Number(line.item_id));
+        entry.total_issued_qty += issuedQty;
+      });
+    });
+
+    const allRows = Array.from(sectionMap.values())
+      .map((entry) => ({
+        section_id: entry.section_id,
+        section_name: entry.section_name,
+        total_requisitions: entry.requisition_ids.size,
+        total_issued_qty: toFixedQty(entry.total_issued_qty),
+        distinct_items: entry.item_ids.size,
+      }))
+      .sort((a, b) => {
+        if (toNumber(b.total_issued_qty) !== toNumber(a.total_issued_qty)) {
+          return toNumber(b.total_issued_qty) - toNumber(a.total_issued_qty);
+        }
+        return String(a.section_name).localeCompare(String(b.section_name));
+      });
+
+    const totalIssuedQty = allRows.reduce((sum, row) => sum + toNumber(row.total_issued_qty), 0);
+    const totalRequisitions = allRows.reduce((sum, row) => sum + toNumber(row.total_requisitions), 0);
+    const data = allRows.slice(offset, offset + limit);
+
+    return res.json({
+      month: monthYear.month,
+      year: monthYear.year,
+      data,
+      total: allRows.length,
+      page,
+      limit,
+      totals: {
+        total_requisitions: Number(totalRequisitions || 0),
+        total_issued_qty: toFixedQty(totalIssuedQty),
+      },
+    });
+  } catch (err) {
+    console.error("inventory.reportSectionConsumption error:", err);
+    return res.status(500).json({ message: "Failed to load section-wise monthly report" });
+  }
+};
+
+exports.reportItemConsumption = async (req, res) => {
+  try {
+    ensureAssociations();
+    const monthYear = toMonthYearStrict(req.query.month, req.query.year);
+    if (!monthYear) return res.status(400).json({ message: "Valid month/year required" });
+
+    const { start, end } = getMonthDateRange(monthYear.month, monthYear.year);
+    const { page, limit, offset } = parsePagination(req, 20);
+    const where = { issued_at: { [Op.gte]: start, [Op.lt]: end } };
+
+    const sectionFilter = parseOptionalId(req.query.section);
+    if (sectionFilter.invalid) return res.status(400).json({ message: "Invalid section filter" });
+    if (sectionFilter.value) where.section_id = sectionFilter.value;
+
+    const requisitions = await InventoryRequisition.findAll({
+      where,
+      attributes: ["id"],
+      include: [
+        {
+          model: InventoryRequisitionItem,
+          as: "items",
+          attributes: ["item_id", "requested_qty", "approved_qty", "issued_qty"],
+          include: [
+            {
+              model: InventoryItem,
+              as: "item",
+              attributes: [
+                "id",
+                "item_code",
+                "item_name",
+                "unit",
+                "current_stock",
+                "minimum_stock",
+                "status",
+              ],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+      order: [["issued_at", "DESC"], ["id", "DESC"]],
+    });
+
+    const itemMap = new Map();
+    requisitions.forEach((row) => {
+      const requisition = row.toJSON();
+      const lines = Array.isArray(requisition.items) ? requisition.items : [];
+      lines.forEach((line) => {
+        const issuedQty = toNumber(line.issued_qty);
+        if (issuedQty <= 0) return;
+
+        const itemId = Number(line.item_id || 0);
+        if (!itemId) return;
+
+        if (!itemMap.has(itemId)) {
+          itemMap.set(itemId, {
+            item_id: itemId,
+            item_code: line.item?.item_code || "-",
+            item_name: line.item?.item_name || "-",
+            unit: line.item?.unit || "-",
+            current_stock: toFixedQty(line.item?.current_stock),
+            minimum_stock: toFixedQty(line.item?.minimum_stock),
+            status: line.item?.status || "active",
+            total_requested_qty: 0,
+            total_approved_qty: 0,
+            total_issued_qty: 0,
+          });
+        }
+
+        const entry = itemMap.get(itemId);
+        entry.total_requested_qty += toNumber(line.requested_qty);
+        entry.total_approved_qty += toNumber(line.approved_qty);
+        entry.total_issued_qty += issuedQty;
+      });
+    });
+
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const allRows = Array.from(itemMap.values())
+      .map((entry) => {
+        const currentStock = toFixedQty(entry.current_stock);
+        const minimumStock = toFixedQty(entry.minimum_stock);
+        return {
+          item_id: entry.item_id,
+          item_code: entry.item_code,
+          item_name: entry.item_name,
+          unit: entry.unit,
+          total_requested_qty: toFixedQty(entry.total_requested_qty),
+          total_approved_qty: toFixedQty(entry.total_approved_qty),
+          total_issued_qty: toFixedQty(entry.total_issued_qty),
+          current_stock: currentStock,
+          minimum_stock: minimumStock,
+          stock_status: currentStock <= minimumStock ? "Low" : "Normal",
+        };
+      })
+      .filter((row) => {
+        if (!q) return true;
+        return (
+          String(row.item_name || "").toLowerCase().includes(q) ||
+          String(row.item_code || "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        if (toNumber(b.total_issued_qty) !== toNumber(a.total_issued_qty)) {
+          return toNumber(b.total_issued_qty) - toNumber(a.total_issued_qty);
+        }
+        return String(a.item_name).localeCompare(String(b.item_name));
+      });
+
+    const totalRequestedQty = allRows.reduce((sum, row) => sum + toNumber(row.total_requested_qty), 0);
+    const totalApprovedQty = allRows.reduce((sum, row) => sum + toNumber(row.total_approved_qty), 0);
+    const totalIssuedQty = allRows.reduce((sum, row) => sum + toNumber(row.total_issued_qty), 0);
+    const data = allRows.slice(offset, offset + limit);
+
+    return res.json({
+      month: monthYear.month,
+      year: monthYear.year,
+      data,
+      total: allRows.length,
+      page,
+      limit,
+      totals: {
+        total_requested_qty: toFixedQty(totalRequestedQty),
+        total_approved_qty: toFixedQty(totalApprovedQty),
+        total_issued_qty: toFixedQty(totalIssuedQty),
+      },
+    });
+  } catch (err) {
+    console.error("inventory.reportItemConsumption error:", err);
+    return res.status(500).json({ message: "Failed to load item-wise monthly report" });
+  }
+};
+
+exports.reportStockMovement = async (req, res) => {
+  try {
+    ensureAssociations();
+    const monthYear = toMonthYearStrict(req.query.month, req.query.year);
+    if (!monthYear) return res.status(400).json({ message: "Valid month/year required" });
+
+    const { start, end } = getMonthDateRange(monthYear.month, monthYear.year);
+    const { page, limit, offset } = parsePagination(req, 20);
+    const where = {
+      createdAt: { [Op.gte]: start, [Op.lt]: end },
+    };
+
+    const sectionFilter = parseOptionalId(req.query.section);
+    if (sectionFilter.invalid) return res.status(400).json({ message: "Invalid section filter" });
+    if (sectionFilter.value) where.section_id = sectionFilter.value;
+
+    const itemFilter = parseOptionalId(req.query.item_id);
+    if (itemFilter.invalid) return res.status(400).json({ message: "Invalid item filter" });
+    if (itemFilter.value) where.item_id = itemFilter.value;
+
+    const txType = String(req.query.transaction_type || "").trim();
+    if (txType) where.transaction_type = txType;
+
+    const q = String(req.query.q || "").trim();
+    if (q) {
+      const matchedItems = await InventoryItem.findAll({
+        where: {
+          [Op.or]: [
+            { item_code: { [Op.like]: `%${q}%` } },
+            { item_name: { [Op.like]: `%${q}%` } },
+          ],
+        },
+        attributes: ["id"],
+      });
+      const matchedIds = matchedItems.map((item) => Number(item.id));
+      if (!matchedIds.length) {
+        return res.json({ month: monthYear.month, year: monthYear.year, data: [], total: 0, page, limit });
+      }
+      if (itemFilter.value && !matchedIds.includes(itemFilter.value)) {
+        return res.json({ month: monthYear.month, year: monthYear.year, data: [], total: 0, page, limit });
+      }
+      if (!itemFilter.value) {
+        where.item_id = { [Op.in]: matchedIds };
+      }
+    }
+
+    const { rows, count } = await InventoryTransaction.findAndCountAll({
+      where,
+      include: [
+        {
+          model: InventoryItem,
+          as: "item",
+          attributes: ["id", "item_code", "item_name", "unit"],
+          required: false,
+        },
+        { model: Section, as: "section", attributes: ["id", "name"], required: false },
+        { model: User, as: "doneBy", attributes: ["id", "name", "username"], required: false },
+      ],
+      order: [["createdAt", "DESC"], ["id", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const data = rows.map((row) => {
+      const item = row.toJSON();
+      return {
+        id: Number(item.id),
+        item_id: item.item_id || null,
+        item_code: item.item?.item_code || "-",
+        item_name: item.item?.item_name || "-",
+        unit: item.item?.unit || "-",
+        transaction_type: item.transaction_type || "-",
+        qty: toFixedQty(item.qty),
+        balance_after: toFixedQty(item.balance_after),
+        reference_type: item.reference_type || "-",
+        reference_id: item.reference_id || null,
+        section_id: item.section_id || null,
+        section_name: item.section?.name || "-",
+        remarks: item.remarks || null,
+        done_by: item.doneBy?.name || item.doneBy?.username || "-",
+        date: item.createdAt || null,
+      };
+    });
+
+    return res.json({
+      month: monthYear.month,
+      year: monthYear.year,
+      data,
+      total: Number(count || 0),
+      page,
+      limit,
+    });
+  } catch (err) {
+    console.error("inventory.reportStockMovement error:", err);
+    return res.status(500).json({ message: "Failed to load stock movement report" });
   }
 };

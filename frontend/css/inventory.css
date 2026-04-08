@@ -376,6 +376,54 @@
   margin-bottom: 12px;
 }
 
+.inv-kpi-grid.inv-kpi-grid-reports {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.inventory-reports-page .inv-report-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inventory-reports-page .inv-tab-btn {
+  border: 1px solid #cfdeed;
+  border-radius: 999px;
+  background: #f7fbff;
+  color: #1f2f46;
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.inventory-reports-page .inv-tab-btn:hover {
+  background: #eef5fd;
+  border-color: #b6ccdf;
+}
+
+.inventory-reports-page .inv-tab-btn.is-active {
+  background: #0e67b7;
+  border-color: #0e67b7;
+  color: #fff;
+}
+
+.inventory-reports-page .inv-report-panel {
+  display: none;
+}
+
+.inventory-reports-page .inv-report-panel.is-active {
+  display: block;
+}
+
+.inventory-reports-page .inv-table tfoot td {
+  background: #f8fbff;
+  font-weight: 800;
+  color: #1e293b;
+}
+
 .inv-kpi-card {
   padding: 10px 12px;
 }
@@ -575,8 +623,46 @@
   background: #1d4ed8;
 }
 
+@media print {
+  .inventory-reports-page {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  .inventory-reports-page #pageHeaderMount,
+  .inventory-reports-page .inv-toolbar,
+  .inventory-reports-page .inv-report-tabs,
+  .inventory-reports-page .inv-actions,
+  #sidebar,
+  #topbar,
+  #overlay {
+    display: none !important;
+  }
+
+  .inventory-reports-page .inv-card {
+    box-shadow: none !important;
+    border: 1px solid #dce6f2 !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid;
+  }
+
+  .inventory-reports-page .inv-report-panel:not(.is-active) {
+    display: none !important;
+  }
+
+  .dashboard-container .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .inv-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inv-kpi-grid.inv-kpi-grid-reports {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -623,6 +709,10 @@
   }
 
   .inv-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-kpi-grid.inv-kpi-grid-reports {
     grid-template-columns: 1fr;
   }
 
