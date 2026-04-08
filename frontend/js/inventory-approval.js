@@ -18,6 +18,7 @@ const state = {
   limit: 20,
   total: 0,
 };
+const DEFAULT_STATUS_FILTER = "all";
 
 function modalToggle(id, open) {
   const modal = byId(id);
@@ -29,7 +30,7 @@ function modalToggle(id, open) {
 function readFilters() {
   return {
     q: String(byId("apSearch")?.value || "").trim(),
-    status: String(byId("apStatus")?.value || "Forwarded").trim(),
+    status: String(byId("apStatus")?.value || DEFAULT_STATUS_FILTER).trim(),
   };
 }
 
@@ -274,7 +275,7 @@ function bindEvents() {
   byId("apSearchBtn")?.addEventListener("click", () => loadRows(1).catch((err) => showToast(err.message, "error")));
   byId("apClearBtn")?.addEventListener("click", () => {
     byId("apSearch").value = "";
-    byId("apStatus").value = "Forwarded";
+    byId("apStatus").value = DEFAULT_STATUS_FILTER;
     loadRows(1).catch((err) => showToast(err.message, "error"));
   });
   byId("apStatus")?.addEventListener("change", () => loadRows(1).catch((err) => showToast(err.message, "error")));
@@ -320,6 +321,7 @@ function bindEvents() {
 }
 
 async function init() {
+  if (byId("apStatus")) byId("apStatus").value = DEFAULT_STATUS_FILTER;
   bindEvents();
   await loadRows(1);
 }

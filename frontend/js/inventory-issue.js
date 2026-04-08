@@ -17,6 +17,7 @@ const state = {
   limit: 20,
   total: 0,
 };
+const DEFAULT_STATUS_FILTER = "all";
 
 function modalToggle(id, open) {
   const modal = byId(id);
@@ -28,7 +29,7 @@ function modalToggle(id, open) {
 function readFilters() {
   return {
     q: String(byId("isSearch")?.value || "").trim(),
-    status: String(byId("isStatus")?.value || "Approved").trim(),
+    status: String(byId("isStatus")?.value || DEFAULT_STATUS_FILTER).trim(),
   };
 }
 
@@ -271,7 +272,7 @@ function bindEvents() {
   byId("isSearchBtn")?.addEventListener("click", () => loadRows(1).catch((err) => showToast(err.message, "error")));
   byId("isClearBtn")?.addEventListener("click", () => {
     byId("isSearch").value = "";
-    byId("isStatus").value = "Approved";
+    byId("isStatus").value = DEFAULT_STATUS_FILTER;
     loadRows(1).catch((err) => showToast(err.message, "error"));
   });
   byId("isStatus")?.addEventListener("change", () => loadRows(1).catch((err) => showToast(err.message, "error")));
@@ -316,6 +317,7 @@ function bindEvents() {
 }
 
 async function init() {
+  if (byId("isStatus")) byId("isStatus").value = DEFAULT_STATUS_FILTER;
   bindEvents();
   await loadRows(1);
 }
