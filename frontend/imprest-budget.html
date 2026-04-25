@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imprest Budget Setup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link rel="stylesheet" href="css/imprest.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content imprest-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="imp-card">
+          <div class="imp-card-head">
+            <div>
+              <h3>Master Setup</h3>
+              <p class="imp-card-sub">Base, financial code, fiscal year এবং budget allocation configure করুন</p>
+            </div>
+          </div>
+
+          <div class="imp-grid">
+            <article class="imp-card" style="margin:0; flex:1 1 320px;">
+              <h4>Add Base</h4>
+              <div class="imp-grid" style="margin-top:8px;">
+                <label class="imp-field"><span>Base Name</span><input id="baseName" class="imp-input" /></label>
+                <label class="imp-field"><span>Base Code</span><input id="baseCode" class="imp-input" /></label>
+                <label class="imp-field"><span>Status</span><select id="baseStatus" class="imp-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+              </div>
+              <div class="imp-actions" style="margin-top:10px;"><button id="baseSaveBtn" class="imp-btn" type="button">Save Base</button></div>
+            </article>
+
+            <article class="imp-card" style="margin:0; flex:1 1 360px;">
+              <h4>Add Financial Code</h4>
+              <div class="imp-grid" style="margin-top:8px;">
+                <label class="imp-field"><span>Code</span><input id="fcCode" class="imp-input" /></label>
+                <label class="imp-field"><span>খাত (বাংলা)</span><input id="fcNameBn" class="imp-input" /></label>
+                <label class="imp-field"><span>Khat (English)</span><input id="fcNameEn" class="imp-input" /></label>
+                <label class="imp-field"><span>Status</span><select id="fcStatus" class="imp-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+              </div>
+              <div class="imp-actions" style="margin-top:10px;"><button id="fcSaveBtn" class="imp-btn" type="button">Save Code</button></div>
+            </article>
+
+            <article class="imp-card" style="margin:0; flex:1 1 320px;">
+              <h4>Add Fiscal Year</h4>
+              <div class="imp-grid" style="margin-top:8px;">
+                <label class="imp-field"><span>Name</span><input id="fyName" class="imp-input" placeholder="2025-2026" /></label>
+                <label class="imp-field"><span>Start Date</span><input id="fyStart" class="imp-input" type="date" /></label>
+                <label class="imp-field"><span>End Date</span><input id="fyEnd" class="imp-input" type="date" /></label>
+                <label class="imp-field"><span>Status</span><select id="fyStatus" class="imp-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+              </div>
+              <div class="imp-actions" style="margin-top:10px;"><button id="fySaveBtn" class="imp-btn" type="button">Save Fiscal Year</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="imp-card">
+          <div class="imp-card-head">
+            <h3>Budget Allocation</h3>
+          </div>
+
+          <div class="imp-toolbar">
+            <label class="imp-field"><span>Base</span><select id="baBase" class="imp-select"></select></label>
+            <label class="imp-field"><span>Fiscal Year</span><select id="baFiscalYear" class="imp-select"></select></label>
+            <label class="imp-field"><span>Financial Code</span><select id="baCode" class="imp-select"></select></label>
+            <label class="imp-field"><span>Budget Amount</span><input id="baAmount" class="imp-input" type="number" min="0" step="0.01" /></label>
+            <div class="imp-actions"><button id="baSaveBtn" class="imp-btn" type="button">Save Allocation</button></div>
+          </div>
+        </section>
+
+        <section class="imp-card">
+          <div class="imp-toolbar">
+            <label class="imp-field"><span>Filter Base</span><select id="baFilterBase" class="imp-select"><option value="">All</option></select></label>
+            <label class="imp-field"><span>Filter Fiscal Year</span><select id="baFilterFy" class="imp-select"><option value="">All</option></select></label>
+            <div class="imp-actions">
+              <button id="baFilterBtn" class="imp-btn secondary" type="button">Apply</button>
+              <button id="baRefreshBtn" class="imp-btn secondary" type="button">Refresh</button>
+            </div>
+          </div>
+
+          <div class="imp-table-wrap" style="margin-top:10px;">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Base</th>
+                  <th>Fiscal Year</th>
+                  <th>Financial Code</th>
+                  <th>খাত</th>
+                  <th class="imp-right">Budget Amount</th>
+                </tr>
+              </thead>
+              <tbody id="baRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("imprest-budget.html");
+    renderPageHeader({
+      icon: "request_quote",
+      title: "Imprest Budget Setup",
+      subtitle: "Configure master data and budget allocation for each base and fiscal year.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/imprest-budget.js"></script>
+</body>
+</html>

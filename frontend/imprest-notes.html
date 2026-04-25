@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imprest Notes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link rel="stylesheet" href="css/imprest.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content imprest-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="imp-card">
+          <div class="imp-toolbar">
+            <label class="imp-field">
+              <span>Base</span>
+              <select id="impListBase" class="imp-select">
+                <option value="">All</option>
+              </select>
+            </label>
+
+            <label class="imp-field">
+              <span>Fiscal Year</span>
+              <select id="impListFiscalYear" class="imp-select">
+                <option value="">All</option>
+              </select>
+            </label>
+
+            <label class="imp-field">
+              <span>Month</span>
+              <select id="impListMonth" class="imp-select">
+                <option value="">All</option>
+              </select>
+            </label>
+
+            <label class="imp-field">
+              <span>Pakkhik</span>
+              <select id="impListPakkhik" class="imp-select">
+                <option value="">All</option>
+              </select>
+            </label>
+
+            <label class="imp-field">
+              <span>Status</span>
+              <select id="impListStatus" class="imp-select">
+                <option value="">All</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="SUBMITTED">SUBMITTED</option>
+                <option value="FORWARDED">FORWARDED</option>
+                <option value="APPROVED">APPROVED</option>
+                <option value="FUND_ISSUED">FUND ISSUED</option>
+                <option value="ADJUSTED">ADJUSTED</option>
+                <option value="REJECTED">REJECTED</option>
+              </select>
+            </label>
+
+            <label class="imp-field wide">
+              <span>Search</span>
+              <input id="impListSearch" class="imp-input" placeholder="Note no / base / remarks" />
+            </label>
+
+            <div class="imp-actions">
+              <button id="impListSearchBtn" class="imp-btn secondary" type="button">Search</button>
+              <button id="impListClearBtn" class="imp-btn secondary" type="button">Clear</button>
+              <a class="imp-btn" href="imprest-note.html">New Note</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="imp-card">
+          <div class="imp-table-wrap">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">SL</th>
+                  <th style="width:170px;">Note No</th>
+                  <th>Base</th>
+                  <th style="width:150px;">Fiscal Year</th>
+                  <th style="width:190px;">Period</th>
+                  <th style="width:120px;">Status</th>
+                  <th class="imp-right" style="width:130px;">Current Claim</th>
+                  <th class="imp-right" style="width:130px;">Remaining</th>
+                  <th style="width:280px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="impListRows"></tbody>
+            </table>
+          </div>
+
+          <div class="imp-pagination">
+            <button id="impListPrevBtn" class="imp-btn secondary" type="button">Prev</button>
+            <div id="impListPageInfo" class="imp-page-info">Page 1 / 1</div>
+            <button id="impListNextBtn" class="imp-btn secondary" type="button">Next</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="impActionModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card narrow">
+      <div class="inv-modal-head">
+        <h4 id="impActionTitle">Take Action</h4>
+        <button id="impActionClose" class="inv-close" type="button">&times;</button>
+      </div>
+      <form id="impActionForm">
+        <input id="impActionId" type="hidden" />
+        <input id="impActionType" type="hidden" />
+        <label class="imp-field" style="max-width:none;">
+          <span>Remarks</span>
+          <textarea id="impActionRemarks" class="imp-textarea" rows="3" placeholder="Optional remarks"></textarea>
+        </label>
+        <div class="imp-actions" style="margin-top:10px;">
+          <button id="impActionCancel" class="imp-btn secondary" type="button">Cancel</button>
+          <button id="impActionSubmit" class="imp-btn" type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="impIssueModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card">
+      <div class="inv-modal-head">
+        <h4>Issue Fund</h4>
+        <button id="impIssueClose" class="inv-close" type="button">&times;</button>
+      </div>
+      <form id="impIssueForm">
+        <input id="impIssueId" type="hidden" />
+
+        <div class="imp-grid">
+          <label class="imp-field">
+            <span>Issue Date</span>
+            <input id="impIssueDate" class="imp-input" type="date" />
+          </label>
+          <label class="imp-field">
+            <span>Voucher No</span>
+            <input id="impIssueVoucher" class="imp-input" />
+          </label>
+          <label class="imp-field wide" style="max-width:none;">
+            <span>Remarks</span>
+            <input id="impIssueRemarks" class="imp-input" />
+          </label>
+        </div>
+
+        <div class="imp-table-wrap" style="margin-top:10px;">
+          <table class="imp-table">
+            <thead>
+              <tr>
+                <th>SL</th>
+                <th>খাত</th>
+                <th>কোড</th>
+                <th class="imp-right">Approved</th>
+                <th class="imp-right">Already Issued</th>
+                <th class="imp-right">Issue Now</th>
+              </tr>
+            </thead>
+            <tbody id="impIssueRows"></tbody>
+          </table>
+        </div>
+
+        <div class="imp-actions" style="margin-top:10px;">
+          <button id="impIssueCancel" class="imp-btn secondary" type="button">Cancel</button>
+          <button id="impIssueSubmit" class="imp-btn success" type="submit">Confirm Issue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="impAdjustModal" class="inv-modal" aria-hidden="true">
+    <div class="inv-modal-card">
+      <div class="inv-modal-head">
+        <h4>Adjustment</h4>
+        <button id="impAdjustClose" class="inv-close" type="button">&times;</button>
+      </div>
+      <form id="impAdjustForm">
+        <input id="impAdjustId" type="hidden" />
+
+        <div class="imp-grid">
+          <label class="imp-field">
+            <span>Adjustment Date</span>
+            <input id="impAdjustDate" class="imp-input" type="date" />
+          </label>
+          <label class="imp-field">
+            <span>Voucher No</span>
+            <input id="impAdjustVoucher" class="imp-input" />
+          </label>
+          <label class="imp-field wide" style="max-width:none;">
+            <span>Remarks</span>
+            <input id="impAdjustRemarks" class="imp-input" />
+          </label>
+        </div>
+
+        <div class="imp-table-wrap" style="margin-top:10px;">
+          <table class="imp-table">
+            <thead>
+              <tr>
+                <th>SL</th>
+                <th>খাত</th>
+                <th>কোড</th>
+                <th class="imp-right">Issued</th>
+                <th class="imp-right">Adjusted</th>
+                <th class="imp-right">Add Adjustment</th>
+              </tr>
+            </thead>
+            <tbody id="impAdjustRows"></tbody>
+          </table>
+        </div>
+
+        <div class="imp-actions" style="margin-top:10px;">
+          <button id="impAdjustCancel" class="imp-btn secondary" type="button">Cancel</button>
+          <button id="impAdjustSubmit" class="imp-btn success" type="submit">Confirm Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("imprest-notes.html");
+    renderPageHeader({
+      icon: "description",
+      title: "Imprest Notes",
+      subtitle: "Track, approve, issue, adjust and print all requisition notes.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/imprest-notes.js"></script>
+</body>
+</html>

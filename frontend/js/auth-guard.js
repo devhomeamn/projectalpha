@@ -46,6 +46,11 @@
     "inventory-issue.html": ["admin", "inventory manager"],
     "inventory-reports.html": ["admin", "inventory manager"],
     "requisition-application.html": ["admin", "general", "master", "inventory manager"],
+    "imprest-note.html": ["admin", "general", "master"],
+    "imprest-notes.html": ["admin", "general", "master"],
+    "imprest-adjustment.html": ["admin", "master"],
+    "imprest-budget.html": ["admin", "master"],
+    "imprest-report.html": ["admin", "general", "master"],
   };
 
   const allowedRoles = pageRoles[page];

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imprest Adjustment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link rel="stylesheet" href="css/imprest.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content imprest-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="imp-card">
+          <div class="imp-toolbar">
+            <label class="imp-field">
+              <span>Base</span>
+              <select id="adjBase" class="imp-select"></select>
+            </label>
+            <label class="imp-field">
+              <span>Fiscal Year</span>
+              <select id="adjFiscalYear" class="imp-select"></select>
+            </label>
+            <div class="imp-actions">
+              <button id="adjLoadBtn" class="imp-btn" type="button">Load Durations</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="imp-card">
+          <div class="imp-card-head">
+            <h3>Duration Summary</h3>
+          </div>
+          <div class="imp-table-wrap">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">SL</th>
+                  <th>Duration</th>
+                  <th style="width:210px;">Range</th>
+                  <th class="imp-right" style="width:130px;">Issued</th>
+                  <th class="imp-right" style="width:130px;">Adjusted</th>
+                  <th class="imp-right" style="width:130px;">Pending</th>
+                  <th style="width:220px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adjDurationRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="imp-card" id="adjDetailCard" style="display:none;">
+          <div class="imp-card-head">
+            <div>
+              <h3>Duration Adjustment Entry</h3>
+              <p class="imp-card-sub" id="adjSelectedLabel">Duration not selected</p>
+            </div>
+          </div>
+
+          <div class="imp-kpi-grid">
+            <article class="imp-kpi"><p class="label">Issued Total</p><p class="value" id="adjIssuedTotal">0.00</p></article>
+            <article class="imp-kpi"><p class="label">Adjusted Total</p><p class="value" id="adjAdjustedTotal">0.00</p></article>
+            <article class="imp-kpi"><p class="label">Pending Total</p><p class="value" id="adjPendingTotal">0.00</p></article>
+            <article class="imp-kpi"><p class="label">Saved Rows</p><p class="value" id="adjSavedCount">0</p></article>
+          </div>
+
+          <div class="imp-table-wrap" style="margin-top:10px;">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">SL</th>
+                  <th>Khat</th>
+                  <th style="width:130px;">Code</th>
+                  <th class="imp-right" style="width:140px;">Issued</th>
+                  <th class="imp-right" style="width:140px;">Adjusted</th>
+                  <th class="imp-right" style="width:140px;">Pending</th>
+                </tr>
+              </thead>
+              <tbody id="adjIssuedRows"></tbody>
+            </table>
+          </div>
+
+          <div class="imp-grid" style="margin-top:10px;">
+            <label class="imp-field">
+              <span>Adjustment Date (default)</span>
+              <input id="adjEntryDate" class="imp-input" type="date" />
+            </label>
+            <label class="imp-field">
+              <span>Voucher No (default)</span>
+              <input id="adjEntryVoucher" class="imp-input" />
+            </label>
+            <label class="imp-field wide" style="max-width:none;">
+              <span>Remarks (default)</span>
+              <input id="adjEntryRemarks" class="imp-input" />
+            </label>
+          </div>
+
+          <div class="imp-table-wrap" style="margin-top:10px;">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">SL</th>
+                  <th style="width:230px;">Source Code (optional)</th>
+                  <th style="width:230px;">Adjust To Code</th>
+                  <th style="width:140px;">Amount</th>
+                  <th>Remarks</th>
+                  <th style="width:90px;">Remove</th>
+                </tr>
+              </thead>
+              <tbody id="adjEntryRows"></tbody>
+            </table>
+          </div>
+
+          <div class="imp-actions" style="margin-top:10px;">
+            <button id="adjAddRowBtn" class="imp-btn secondary" type="button">Add Row</button>
+            <button id="adjSaveBtn" class="imp-btn success" type="button">Save Adjustment</button>
+          </div>
+        </section>
+
+        <section class="imp-card">
+          <div class="imp-card-head">
+            <h3>Saved Adjustment Details</h3>
+          </div>
+          <div class="imp-table-wrap">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">SL</th>
+                  <th style="width:160px;">Date</th>
+                  <th style="width:150px;">Voucher</th>
+                  <th style="width:200px;">Duration</th>
+                  <th style="width:170px;">Source Code</th>
+                  <th style="width:170px;">Target Code</th>
+                  <th class="imp-right" style="width:140px;">Amount</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="adjSavedRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("imprest-adjustment.html");
+    renderPageHeader({
+      icon: "fact_check",
+      title: "Imprest Adjustment",
+      subtitle: "Duration-wise adjustment entry with source-target code details.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/imprest-adjustment.js"></script>
+</body>
+</html>

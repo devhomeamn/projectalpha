@@ -247,6 +247,44 @@ export async function initLayout(activePage) {
       ],
     },
     {
+      group: true,
+      name: "Imprest Management",
+      icon: "account_balance_wallet",
+      roles: ["Admin", "Master", "General"],
+      children: [
+        {
+          name: "Imprest Note",
+          icon: "note_add",
+          roles: ["Admin", "Master", "General"],
+          link: "imprest-note.html",
+        },
+        {
+          name: "Imprest Notes",
+          icon: "description",
+          roles: ["Admin", "Master", "General"],
+          link: "imprest-notes.html",
+        },
+        {
+          name: "Imprest Adjustment",
+          icon: "fact_check",
+          roles: ["Admin", "Master"],
+          link: "imprest-adjustment.html",
+        },
+        {
+          name: "Budget Setup",
+          icon: "request_quote",
+          roles: ["Admin", "Master"],
+          link: "imprest-budget.html",
+        },
+        {
+          name: "Imprest Report",
+          icon: "analytics",
+          roles: ["Admin", "Master", "General"],
+          link: "imprest-report.html",
+        },
+      ],
+    },
+    {
       name: "Add Section",
       icon: "add_circle",
       roles: ["Admin", "Master"],

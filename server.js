@@ -19,6 +19,15 @@ require("./models/inventoryItemModel");
 require("./models/inventoryRequisitionModel");
 require("./models/inventoryRequisitionItemModel");
 require("./models/inventoryTransactionModel");
+require("./models/imprestBaseModel");
+require("./models/imprestFinancialCodeModel");
+require("./models/imprestFiscalYearModel");
+require("./models/imprestBudgetAllocationModel");
+require("./models/imprestNoteModel");
+require("./models/imprestNoteItemModel");
+require("./models/imprestIssueModel");
+require("./models/imprestAdjustmentModel");
+require("./models/imprestDurationAdjustmentModel");
 
 dotenv.config();
 
@@ -40,6 +49,7 @@ const aoClearanceRoutes = require('./routes/aoClearanceRoutes');
 const chequeRegisterRoutes = require('./routes/chequeRegisterRoutes');
 const recordSectionRoutes = require('./routes/recordSectionRoutes');
 const inventoryRoutes = require("./routes/inventoryRoutes");
+const imprestRoutes = require("./routes/imprestRoutes");
 
 app.use('/api/reports', require('./routes/reportsRoutes'));
 app.use('/api/notices', require('./routes/noticeRoutes'));
@@ -55,6 +65,7 @@ app.use('/api/cheque-register', chequeRegisterRoutes);
 app.use('/api/record-sections', recordSectionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/imprest", imprestRoutes);
 
 // Static serve
 app.use(express.static(path.join(__dirname, 'frontend')));
@@ -127,12 +138,60 @@ async function ensureRecordSectionEntryColumns() {
   }
 }
 
+async function ensureImprestNoteIndexes() {
+  const qi = sequelize.getQueryInterface();
+  const tableName = "imprest_notes";
+
+  let indexes;
+  try {
+    indexes = await qi.showIndex(tableName);
+  } catch {
+    return;
+  }
+
+  const legacyUnique = (indexes || []).find((idx) => {
+    if (!idx?.unique) return false;
+    const fields = (idx.fields || []).map((f) => String(f.attribute || f.name || ""));
+    return (
+      fields.length === 4 &&
+      fields[0] === "base_id" &&
+      fields[1] === "fiscal_year_id" &&
+      fields[2] === "month" &&
+      fields[3] === "pakkhik"
+    );
+  });
+
+  if (legacyUnique?.name) {
+    try {
+      await qi.removeIndex(tableName, legacyUnique.name);
+      console.log(`Removed legacy index ${legacyUnique.name} from ${tableName}`);
+    } catch (err) {
+      console.warn(`Could not remove legacy index ${legacyUnique.name}:`, err.message);
+    }
+  }
+
+  indexes = await qi.showIndex(tableName);
+  const hasCurrentIndex = (indexes || []).some((idx) => idx?.name === "ux_imp_note_base_fy_m_pk_ps");
+  if (!hasCurrentIndex) {
+    try {
+      await qi.addIndex(tableName, ["base_id", "fiscal_year_id", "month", "pakkhik", "period_start"], {
+        name: "ux_imp_note_base_fy_m_pk_ps",
+        unique: true,
+      });
+      console.log(`Added index ux_imp_note_base_fy_m_pk_ps on ${tableName}`);
+    } catch (err) {
+      console.warn("Could not add current imprest note unique index:", err.message);
+    }
+  }
+}
+
 async function startServer() {
   try {
     await sequelize.sync();
     await ensureUserMobileColumn();
     await ensureUserRoleEnum();
     await ensureRecordSectionEntryColumns();
+    await ensureImprestNoteIndexes();
     console.log('Database synced with approval system');
 
     const PORT = process.env.PORT || 4000;

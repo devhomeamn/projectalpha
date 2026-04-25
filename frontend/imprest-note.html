@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imprest Note</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link rel="stylesheet" href="css/imprest.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content imprest-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="imp-card">
+          <div class="imp-toolbar">
+            <label class="imp-field">
+              <span>Base</span>
+              <select id="impBase" class="imp-select"></select>
+            </label>
+
+            <label class="imp-field">
+              <span>Fiscal Year</span>
+              <select id="impFiscalYear" class="imp-select"></select>
+            </label>
+
+            <label class="imp-field">
+              <span>Month</span>
+              <select id="impMonth" class="imp-select"></select>
+            </label>
+
+            <label class="imp-field">
+              <span>Pakkhik</span>
+              <select id="impPakkhik" class="imp-select"></select>
+            </label>
+
+            <div id="impSuppPeriodBlock" class="imp-grid" style="display:none; width:100%;">
+              <label class="imp-field">
+                <span>Period Start</span>
+                <input id="impPeriodStart" class="imp-input" type="date" />
+              </label>
+              <label class="imp-field">
+                <span>Period End</span>
+                <input id="impPeriodEnd" class="imp-input" type="date" />
+              </label>
+            </div>
+
+            <div class="imp-actions">
+              <button id="impGenerateBtn" class="imp-btn" type="button">Generate Note</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="imp-card" id="impNoteBlock" style="display:none;">
+          <div class="imp-card-head">
+            <div>
+              <h3>Imprest Requisition Note</h3>
+              <p class="imp-card-sub">
+                Claim, previous expense and remaining balance are auto-calculated code-wise.
+              </p>
+            </div>
+            <span id="impStatusBadge" class="imp-status">DRAFT</span>
+          </div>
+
+          <div class="imp-meta-grid" id="impMetaGrid"></div>
+
+          <label class="imp-field wide" style="max-width:none; margin-bottom:10px;">
+            <span>Remarks</span>
+            <textarea id="impRemarks" class="imp-textarea" rows="2" placeholder="Optional remarks"></textarea>
+          </label>
+
+          <div class="imp-table-wrap">
+            <table class="imp-table">
+              <thead>
+                <tr>
+                  <th style="width:64px;">SL</th>
+                  <th>Khat</th>
+                  <th style="width:130px;">Code</th>
+                  <th class="imp-right" style="width:130px;">Budget</th>
+                  <th class="imp-right" style="width:140px;">Previous</th>
+                  <th class="imp-right" style="width:150px;">Current Claim</th>
+                  <th class="imp-right" style="width:140px;">Remaining</th>
+                  <th style="width:90px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="impItemRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>Total</strong></td>
+                  <td class="imp-right" id="impTotalBudget">0.00</td>
+                  <td class="imp-right" id="impTotalPrevious">0.00</td>
+                  <td class="imp-right" id="impTotalClaim">0.00</td>
+                  <td class="imp-right" id="impTotalRemaining">0.00</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="imp-grid" style="margin-top:10px;">
+            <label class="imp-field wide" style="max-width:none;">
+              <span>Add Code (Search)</span>
+              <div class="imp-code-search-row">
+                <input
+                  id="impAddCodeSearch"
+                  class="imp-input"
+                  type="text"
+                  placeholder="Type code or khat name"
+                />
+                <button id="impAddCodeBtn" class="imp-mini-btn primary" type="button">Add Code</button>
+              </div>
+              <div id="impAddCodeList" class="imp-code-search-list"></div>
+            </label>
+          </div>
+
+          <div class="imp-actions" style="margin-top:12px;">
+            <button id="impSaveBtn" class="imp-btn secondary" type="button">Save Draft</button>
+            <button id="impSubmitBtn" class="imp-btn success" type="button">Submit</button>
+            <button id="impPrintBtn" class="imp-btn" type="button">Print Preview</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("imprest-note.html");
+    renderPageHeader({
+      icon: "note_add",
+      title: "Imprest Note",
+      subtitle: "Generate period-based requisition note and submit for approval.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/imprest-note.js"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imprest Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="images/site-icon.ico" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/inventory.css" />
+  <link rel="stylesheet" href="css/imprest.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <script src="js/auth-guard.js"></script>
+</head>
+<body>
+  <div id="overlay" class="overlay"></div>
+
+  <div class="dashboard-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div id="topbar"></div>
+
+      <section class="content imprest-page">
+        <div id="pageHeaderMount"></div>
+
+        <section class="imp-card">
+          <div class="imp-toolbar">
+            <label class="imp-field"><span>Base</span><select id="repBase" class="imp-select"><option value="">All</option></select></label>
+            <label class="imp-field"><span>Fiscal Year</span><select id="repFy" class="imp-select"><option value="">All</option></select></label>
+            <label class="imp-field"><span>Month</span><select id="repMonth" class="imp-select"><option value="">All</option></select></label>
+            <label class="imp-field"><span>Pakkhik</span><select id="repPakkhik" class="imp-select"><option value="">All</option></select></label>
+            <label class="imp-field"><span>Status</span><select id="repStatus" class="imp-select"><option value="">All</option><option value="APPROVED">APPROVED</option><option value="FUND_ISSUED">FUND_ISSUED</option><option value="ADJUSTED">ADJUSTED</option><option value="SUBMITTED">SUBMITTED</option><option value="REJECTED">REJECTED</option></select></label>
+            <label class="imp-field wide"><span>Search</span><input id="repSearch" class="imp-input" placeholder="Note no / remarks" /></label>
+            <div class="imp-actions">
+              <button id="repLoadBtn" class="imp-btn secondary" type="button">Load</button>
+              <button id="repClearBtn" class="imp-btn secondary" type="button">Clear</button>
+              <button id="repPrintBtn" class="imp-btn" type="button">Print</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="imp-kpi-grid">
+          <article class="imp-kpi"><p class="label">Total Notes</p><p class="value" id="repKpiNotes">0</p></article>
+          <article class="imp-kpi"><p class="label">Total Budget</p><p class="value" id="repKpiBudget">0.00</p></article>
+          <article class="imp-kpi"><p class="label">Total Claim</p><p class="value" id="repKpiClaim">0.00</p></article>
+          <article class="imp-kpi"><p class="label">Total Remaining</p><p class="value" id="repKpiRemaining">0.00</p></article>
+        </section>
+
+        <section class="imp-card">
+          <div class="imp-card-head">
+            <h3>Note Summary</h3>
+          </div>
+          <div class="imp-table-wrap">
+            <table class="imp-table" id="repTable">
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Note No</th>
+                  <th>Base</th>
+                  <th>Fiscal Year</th>
+                  <th>Period</th>
+                  <th>Status</th>
+                  <th class="imp-right">Budget</th>
+                  <th class="imp-right">Previous</th>
+                  <th class="imp-right">Claim</th>
+                  <th class="imp-right">Remaining</th>
+                </tr>
+              </thead>
+              <tbody id="repRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initLayout, renderPageHeader } from "./js/layout.js";
+
+    initLayout("imprest-report.html");
+    renderPageHeader({
+      icon: "analytics",
+      title: "Imprest Report",
+      subtitle: "Filter-wise note summary and financial totals.",
+      showClock: true,
+    });
+  </script>
+
+  <script type="module" src="js/imprest-report.js"></script>
+</body>
+</html>
