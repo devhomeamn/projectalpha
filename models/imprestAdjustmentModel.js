@@ -29,6 +29,10 @@ const ImprestAdjustment = sequelize.define(
       type: DataTypes.STRING(120),
       allowNull: true,
     },
+    selection_note_ids: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     voucher_no: {
       type: DataTypes.STRING(120),
       allowNull: true,

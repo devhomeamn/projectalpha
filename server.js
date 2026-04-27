@@ -297,9 +297,20 @@ async function ensureImprestWorkflowColumns() {
         allowNull: true,
       });
     }
+    if (!adjCols.selection_note_ids) {
+      await qi.addColumn("imprest_adjustments", "selection_note_ids", {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      });
+    }
     await sequelize.query(`
       UPDATE imprest_adjustments
       SET adjustment_ref_no = COALESCE(adjustment_ref_no, voucher_no)
+    `);
+    await sequelize.query(`
+      UPDATE imprest_adjustments
+      SET selection_note_ids = COALESCE(selection_note_ids, CAST(note_id AS CHAR))
+      WHERE selection_note_ids IS NULL OR selection_note_ids = ''
     `);
     await sequelize.query(`
       UPDATE imprest_adjustments a

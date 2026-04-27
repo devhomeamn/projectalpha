@@ -45,6 +45,7 @@
             </label>
             <div class="imp-actions">
               <button id="adjLoadBtn" class="imp-btn" type="button">Load Issued Notes</button>
+              <button id="adjPrepareBtn" class="imp-btn secondary" type="button">Prepare Selected Notes</button>
             </div>
           </div>
         </section>
@@ -57,6 +58,7 @@
             <table class="imp-table">
               <thead>
                 <tr>
+                  <th style="width:90px;">Select</th>
                   <th style="width:60px;">SL</th>
                   <th style="width:190px;">Note No</th>
                   <th>Base</th>
@@ -65,7 +67,6 @@
                   <th class="imp-right" style="width:130px;">Issued</th>
                   <th class="imp-right" style="width:130px;">Adjusted</th>
                   <th class="imp-right" style="width:130px;">Pending</th>
-                  <th style="width:120px;">Action</th>
                 </tr>
               </thead>
               <tbody id="adjNoteRows"></tbody>
@@ -76,8 +77,8 @@
         <section class="imp-card" id="adjDetailCard" style="display:none;">
           <div class="imp-card-head">
             <div>
-              <h3>Note Adjustment Entry</h3>
-              <p class="imp-card-sub" id="adjSelectedLabel">Note not selected</p>
+              <h3>Selected Notes Adjustment Entry</h3>
+              <p class="imp-card-sub" id="adjSelectedLabel">No notes selected</p>
             </div>
           </div>
 

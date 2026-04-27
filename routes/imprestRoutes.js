@@ -24,6 +24,11 @@ router.post(
   requireRole("admin", "master"),
   imprestController.createDurationAdjustmentEntries
 );
+router.post(
+  "/adjustments/notes",
+  requireRole("admin", "master"),
+  imprestController.adjustSelectedNotes
+);
 
 router.get("/reports", imprestController.getWorkflowReport);
 

@@ -18,7 +18,9 @@ const state = {
   bases: [],
   fiscalYears: [],
   noteSummaryRows: [],
-  selectedNote: null,
+  selectedNoteIds: new Set(),
+  selectedNotes: [],
+  aggregateRows: [],
 };
 
 function todayDate() {
@@ -48,8 +50,19 @@ function readFilters() {
     fiscal_year_id: toPositiveInt(byId("adjFiscalYear")?.value),
     month: toPositiveInt(byId("adjMonth")?.value),
     demand_type: String(byId("adjDemandType")?.value || "").trim(),
-    pakkhik: String(byId("adjPakkhik")?.value || "").trim(),
+    pakkhik: String(byId("adjPakkhik")?.value || "").trim().toUpperCase(),
   };
+}
+
+function resetPreparedSelection() {
+  state.selectedNotes = [];
+  state.aggregateRows = [];
+  byId("adjDetailCard").style.display = "none";
+}
+
+function resetAllSelection() {
+  state.selectedNoteIds = new Set();
+  resetPreparedSelection();
 }
 
 function renderNoteRows() {
@@ -64,8 +77,13 @@ function renderNoteRows() {
   tbody.innerHTML = state.noteSummaryRows
     .map((row, idx) => {
       const typeLabel = row.demand_type === "COMPLEMENTARY" ? "Complementary" : getPakkhikLabel(row.pakkhik);
+      const noteId = Number(row.note_id);
+      const isChecked = state.selectedNoteIds.has(noteId) ? "checked" : "";
       return `
         <tr>
+          <td style="text-align:center;">
+            <input type="checkbox" class="adj-note-select" data-note-id="${noteId}" ${isChecked} />
+          </td>
           <td>${idx + 1}</td>
           <td>${escapeHtml(row.note_no || "-")}</td>
           <td>${escapeHtml(row.base_name || "-")} (${escapeHtml(row.base_code || "-")})</td>
@@ -74,60 +92,96 @@ function renderNoteRows() {
           <td class="imp-right">${formatMoney(row.issued_amount)}</td>
           <td class="imp-right">${formatMoney(row.adjusted_amount)}</td>
           <td class="imp-right">${formatMoney(row.pending_adjustment)}</td>
-          <td>
-            <button class="imp-mini-btn primary" data-action="select-note" data-note-id="${Number(row.note_id)}" type="button">
-              Select
-            </button>
-          </td>
         </tr>
       `;
     })
     .join("");
 }
 
-function setKpisFromNote(note) {
-  const items = ensureArray(note?.items);
-  const issuedTotal = items.reduce((sum, item) => sum + toNumber(item.issued_amount), 0);
-  const adjustedTotal = items.reduce((sum, item) => sum + toNumber(item.adjusted_amount ?? item.adjustment_amount), 0);
-  const pendingTotal = Math.max(0, Number((issuedTotal - adjustedTotal).toFixed(2)));
+function setKpisFromRows(rows) {
+  const issuedTotal = rows.reduce((sum, row) => sum + toNumber(row.issued_amount), 0);
+  const adjustedTotal = rows.reduce((sum, row) => sum + toNumber(row.adjusted_amount), 0);
+  const pendingTotal = rows.reduce((sum, row) => sum + toNumber(row.pending_amount), 0);
 
   byId("adjIssuedTotal").textContent = formatMoney(issuedTotal);
   byId("adjAdjustedTotal").textContent = formatMoney(adjustedTotal);
   byId("adjPendingTotal").textContent = formatMoney(pendingTotal);
-  byId("adjSavedCount").textContent = String(items.length);
+  byId("adjSavedCount").textContent = String(rows.length);
 }
 
-function renderEntryRows(note) {
+function renderEntryRows(rows) {
   const tbody = byId("adjEntryRows");
   if (!tbody) return;
 
-  const items = ensureArray(note?.items);
-  const issuedItems = items.filter((item) => toNumber(item.issued_amount) > 0);
-
-  if (!issuedItems.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="imp-empty">No issued note item found</td></tr>';
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="imp-empty">No code-wise issued row found</td></tr>';
     return;
   }
 
-  tbody.innerHTML = issuedItems
-    .map((item, idx) => {
-      const issued = toNumber(item.issued_amount);
-      const adjusted = toNumber(item.adjusted_amount ?? item.adjustment_amount);
-      const pending = Math.max(0, Number((issued - adjusted).toFixed(2)));
+  tbody.innerHTML = rows
+    .map((row, idx) => {
       return `
-        <tr data-note-item-id="${Number(item.note_item_id || item.id)}" data-code-id="${Number(item.financial_code_id)}" data-pending="${pending}">
+        <tr data-code-id="${Number(row.financial_code_id)}" data-pending="${Number(row.pending_amount)}">
           <td>${idx + 1}</td>
-          <td>${escapeHtml(item.khat_name || item.financial_code?.khat_name_bn || "-")}</td>
-          <td>${escapeHtml(item.financial_code?.code || "-")}</td>
-          <td class="imp-right">${formatMoney(issued)}</td>
-          <td class="imp-right">${formatMoney(adjusted)}</td>
-          <td class="imp-right">${formatMoney(pending)}</td>
-          <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${pending}" value="${pending}" /></td>
+          <td>${escapeHtml(row.khat_name_bn || "-")}</td>
+          <td>${escapeHtml(row.code || "-")}</td>
+          <td class="imp-right">${formatMoney(row.issued_amount)}</td>
+          <td class="imp-right">${formatMoney(row.adjusted_amount)}</td>
+          <td class="imp-right">${formatMoney(row.pending_amount)}</td>
+          <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${Number(
+            row.pending_amount
+          )}" value="${Number(row.pending_amount)}" /></td>
           <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
         </tr>
       `;
     })
     .join("");
+}
+
+function setSelectionSummary(notes) {
+  const noteNos = notes.map((x) => x.note_no).filter(Boolean);
+  const first = notes[0] || {};
+  const preview = noteNos.slice(0, 4).join(", ");
+  const more = noteNos.length > 4 ? ` ... +${noteNos.length - 4} more` : "";
+
+  byId("adjSelectedLabel").textContent =
+    `${notes.length} note selected | ${first.base?.base_name || first.base_name || "-"} | ${preview}${more}`;
+}
+
+function buildAggregateRows(notes) {
+  const map = new Map();
+
+  notes.forEach((note) => {
+    ensureArray(note.items).forEach((item) => {
+      const codeId = toPositiveInt(item.financial_code_id);
+      if (!codeId) return;
+
+      const issued = toNumber(item.issued_amount);
+      if (issued <= 0) return;
+
+      const adjusted = toNumber(item.adjusted_amount ?? item.adjustment_amount);
+      const bucket =
+        map.get(codeId) ||
+        {
+          financial_code_id: codeId,
+          code: item.financial_code?.code || `CODE-${codeId}`,
+          khat_name_bn: item.khat_name || item.financial_code?.khat_name_bn || "-",
+          issued_amount: 0,
+          adjusted_amount: 0,
+          pending_amount: 0,
+        };
+
+      bucket.issued_amount = Number((bucket.issued_amount + issued).toFixed(2));
+      bucket.adjusted_amount = Number((bucket.adjusted_amount + adjusted).toFixed(2));
+      bucket.pending_amount = Number((bucket.issued_amount - bucket.adjusted_amount).toFixed(2));
+
+      map.set(codeId, bucket);
+    });
+  });
+
+  return Array.from(map.values())
+    .filter((row) => toNumber(row.issued_amount) > 0)
+    .sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
 }
 
 async function loadMasters() {
@@ -149,8 +203,8 @@ async function loadIssuedNotes() {
     fiscal_year_id: String(filters.fiscal_year_id),
   });
   if (filters.month) params.set("month", String(filters.month));
-  if (filters.demand_type) params.set("demand_type", filters.demand_type);
   if (filters.pakkhik) params.set("pakkhik", filters.pakkhik);
+  if (filters.demand_type) params.set("demand_type", filters.demand_type);
 
   const out = await imprestFetch(`/reports?${params.toString()}`);
   const rows = ensureArray(out.data).filter((row) =>
@@ -190,28 +244,37 @@ async function loadIssuedNotes() {
     return String(a.note_no || "").localeCompare(String(b.note_no || ""));
   });
 
-  state.selectedNote = null;
-  byId("adjDetailCard").style.display = "none";
+  resetAllSelection();
   renderNoteRows();
 }
 
-async function selectNote(noteId) {
-  const id = toPositiveInt(noteId);
-  if (!id) return;
+async function prepareSelectedNotes() {
+  if (!state.selectedNoteIds.size) {
+    showToast("Select at least one note", "warn");
+    return;
+  }
 
-  const out = await imprestFetch(`/notes/${id}`);
-  state.selectedNote = out.data;
+  const noteIds = Array.from(state.selectedNoteIds);
+  const notesOut = await Promise.all(noteIds.map((id) => imprestFetch(`/notes/${id}`)));
+  const notes = notesOut.map((x) => x.data).filter(Boolean);
+
+  if (!notes.length) throw new Error("Selected notes could not be loaded");
+
+  const baseId = Number(notes[0].base_id || 0);
+  if (notes.some((x) => Number(x.base_id) !== baseId)) {
+    throw new Error("Selected notes must belong to same base");
+  }
+
+  const aggregateRows = buildAggregateRows(notes);
+  if (!aggregateRows.length) throw new Error("No code-wise issued amount found for selected notes");
+
+  state.selectedNotes = notes;
+  state.aggregateRows = aggregateRows;
 
   byId("adjDetailCard").style.display = "block";
-  const demandLabel =
-    String(state.selectedNote.demand_type || "REGULAR").toUpperCase() === "COMPLEMENTARY"
-      ? "Complementary"
-      : getPakkhikLabel(state.selectedNote.pakkhik);
-  const dispatchNo = ensureArray(state.selectedNote.issues).slice(-1)[0]?.dispatch_no || ensureArray(state.selectedNote.issues).slice(-1)[0]?.voucher_no || "-";
-
-  byId("adjSelectedLabel").textContent = `${state.selectedNote.note_no} | ${state.selectedNote.month_name} (${demandLabel}) | Dispatch: ${dispatchNo}`;
-  setKpisFromNote(state.selectedNote);
-  renderEntryRows(state.selectedNote);
+  setSelectionSummary(notes);
+  setKpisFromRows(aggregateRows);
+  renderEntryRows(aggregateRows);
 }
 
 function readAdjustmentPayloadRows() {
@@ -223,8 +286,6 @@ function readAdjustmentPayloadRows() {
       if (amount <= 0) return null;
       if (amount > pending) throw new Error("Adjusted amount exceeds pending amount");
       return {
-        note_item_id: Number(row.getAttribute("data-note-item-id")),
-        id: Number(row.getAttribute("data-note-item-id")),
         financial_code_id: Number(row.getAttribute("data-code-id")),
         adjusted_amount: Number(amount.toFixed(2)),
         remarks: String(row.querySelector(".adj-row-remarks")?.value || "").trim() || null,
@@ -234,9 +295,9 @@ function readAdjustmentPayloadRows() {
 }
 
 async function saveAdjustments() {
-  const noteId = toPositiveInt(state.selectedNote?.id);
-  if (!noteId) {
-    showToast("Select a note first", "warn");
+  const noteIds = Array.from(state.selectedNoteIds);
+  if (!noteIds.length) {
+    showToast("Select at least one note", "warn");
     return;
   }
 
@@ -246,7 +307,11 @@ async function saveAdjustments() {
     return;
   }
 
+  const filters = readFilters();
   const payload = {
+    note_ids: noteIds,
+    month: filters.month || null,
+    pakkhik: filters.pakkhik || null,
     adjustment_date: byId("adjEntryDate")?.value || null,
     adjustment_ref_no: String(byId("adjEntryRef")?.value || "").trim() || null,
     remarks: String(byId("adjEntryRemarks")?.value || "").trim() || null,
@@ -256,14 +321,13 @@ async function saveAdjustments() {
   const button = byId("adjSaveBtn");
   const release = setButtonBusy(button, true, "Saving...");
   try {
-    await imprestFetch(`/notes/${noteId}/adjust`, {
+    const out = await imprestFetch("/adjustments/notes", {
       method: "POST",
       body: JSON.stringify(payload),
     });
 
-    showToast("Adjustment saved", "success");
+    showToast(out.message || "Adjustment saved", "success");
     await loadIssuedNotes();
-    await selectNote(noteId);
   } catch (err) {
     showToast(err.message || "Failed to save adjustment", "error");
   } finally {
@@ -276,12 +340,21 @@ function bindEvents() {
     loadIssuedNotes().catch((err) => showToast(err.message || "Failed to load notes", "error"));
   });
 
-  byId("adjNoteRows")?.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action='select-note']");
-    if (!btn) return;
-    const noteId = toPositiveInt(btn.getAttribute("data-note-id"));
+  byId("adjPrepareBtn")?.addEventListener("click", () => {
+    prepareSelectedNotes().catch((err) => showToast(err.message || "Failed to prepare notes", "error"));
+  });
+
+  byId("adjNoteRows")?.addEventListener("change", (e) => {
+    const checkbox = e.target.closest(".adj-note-select");
+    if (!checkbox) return;
+    const noteId = toPositiveInt(checkbox.getAttribute("data-note-id"));
     if (!noteId) return;
-    selectNote(noteId).catch((err) => showToast(err.message || "Failed to open note", "error"));
+
+    if (checkbox.checked) state.selectedNoteIds.add(noteId);
+    else state.selectedNoteIds.delete(noteId);
+
+    resetPreparedSelection();
+    renderNoteRows();
   });
 
   byId("adjSaveBtn")?.addEventListener("click", saveAdjustments);

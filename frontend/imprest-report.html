@@ -32,6 +32,8 @@
                 <option value="monthly_pakkhik">3. Monthly Pakkhik Report</option>
                 <option value="dispatch_note_adjustment">4. Dispatch/Note-wise Adjustment</option>
                 <option value="budget_utilization">5. Budget Utilization</option>
+                <option value="adjustment_by_base">6. Adjustment by Base</option>
+                <option value="adjustment_period_detail">7. Adjustment Period Detail</option>
               </select>
             </label>
             <label class="imp-field"><span>Base</span><select id="repBase" class="imp-select"><option value="">All</option></select></label>
@@ -70,7 +72,10 @@
 
         <section class="imp-card">
           <div class="imp-card-head">
-            <h3 id="repTableTitle">Report Data</h3>
+            <div>
+              <h3 id="repTableTitle">Report Data</h3>
+              <p id="repContext" class="imp-card-sub"></p>
+            </div>
           </div>
           <div class="imp-table-wrap">
             <table class="imp-table" id="repTable">

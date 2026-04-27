@@ -53,6 +53,7 @@ const REPORT_CONFIG = {
     title: "Dispatch/Note-wise Adjustment Report",
     columns: [
       { key: "note_no", label: "Note No" },
+      { key: "selected_note_nos", label: "Selected Notes" },
       { key: "dispatch_no", label: "Dispatch No" },
       { key: "base_name", label: "Base" },
       { key: "month_name", label: "Month" },
@@ -77,12 +78,53 @@ const REPORT_CONFIG = {
     ],
     kpi: { budget: "budget_amount", issued: "cumulative_issued", adjusted: "cumulative_adjusted", pending: "pending_adjustment" },
   },
+  adjustment_by_base_summary: {
+    title: "Adjustment Report by Base",
+    columns: [
+      { key: "base_name", label: "Base" },
+      { key: "base_code", label: "Base Code" },
+      { key: "given_amount", label: "Given (Issued)", money: true, right: true },
+      { key: "adjusted_amount", label: "Adjusted", money: true, right: true },
+      { key: "unadjusted_amount", label: "Unadjusted", money: true, right: true },
+    ],
+    kpi: { budget: null, issued: "given_amount", adjusted: "adjusted_amount", pending: "unadjusted_amount" },
+  },
+  adjustment_by_base_detail: {
+    title: "Adjustment Report by Base (Code-wise)",
+    columns: [
+      { key: "base_name", label: "Base" },
+      { key: "code", label: "Code" },
+      { key: "khat_name_bn", label: "Khat" },
+      { key: "given_amount", label: "Given (Issued)", money: true, right: true },
+      { key: "adjusted_amount", label: "Adjusted", money: true, right: true },
+      { key: "unadjusted_amount", label: "Unadjusted", money: true, right: true },
+    ],
+    kpi: { budget: null, issued: "given_amount", adjusted: "adjusted_amount", pending: "unadjusted_amount" },
+  },
+  adjustment_period_detail: {
+    title: "Adjustment Period Detail",
+    columns: [
+      { key: "adjustment_date", label: "Adjustment Date" },
+      { key: "adjustment_ref_no", label: "Ref No" },
+      { key: "selected_periods", label: "Adjusted Against (Periods)" },
+      { key: "selected_pakkhiks", label: "Pakkhik Scope" },
+      { key: "code", label: "Code" },
+      { key: "khat_name_bn", label: "Khat" },
+      { key: "given_amount", label: "Given (Issued)", money: true, right: true },
+      { key: "adjusted_amount", label: "Adjusted", money: true, right: true },
+      { key: "unadjusted_amount", label: "Unadjusted", money: true, right: true },
+      { key: "selected_note_nos", label: "Selected Notes" },
+    ],
+    kpi: { budget: null, issued: "given_amount", adjusted: "adjusted_amount", pending: "unadjusted_amount" },
+  },
 };
 
 const state = {
   bases: [],
   fiscalYears: [],
   type: "base_yearly",
+  view: "default",
+  meta: null,
   rows: [],
 };
 
@@ -99,7 +141,18 @@ function setFilterOptions() {
 }
 
 function getConfig() {
+  if (state.type === "adjustment_by_base") {
+    return state.view === "base_summary"
+      ? REPORT_CONFIG.adjustment_by_base_summary
+      : REPORT_CONFIG.adjustment_by_base_detail;
+  }
   return REPORT_CONFIG[state.type] || REPORT_CONFIG.base_yearly;
+}
+
+function compactList(values, max = 6) {
+  const rows = ensureArray(values).map((x) => String(x || "").trim()).filter(Boolean);
+  if (rows.length <= max) return rows.join(", ");
+  return `${rows.slice(0, max).join(", ")} ... +${rows.length - max}`;
 }
 
 function readFilters() {
@@ -141,6 +194,26 @@ function renderKpis() {
 function renderTable() {
   const config = getConfig();
   byId("repTableTitle").textContent = config.title;
+  const contextEl = byId("repContext");
+  if (contextEl) {
+    if (state.type === "adjustment_period_detail") {
+      const meta = state.meta || {};
+      const parts = [];
+      if (meta.base_name) parts.push(`Base: ${meta.base_name}`);
+      if (meta.fiscal_year_name) parts.push(`FY: ${meta.fiscal_year_name}`);
+      if (meta.requested_month) parts.push(`Requested Month: ${meta.requested_month}`);
+      if (meta.requested_pakkhik) parts.push(`Requested Pakkhik: ${meta.requested_pakkhik}`);
+      if (ensureArray(meta.scope_pakkhiks).length) {
+        parts.push(`Adjusted Against Pakkhik: ${compactList(meta.scope_pakkhiks, 8)}`);
+      }
+      if (ensureArray(meta.scope_periods).length) {
+        parts.push(`Periods: ${compactList(meta.scope_periods, 6)}`);
+      }
+      contextEl.textContent = parts.join(" | ");
+    } else {
+      contextEl.textContent = "";
+    }
+  }
 
   byId("repHead").innerHTML = `
     <tr>
@@ -166,8 +239,16 @@ function renderTable() {
           return `<td class="${col.right ? "imp-right" : ""}">${text}</td>`;
         })
         .join("");
+      const isBaseSummaryRow =
+        state.type === "adjustment_by_base" &&
+        state.view === "base_summary" &&
+        Number(row.base_id || 0) > 0;
+      const attrs = isBaseSummaryRow
+        ? ` data-base-id="${Number(row.base_id)}" title="Click to view code-wise adjustment"`
+        : "";
+      const style = isBaseSummaryRow ? ` style="cursor:pointer;"` : "";
 
-      return `<tr><td>${idx + 1}</td>${cells}</tr>`;
+      return `<tr${attrs}${style}><td>${idx + 1}</td>${cells}</tr>`;
     })
     .join("");
 }
@@ -182,6 +263,8 @@ async function loadReport() {
   });
 
   const out = await imprestFetch(`/reports?${params.toString()}`);
+  state.view = String(out.view || "default").trim().toLowerCase() || "default";
+  state.meta = out.meta || null;
   state.rows = ensureArray(out.data);
 
   renderTable();
@@ -283,6 +366,15 @@ function bindEvents() {
   });
 
   byId("repType")?.addEventListener("change", () => loadReport().catch((err) => showToast(err.message, "error")));
+  byId("repRows")?.addEventListener("click", (e) => {
+    if (!(state.type === "adjustment_by_base" && state.view === "base_summary")) return;
+    const row = e.target.closest("tr[data-base-id]");
+    if (!row) return;
+    const baseId = Number(row.getAttribute("data-base-id") || 0);
+    if (!baseId) return;
+    byId("repBase").value = String(baseId);
+    loadReport().catch((err) => showToast(err.message, "error"));
+  });
   byId("repPrintBtn")?.addEventListener("click", printReport);
 }
 
