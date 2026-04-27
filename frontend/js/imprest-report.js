@@ -4,15 +4,85 @@ import {
   ensureArray,
   escapeHtml,
   formatMoney,
-  getPakkhikLabel,
   imprestFetch,
-  normalizeStatusClass,
   showToast,
+  toNumber,
 } from "./imprest-common.js";
+
+const REPORT_CONFIG = {
+  base_yearly: {
+    title: "Base-wise Yearly Summary",
+    columns: [
+      { key: "base_name", label: "Base" },
+      { key: "budget_amount", label: "Budget", money: true, right: true },
+      { key: "total_issued", label: "Total Issued", money: true, right: true },
+      { key: "total_adjusted", label: "Total Adjusted", money: true, right: true },
+      { key: "pending_adjustment", label: "Pending Adjustment", money: true, right: true },
+      { key: "budget_remaining", label: "Budget Remaining", money: true, right: true },
+    ],
+    kpi: { budget: "budget_amount", issued: "total_issued", adjusted: "total_adjusted", pending: "pending_adjustment" },
+  },
+  code_yearly: {
+    title: "Code-wise Yearly Summary",
+    columns: [
+      { key: "code", label: "Code" },
+      { key: "khat_name_bn", label: "Khat" },
+      { key: "budget_amount", label: "Budget", money: true, right: true },
+      { key: "total_issued", label: "Total Issued", money: true, right: true },
+      { key: "total_adjusted", label: "Total Adjusted", money: true, right: true },
+      { key: "pending_adjustment", label: "Pending Adjustment", money: true, right: true },
+      { key: "budget_remaining", label: "Budget Remaining", money: true, right: true },
+    ],
+    kpi: { budget: "budget_amount", issued: "total_issued", adjusted: "total_adjusted", pending: "pending_adjustment" },
+  },
+  monthly_pakkhik: {
+    title: "Monthly Pakkhik Report",
+    columns: [
+      { key: "base_name", label: "Base" },
+      { key: "month_name", label: "Month" },
+      { key: "first_half_issued", label: "1st Pakkhik Issued", money: true, right: true },
+      { key: "second_half_issued", label: "2nd Pakkhik Issued", money: true, right: true },
+      { key: "complementary_issued", label: "Complementary Issued", money: true, right: true },
+      { key: "total_issued", label: "Total Issued", money: true, right: true },
+      { key: "adjusted_amount", label: "Adjusted", money: true, right: true },
+      { key: "pending_adjustment", label: "Pending", money: true, right: true },
+    ],
+    kpi: { budget: null, issued: "total_issued", adjusted: "adjusted_amount", pending: "pending_adjustment" },
+  },
+  dispatch_note_adjustment: {
+    title: "Dispatch/Note-wise Adjustment Report",
+    columns: [
+      { key: "note_no", label: "Note No" },
+      { key: "dispatch_no", label: "Dispatch No" },
+      { key: "base_name", label: "Base" },
+      { key: "month_name", label: "Month" },
+      { key: "demand_type", label: "Demand Type" },
+      { key: "code", label: "Code" },
+      { key: "issued_amount", label: "Issued Amount", money: true, right: true },
+      { key: "adjusted_amount", label: "Adjusted Expense", money: true, right: true },
+      { key: "pending_adjustment", label: "Pending Adjustment", money: true, right: true },
+    ],
+    kpi: { budget: null, issued: "issued_amount", adjusted: "adjusted_amount", pending: "pending_adjustment" },
+  },
+  budget_utilization: {
+    title: "Budget Utilization Report",
+    columns: [
+      { key: "base_name", label: "Base" },
+      { key: "code", label: "Code" },
+      { key: "budget_amount", label: "Budget", money: true, right: true },
+      { key: "cumulative_issued", label: "Cumulative Issued", money: true, right: true },
+      { key: "cumulative_adjusted", label: "Cumulative Adjusted", money: true, right: true },
+      { key: "pending_adjustment", label: "Pending Adjustment", money: true, right: true },
+      { key: "remaining_budget", label: "Remaining Budget", money: true, right: true },
+    ],
+    kpi: { budget: "budget_amount", issued: "cumulative_issued", adjusted: "cumulative_adjusted", pending: "pending_adjustment" },
+  },
+};
 
 const state = {
   bases: [],
   fiscalYears: [],
+  type: "base_yearly",
   rows: [],
 };
 
@@ -26,127 +96,117 @@ function setFilterOptions() {
     state.fiscalYears.map((r) => `<option value="${Number(r.id)}">${escapeHtml(r.name)}</option>`).join("");
 
   byId("repMonth").innerHTML = '<option value="">All</option>' + createMonthOptionsHtml();
-  byId("repPakkhik").innerHTML = `
-    <option value="">All</option>
-    <option value="FIRST_HALF">1st Half</option>
-    <option value="SECOND_HALF">2nd Half</option>
-    <option value="SUPPLEMENTARY">Supplementary</option>
-  `;
+}
+
+function getConfig() {
+  return REPORT_CONFIG[state.type] || REPORT_CONFIG.base_yearly;
 }
 
 function readFilters() {
   return {
+    type: String(byId("repType")?.value || "base_yearly"),
     base_id: byId("repBase")?.value || "",
     fiscal_year_id: byId("repFy")?.value || "",
     month: byId("repMonth")?.value || "",
+    demand_type: byId("repDemandType")?.value || "",
     pakkhik: byId("repPakkhik")?.value || "",
-    status: byId("repStatus")?.value || "",
-    q: String(byId("repSearch")?.value || "").trim(),
   };
 }
 
-function aggregate(rows) {
-  return rows.reduce(
-    (acc, row) => {
-      acc.notes += 1;
-      acc.budget += Number(row.total_budget || 0);
-      acc.claim += Number(row.total_current_claim || 0);
-      acc.remaining += Number(row.total_remaining || 0);
-      return acc;
-    },
-    { notes: 0, budget: 0, claim: 0, remaining: 0 }
-  );
+function aggregateKpis(rows, config) {
+  const sumOf = (key) => {
+    if (!key) return 0;
+    return rows.reduce((sum, row) => sum + toNumber(row[key]), 0);
+  };
+
+  return {
+    count: rows.length,
+    budget: sumOf(config.kpi.budget),
+    issued: sumOf(config.kpi.issued),
+    adjusted: sumOf(config.kpi.adjusted),
+    pending: sumOf(config.kpi.pending),
+  };
 }
 
 function renderKpis() {
-  const ag = aggregate(state.rows);
-  byId("repKpiNotes").textContent = String(ag.notes);
+  const config = getConfig();
+  const ag = aggregateKpis(state.rows, config);
+  byId("repKpiRows").textContent = String(ag.count);
   byId("repKpiBudget").textContent = formatMoney(ag.budget);
-  byId("repKpiClaim").textContent = formatMoney(ag.claim);
-  byId("repKpiRemaining").textContent = formatMoney(ag.remaining);
+  byId("repKpiIssued").textContent = formatMoney(ag.issued);
+  byId("repKpiAdjusted").textContent = formatMoney(ag.adjusted);
+  byId("repKpiPending").textContent = formatMoney(ag.pending);
 }
 
-function renderRows() {
-  const tbody = byId("repRows");
-  if (!tbody) return;
+function renderTable() {
+  const config = getConfig();
+  byId("repTableTitle").textContent = config.title;
 
+  byId("repHead").innerHTML = `
+    <tr>
+      <th style="width:60px;">SL</th>
+      ${config.columns
+        .map((col) => `<th class="${col.right ? "imp-right" : ""}">${escapeHtml(col.label)}</th>`)
+        .join("")}
+    </tr>
+  `;
+
+  const tbody = byId("repRows");
   if (!state.rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="imp-empty">No report data found</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${config.columns.length + 1}" class="imp-empty">No report data found</td></tr>`;
     return;
   }
 
   tbody.innerHTML = state.rows
     .map((row, idx) => {
-      return `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${escapeHtml(row.note_no || "-")}</td>
-          <td>${escapeHtml(row.base?.base_name || "-")}</td>
-          <td>${escapeHtml(row.fiscal_year?.name || "-")}</td>
-          <td>${escapeHtml(row.month_name || "-")} (${escapeHtml(getPakkhikLabel(row.pakkhik))})</td>
-          <td><span class="imp-status ${normalizeStatusClass(row.status)}">${escapeHtml(row.status || "-")}</span></td>
-          <td class="imp-right">${formatMoney(row.total_budget)}</td>
-          <td class="imp-right">${formatMoney(row.total_previous_expense)}</td>
-          <td class="imp-right">${formatMoney(row.total_current_claim)}</td>
-          <td class="imp-right">${formatMoney(row.total_remaining)}</td>
-        </tr>
-      `;
+      const cells = config.columns
+        .map((col) => {
+          const value = row[col.key];
+          const text = col.money ? formatMoney(value) : escapeHtml(value ?? "-");
+          return `<td class="${col.right ? "imp-right" : ""}">${text}</td>`;
+        })
+        .join("");
+
+      return `<tr><td>${idx + 1}</td>${cells}</tr>`;
     })
     .join("");
 }
 
-async function fetchAllRows() {
-  const filters = readFilters();
-  const all = [];
-
-  let page = 1;
-  const limit = 100;
-  let total = 0;
-
-  while (page <= 20) {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    ["base_id", "fiscal_year_id", "month", "pakkhik", "status", "q"].forEach((key) => {
-      if (filters[key]) params.set(key, String(filters[key]));
-    });
-
-    const out = await imprestFetch(`/notes?${params.toString()}`);
-    const rows = ensureArray(out.data);
-    total = Number(out.total || rows.length);
-
-    all.push(...rows);
-    if (all.length >= total || !rows.length) break;
-    page += 1;
-  }
-
-  state.rows = all;
-}
-
 async function loadReport() {
-  await fetchAllRows();
-  renderRows();
+  const filters = readFilters();
+  state.type = filters.type;
+
+  const params = new URLSearchParams({ type: filters.type });
+  ["base_id", "fiscal_year_id", "month", "demand_type", "pakkhik"].forEach((key) => {
+    if (filters[key]) params.set(key, String(filters[key]));
+  });
+
+  const out = await imprestFetch(`/reports?${params.toString()}`);
+  state.rows = ensureArray(out.data);
+
+  renderTable();
   renderKpis();
 }
 
 function buildPrintHtml() {
-  const ag = aggregate(state.rows);
-  const rowsHtml = (state.rows || [])
+  const config = getConfig();
+  const ag = aggregateKpis(state.rows, config);
+
+  const rowsHtml = state.rows
     .map((row, idx) => {
-      return `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${escapeHtml(row.note_no || "-")}</td>
-          <td>${escapeHtml(row.base?.base_name || "-")}</td>
-          <td>${escapeHtml(row.fiscal_year?.name || "-")}</td>
-          <td>${escapeHtml(row.month_name || "-")} (${escapeHtml(getPakkhikLabel(row.pakkhik))})</td>
-          <td>${escapeHtml(row.status || "-")}</td>
-          <td style="text-align:right;">${formatMoney(row.total_budget)}</td>
-          <td style="text-align:right;">${formatMoney(row.total_previous_expense)}</td>
-          <td style="text-align:right;">${formatMoney(row.total_current_claim)}</td>
-          <td style="text-align:right;">${formatMoney(row.total_remaining)}</td>
-        </tr>
-      `;
+      const cells = config.columns
+        .map((col) => {
+          const value = row[col.key];
+          const text = col.money ? formatMoney(value) : escapeHtml(value ?? "-");
+          const align = col.right ? "text-align:right;" : "";
+          return `<td style="${align}">${text}</td>`;
+        })
+        .join("");
+      return `<tr><td>${idx + 1}</td>${cells}</tr>`;
     })
     .join("");
+
+  const headerCells = config.columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("");
 
   return `
     <html>
@@ -161,28 +221,21 @@ function buildPrintHtml() {
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #000; padding: 5px 6px; font-size: 12px; }
           th { text-align: center; background: #f1f5f9; }
-          tfoot td { font-weight: 700; }
         </style>
       </head>
       <body>
-        <h2>Imprest Report Summary</h2>
-        <div class="meta">Total Notes: ${ag.notes} | Budget: ${formatMoney(ag.budget)} | Claim: ${formatMoney(ag.claim)} | Remaining: ${formatMoney(ag.remaining)}</div>
+        <h2>${escapeHtml(config.title)}</h2>
+        <div class="meta">
+          Rows: ${ag.count} | Budget: ${formatMoney(ag.budget)} | Issued: ${formatMoney(ag.issued)} | Adjusted: ${formatMoney(ag.adjusted)} | Pending: ${formatMoney(ag.pending)}
+        </div>
         <table>
           <thead>
             <tr>
               <th>SL</th>
-              <th>Note No</th>
-              <th>Base</th>
-              <th>Fiscal Year</th>
-              <th>Period</th>
-              <th>Status</th>
-              <th>Budget</th>
-              <th>Previous</th>
-              <th>Claim</th>
-              <th>Remaining</th>
+              ${headerCells}
             </tr>
           </thead>
-          <tbody>${rowsHtml || '<tr><td colspan="10" style="text-align:center;">No data</td></tr>'}</tbody>
+          <tbody>${rowsHtml || `<tr><td colspan="${config.columns.length + 1}" style="text-align:center;">No data</td></tr>`}</tbody>
         </table>
       </body>
     </html>
@@ -218,20 +271,19 @@ async function loadMasters() {
 
 function bindEvents() {
   byId("repLoadBtn")?.addEventListener("click", () => loadReport().catch((err) => showToast(err.message, "error")));
+
   byId("repClearBtn")?.addEventListener("click", () => {
+    byId("repType").value = "base_yearly";
     byId("repBase").value = "";
     byId("repFy").value = "";
     byId("repMonth").value = "";
+    byId("repDemandType").value = "";
     byId("repPakkhik").value = "";
-    byId("repStatus").value = "";
-    byId("repSearch").value = "";
     loadReport().catch((err) => showToast(err.message, "error"));
   });
 
+  byId("repType")?.addEventListener("change", () => loadReport().catch((err) => showToast(err.message, "error")));
   byId("repPrintBtn")?.addEventListener("click", printReport);
-  byId("repSearch")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") loadReport().catch((err) => showToast(err.message, "error"));
-  });
 }
 
 async function init() {

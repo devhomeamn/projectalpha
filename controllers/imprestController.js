@@ -12,7 +12,16 @@ const ImprestIssue = require("../models/imprestIssueModel");
 const ImprestAdjustment = require("../models/imprestAdjustmentModel");
 const ImprestDurationAdjustment = require("../models/imprestDurationAdjustmentModel");
 
-const NOTE_PREVIOUS_STATUSES = ["APPROVED", "FUND_ISSUED", "ADJUSTED"];
+const NOTE_ISSUED_STATUSES = ["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"];
+const NOTE_ALLOWED_STATUSES = [
+  "DRAFT",
+  "SUBMITTED",
+  "APPROVED",
+  "FUND_ISSUED",
+  "PARTIALLY_ADJUSTED",
+  "ADJUSTED",
+  "REJECTED",
+];
 const MONTH_NAMES_EN = [
   "January",
   "February",
@@ -156,6 +165,20 @@ function ensureAssociations() {
     ImprestAdjustment.belongsTo(ImprestNote, {
       foreignKey: "note_id",
       as: "note",
+    });
+  }
+
+  if (!ImprestNoteItem.associations?.adjustments) {
+    ImprestNoteItem.hasMany(ImprestAdjustment, {
+      foreignKey: "note_item_id",
+      as: "adjustments",
+      onDelete: "CASCADE",
+    });
+  }
+  if (!ImprestAdjustment.associations?.noteItem) {
+    ImprestAdjustment.belongsTo(ImprestNoteItem, {
+      foreignKey: "note_item_id",
+      as: "noteItem",
     });
   }
 
@@ -304,7 +327,13 @@ function toSafeInt(value, fallback = null) {
 
 function toMoney(value, fallback = 0) {
   if (value === null || value === undefined || String(value).trim() === "") return fallback;
-  const n = Number(value);
+
+  const safe = String(value)
+    .replace(/[\u09e6-\u09ef]/g, (d) => String(d.charCodeAt(0) - 0x09e6))
+    .replace(/,/g, "")
+    .trim();
+
+  const n = Number(safe);
   if (!Number.isFinite(n)) return fallback;
   return Number(n.toFixed(2));
 }
@@ -363,8 +392,54 @@ function parsePakkhik(value) {
   if (!text) return null;
   if (["FIRST_HALF", "FIRST", "1", "H1", "1ST", "1ST_HALF"].includes(text)) return "FIRST_HALF";
   if (["SECOND_HALF", "SECOND", "2", "H2", "2ND", "2ND_HALF"].includes(text)) return "SECOND_HALF";
-  if (["SUPPLEMENTARY", "SUPP", "SUP", "EXTRA"].includes(text)) return "SUPPLEMENTARY";
+  if (["NONE", "NA", "N/A", "0"].includes(text)) return "NONE";
+  if (["SUPPLEMENTARY", "SUPP", "SUP", "EXTRA", "COMPLEMENTARY", "COMP"].includes(text)) return "NONE";
   return null;
+}
+
+function parseDemandType(value) {
+  const text = String(value || "").trim().toUpperCase();
+  if (!text) return null;
+  if (["REGULAR", "NORMAL"].includes(text)) return "REGULAR";
+  if (["COMPLEMENTARY", "SUPPLEMENTARY", "COMP", "SUPP", "EXTRA"].includes(text)) return "COMPLEMENTARY";
+  return null;
+}
+
+function normalizeDemandType(rawDemandType, rawPakkhik) {
+  const demandType = parseDemandType(rawDemandType);
+  if (demandType) return demandType;
+
+  const pakkhik = parsePakkhik(rawPakkhik);
+  if (pakkhik === "NONE") return "COMPLEMENTARY";
+  return "REGULAR";
+}
+
+function normalizePakkhik(rawPakkhik, demandType) {
+  if (demandType === "COMPLEMENTARY") return "NONE";
+  const pakkhik = parsePakkhik(rawPakkhik);
+  if (pakkhik === "FIRST_HALF" || pakkhik === "SECOND_HALF") return pakkhik;
+  return null;
+}
+
+function normalizeStoredDemandType(note) {
+  const demandType = parseDemandType(note?.demand_type);
+  if (demandType) return demandType;
+  return parsePakkhik(note?.pakkhik) === "NONE" ? "COMPLEMENTARY" : "REGULAR";
+}
+
+function normalizeStoredPakkhik(note) {
+  const demandType = normalizeStoredDemandType(note);
+  if (demandType === "COMPLEMENTARY") return "NONE";
+  const pakkhik = parsePakkhik(note?.pakkhik);
+  return pakkhik === "FIRST_HALF" || pakkhik === "SECOND_HALF" ? pakkhik : "NONE";
+}
+
+function normalizeNoteStatus(status) {
+  const text = String(status || "").trim().toUpperCase();
+  if (!text) return "DRAFT";
+  if (text === "FORWARDED") return "SUBMITTED";
+  if (NOTE_ALLOWED_STATUSES.includes(text)) return text;
+  return text;
 }
 
 function parseCodeIdList(value) {
@@ -402,7 +477,8 @@ function pakkhikNameEn(pakkhik) {
   const text = String(pakkhik || "").toUpperCase();
   if (text === "FIRST_HALF") return "1st Half";
   if (text === "SECOND_HALF") return "2nd Half";
-  if (text === "SUPPLEMENTARY") return "Supplementary";
+  if (text === "NONE") return "None";
+  if (text === "SUPPLEMENTARY") return "Complementary";
   return text || "-";
 }
 
@@ -481,21 +557,18 @@ function canEditDraft(req, note) {
 }
 
 function buildNoteFlags(req, note) {
-  const status = String(note.status || "");
+  const status = normalizeNoteStatus(note.status);
 
   return {
     can_view: canViewNote(req, note),
     can_edit: canEditDraft(req, note),
     can_edit_items: canEditDraft(req, note),
     can_submit: canEditDraft(req, note),
-    can_approve:
-      (isAdminUser(req) || isMasterUser(req)) && ["SUBMITTED", "FORWARDED"].includes(status),
-    can_reject:
-      (isAdminUser(req) || isMasterUser(req)) && ["DRAFT", "SUBMITTED", "FORWARDED"].includes(status),
-    can_issue:
-      (isAdminUser(req) || isMasterUser(req)) && ["APPROVED", "FUND_ISSUED"].includes(status),
+    can_approve: (isAdminUser(req) || isMasterUser(req)) && ["SUBMITTED"].includes(status),
+    can_reject: (isAdminUser(req) || isMasterUser(req)) && ["DRAFT", "SUBMITTED"].includes(status),
+    can_issue: (isAdminUser(req) || isMasterUser(req)) && ["APPROVED"].includes(status),
     can_adjust:
-      (isAdminUser(req) || isMasterUser(req)) && ["APPROVED", "FUND_ISSUED", "ADJUSTED"].includes(status),
+      (isAdminUser(req) || isMasterUser(req)) && ["FUND_ISSUED", "PARTIALLY_ADJUSTED"].includes(status),
     can_print: canViewNote(req, note),
   };
 }
@@ -579,17 +652,34 @@ function serializeNoteItem(row) {
   const item = row?.toJSON ? row.toJSON() : row;
   if (!item) return null;
 
+  const previousIssued = toMoney(item.previous_issued_amount, toMoney(item.previous_expense, 0));
+  const claimed = toMoney(item.current_claim, 0);
+  const approved = toMoney(item.approved_amount, claimed);
+  const issued = toMoney(item.issued_amount, approved);
+  const adjusted = toMoney(item.adjustment_amount, 0);
+  const unadjusted = toMoney(item.unadjusted_amount, roundMoney(issued - adjusted));
+  const budgetRemaining = toMoney(
+    item.budget_remaining,
+    roundMoney(toMoney(item.budget_amount, 0) - previousIssued - issued)
+  );
+
   return {
     id: Number(item.id),
+    note_item_id: Number(item.id),
     note_id: Number(item.note_id),
     financial_code_id: Number(item.financial_code_id),
     khat_name: item.khat_name,
     budget_amount: toMoney(item.budget_amount, 0),
-    previous_expense: toMoney(item.previous_expense, 0),
-    current_claim: toMoney(item.current_claim, 0),
-    approved_amount: toMoney(item.approved_amount, 0),
-    issued_amount: toMoney(item.issued_amount, 0),
-    adjustment_amount: toMoney(item.adjustment_amount, 0),
+    previous_issued_amount: previousIssued,
+    previous_expense: previousIssued,
+    current_claim: claimed,
+    claimed_amount: claimed,
+    approved_amount: approved,
+    issued_amount: issued,
+    adjustment_amount: adjusted,
+    adjusted_amount: adjusted,
+    unadjusted_amount: unadjusted,
+    budget_remaining: budgetRemaining,
     remaining_balance: toMoney(item.remaining_balance, 0),
     remarks: item.remarks || null,
     financial_code: item.financialCode
@@ -612,7 +702,8 @@ function serializeIssue(row) {
     id: Number(item.id),
     note_id: Number(item.note_id),
     issue_date: formatDateOnly(item.issue_date),
-    voucher_no: item.voucher_no || null,
+    dispatch_no: item.dispatch_no || item.voucher_no || null,
+    voucher_no: item.voucher_no || item.dispatch_no || null,
     total_issued_amount: toMoney(item.total_issued_amount, 0),
     issued_by: item.issued_by ? Number(item.issued_by) : null,
     issued_by_name: item.issuer?.name || item.issuer?.username || null,
@@ -628,13 +719,23 @@ function serializeAdjustment(row) {
   return {
     id: Number(item.id),
     note_id: Number(item.note_id),
+    note_item_id: item.note_item_id ? Number(item.note_item_id) : null,
     financial_code_id: Number(item.financial_code_id),
     adjusted_amount: toMoney(item.adjusted_amount, 0),
     adjustment_date: formatDateOnly(item.adjustment_date),
+    adjustment_ref_no: item.adjustment_ref_no || item.voucher_no || null,
     voucher_no: item.voucher_no || null,
     remarks: item.remarks || null,
     created_by: item.created_by ? Number(item.created_by) : null,
     created_by_name: item.creator?.name || item.creator?.username || null,
+    note_item: item.noteItem
+      ? {
+          id: Number(item.noteItem.id),
+          note_id: Number(item.noteItem.note_id),
+          financial_code_id: Number(item.noteItem.financial_code_id),
+          khat_name: item.noteItem.khat_name,
+        }
+      : null,
     financial_code: item.financialCode
       ? {
           id: Number(item.financialCode.id),
@@ -690,6 +791,8 @@ function serializeDurationAdjustment(row) {
 function serializeNote(row, req, { includeDetails = true } = {}) {
   const note = row?.toJSON ? row.toJSON() : row;
   if (!note) return null;
+  const demandType = normalizeStoredDemandType(note);
+  const pakkhik = normalizeStoredPakkhik(note);
 
   const base = note.base
     ? {
@@ -715,11 +818,13 @@ function serializeNote(row, req, { includeDetails = true } = {}) {
     fiscal_year_id: Number(note.fiscal_year_id),
     month: Number(note.month),
     month_name: monthName(note.month),
-    pakkhik: note.pakkhik,
-    pakkhik_label: pakkhikNameEn(note.pakkhik),
+    demand_type: demandType,
+    pakkhik: pakkhik,
+    pakkhik_label: pakkhikNameEn(pakkhik),
     period_start: formatDateOnly(note.period_start),
     period_end: formatDateOnly(note.period_end),
-    status: note.status,
+    status: normalizeNoteStatus(note.status),
+    raw_status: note.status,
     total_budget: toMoney(note.total_budget, 0),
     total_previous_expense: toMoney(note.total_previous_expense, 0),
     total_current_claim: toMoney(note.total_current_claim, 0),
@@ -821,6 +926,12 @@ async function fetchNoteWithDetails(noteId, transaction = null) {
         as: "adjustments",
         include: [
           {
+            model: ImprestNoteItem,
+            as: "noteItem",
+            attributes: ["id", "note_id", "financial_code_id", "khat_name"],
+            required: false,
+          },
+          {
             model: User,
             as: "creator",
             attributes: ["id", "name", "username"],
@@ -862,8 +973,8 @@ function resolveFiscalMonthYear(fiscalYear, month) {
   return month >= startMonth ? startYear : endYear;
 }
 
-function computePeriod(fiscalYear, month, pakkhik, customStart = null, customEnd = null) {
-  if (pakkhik === "SUPPLEMENTARY") {
+function computePeriod(fiscalYear, month, pakkhik, customStart = null, customEnd = null, demandType = "REGULAR") {
+  if (demandType === "COMPLEMENTARY" || pakkhik === "NONE" || pakkhik === "SUPPLEMENTARY") {
     const periodStart = toDateOnly(customStart);
     const periodEnd = toDateOnly(customEnd);
     if (!periodStart || !periodEnd) return null;
@@ -873,6 +984,8 @@ function computePeriod(fiscalYear, month, pakkhik, customStart = null, customEnd
       period_end: periodEnd,
     };
   }
+
+  if (!["FIRST_HALF", "SECOND_HALF"].includes(String(pakkhik || ""))) return null;
 
   const year = resolveFiscalMonthYear(fiscalYear, month);
   const monthText = String(month).padStart(2, "0");
@@ -900,7 +1013,7 @@ async function generateNoteNo({ fiscalYear, month, pakkhik, transaction }) {
   const fyToken = String(fiscalYear?.name || "FY")
     .replace(/[^0-9A-Za-z]/g, "")
     .toUpperCase();
-  const halfToken = pakkhik === "FIRST_HALF" ? "FH" : pakkhik === "SECOND_HALF" ? "SH" : "SUP";
+  const halfToken = pakkhik === "FIRST_HALF" ? "FH" : pakkhik === "SECOND_HALF" ? "SH" : "COMP";
   const prefix = `IMP-${fyToken}-${String(month).padStart(2, "0")}-${halfToken}-`;
 
   const latest = await ImprestNote.findOne({
@@ -1036,7 +1149,7 @@ async function loadIssuedSummaryByDuration(baseId, fiscalYearId, durations, tran
     where: {
       base_id: baseId,
       fiscal_year_id: fiscalYearId,
-      status: { [Op.in]: ["FUND_ISSUED", "ADJUSTED"] },
+      status: { [Op.in]: ["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"] },
     },
     attributes: ["id", "note_no", "period_start", "period_end", "status"],
     include: [
@@ -1170,7 +1283,7 @@ async function getPreviousExpenseMap(baseId, fiscalYearId, periodStart, transact
   const where = {
     base_id: baseId,
     fiscal_year_id: fiscalYearId,
-    status: { [Op.in]: NOTE_PREVIOUS_STATUSES },
+    status: { [Op.in]: NOTE_ISSUED_STATUSES },
     ...buildPreviousPeriodCondition(periodStart),
   };
 
@@ -1181,7 +1294,7 @@ async function getPreviousExpenseMap(baseId, fiscalYearId, periodStart, transact
       {
         model: ImprestNoteItem,
         as: "items",
-        attributes: ["financial_code_id", "current_claim", "approved_amount", "issued_amount", "adjustment_amount"],
+        attributes: ["financial_code_id", "issued_amount"],
         required: false,
       },
     ],
@@ -1195,12 +1308,8 @@ async function getPreviousExpenseMap(baseId, fiscalYearId, periodStart, transact
       const codeId = Number(line.financial_code_id || 0);
       if (!codeId) return;
 
-      const spent = pickFirstPositive(
-        line.adjustment_amount,
-        line.issued_amount,
-        line.approved_amount,
-        line.current_claim
-      );
+      const spent = toMoney(line.issued_amount, 0);
+      if (spent <= 0) return;
 
       const old = toMoney(map.get(codeId), 0);
       map.set(codeId, roundMoney(old + spent));
@@ -1268,7 +1377,7 @@ async function syncNoteItemsFromBudget(note, budgetRows, previousExpenseMap, tra
   for (const budgetRow of budgetRows) {
     const codeId = Number(budgetRow.financial_code_id);
     const budgetAmount = toMoney(budgetRow.budget_amount, 0);
-    const previousExpense = toMoney(previousExpenseMap.get(codeId), 0);
+    const previousIssued = toMoney(previousExpenseMap.get(codeId), 0);
     const khatName = getKhatName(budgetRow.financialCode);
 
     const existing = itemByCode.get(codeId);
@@ -1276,19 +1385,17 @@ async function syncNoteItemsFromBudget(note, budgetRows, previousExpenseMap, tra
     if (existing) {
       existing.khat_name = khatName;
       existing.budget_amount = roundMoney(budgetAmount);
-      existing.previous_expense = roundMoney(previousExpense);
+      existing.previous_issued_amount = roundMoney(previousIssued);
+      existing.previous_expense = roundMoney(previousIssued);
 
-      const effectiveClaim =
-        note.status === "DRAFT"
-          ? toMoney(existing.current_claim, 0)
-          : pickFirstPositive(
-              existing.adjustment_amount,
-              existing.issued_amount,
-              existing.approved_amount,
-              existing.current_claim
-            );
+      const claim = toMoney(existing.current_claim, 0);
+      const issued = toMoney(existing.issued_amount, 0);
+      const adjusted = toMoney(existing.adjustment_amount, 0);
+      const unadjusted = roundMoney(Math.max(0, issued - adjusted));
 
-      existing.remaining_balance = computeRemaining(budgetAmount, previousExpense, effectiveClaim);
+      existing.unadjusted_amount = unadjusted;
+      existing.budget_remaining = roundMoney(budgetAmount - previousIssued - issued);
+      existing.remaining_balance = computeRemaining(budgetAmount, previousIssued, claim);
       await existing.save({ transaction });
       continue;
     }
@@ -1299,12 +1406,15 @@ async function syncNoteItemsFromBudget(note, budgetRows, previousExpenseMap, tra
         financial_code_id: codeId,
         khat_name: khatName,
         budget_amount: roundMoney(budgetAmount),
-        previous_expense: roundMoney(previousExpense),
+        previous_issued_amount: roundMoney(previousIssued),
+        previous_expense: roundMoney(previousIssued),
         current_claim: 0,
         approved_amount: 0,
         issued_amount: 0,
         adjustment_amount: 0,
-        remaining_balance: computeRemaining(budgetAmount, previousExpense, 0),
+        unadjusted_amount: 0,
+        budget_remaining: roundMoney(budgetAmount - previousIssued),
+        remaining_balance: computeRemaining(budgetAmount, previousIssued, 0),
       },
       { transaction }
     );
@@ -1356,17 +1466,22 @@ function buildPrintMeta(note) {
   const baseName = note.base?.base_name || "-";
   const monthLabel = monthName(note.month);
   const year = note.period_start ? String(note.period_start).slice(0, 4) : "-";
+  const pakkhik = normalizeStoredPakkhik(note);
+  const demandType = normalizeStoredDemandType(note);
   const pakkhikLabel =
-    note.pakkhik === "FIRST_HALF"
+    pakkhik === "FIRST_HALF"
       ? "\u09e7\u09ae"
-      : note.pakkhik === "SECOND_HALF"
+      : pakkhik === "SECOND_HALF"
       ? "\u09e8\u09df"
-      : "\u09b8\u09ae\u09cd\u09aa\u09c2\u09b0\u0995";
+      : "\u09aa\u09b0\u09bf\u09aa\u09c2\u09b0\u0995";
   const currentClaim = toMoney(note.total_current_claim, 0);
 
   return {
     header_line: "\u0985\u09ab\u09bf\u09b8 \u09a8\u09cb\u099f/\u09aa\u09c3\u09b7\u09cd\u09a0\u09be/\u09e6\u09e8",
-    subject: `\u09ac\u09bf\u09b7\u09df: ${baseName} \u098f\u09b0 ${monthLabel}/${year} \u09ae\u09be\u09b8\u09c7\u09b0 \u0986\u09b0\u09cd\u09a5\u09bf\u0995 \u09a6\u09be\u09ac\u09c0 (${pakkhikLabel} \u09aa\u09be\u0995\u09cd\u09b7\u09bf\u0995)\u0964`,
+    subject:
+      demandType === "COMPLEMENTARY"
+        ? `\u09ac\u09bf\u09b7\u09df: ${baseName} \u098f\u09b0 ${monthLabel}/${year} \u09ae\u09be\u09b8\u09c7\u09b0 \u09aa\u09b0\u09bf\u09aa\u09c2\u09b0\u0995 \u0986\u09b0\u09cd\u09a5\u09bf\u0995 \u09a6\u09be\u09ac\u09c0\u0964`
+        : `\u09ac\u09bf\u09b7\u09df: ${baseName} \u098f\u09b0 ${monthLabel}/${year} \u09ae\u09be\u09b8\u09c7\u09b0 \u0986\u09b0\u09cd\u09a5\u09bf\u0995 \u09a6\u09be\u09ac\u09c0 (${pakkhikLabel} \u09aa\u09be\u0995\u09cd\u09b7\u09bf\u0995)\u0964`,
     paragraph: `\u0989\u09aa\u09b0\u09cd\u09af\u09c1\u0995\u09cd\u09a4 \u09ac\u09bf\u09b7\u09af\u09bc\u09c7 ${note.period_start || "-"} \u09b9\u09a4\u09c7 ${note.period_end || "-"} \u09aa\u09b0\u09cd\u09af\u09a8\u09cd\u09a4 \u09b8\u09ae\u09af\u09bc\u09c7\u09b0 \u09ac\u09cd\u09af\u09af\u09bc \u09a8\u09bf\u09b0\u09cd\u09ac\u09be\u09b9\u09c7\u09b0 \u09a8\u09bf\u09ae\u09bf\u09a4\u09cd\u09a4\u09c7 = ${currentClaim.toFixed(
       2
     )}/- \u099f\u09be\u0995\u09be\u09b0 \u0986\u09b0\u09cd\u09a5\u09bf\u0995 \u09a6\u09be\u09ac\u09c0 \u09aa\u09be\u0993\u09af\u09bc\u09be \u0997\u09c7\u099b\u09c7\u0964`,
@@ -1706,14 +1821,15 @@ exports.generateNote = async (req, res) => {
     const baseId = toPositiveInt(req.body?.base_id);
     const fiscalYearId = toPositiveInt(req.body?.fiscal_year_id);
     const month = parseMonth(req.body?.month);
-    const pakkhik = parsePakkhik(req.body?.pakkhik);
+    const demandType = normalizeDemandType(req.body?.demand_type, req.body?.pakkhik);
+    const pakkhik = normalizePakkhik(req.body?.pakkhik, demandType);
     const requestedCodeIds = parseCodeIdList(req.body?.financial_code_ids);
 
-    if (!baseId || !fiscalYearId || !month || !pakkhik) {
+    if (!baseId || !fiscalYearId || !month || !demandType || !pakkhik) {
       await t.rollback();
       return res
         .status(400)
-        .json({ message: "base_id, fiscal_year_id, month and pakkhik are required" });
+        .json({ message: "base_id, fiscal_year_id, month, demand_type and pakkhik are required" });
     }
 
     const accessError = assertGeneralBaseAccess(req, baseId);
@@ -1737,7 +1853,8 @@ exports.generateNote = async (req, res) => {
       month,
       pakkhik,
       req.body?.period_start,
-      req.body?.period_end
+      req.body?.period_end,
+      demandType
     );
     if (!period) {
       await t.rollback();
@@ -1789,6 +1906,7 @@ exports.generateNote = async (req, res) => {
           base_id: baseId,
           fiscal_year_id: fiscalYearId,
           month,
+          demand_type: demandType,
           pakkhik,
           period_start: period.period_start,
           period_end: period.period_end,
@@ -1800,6 +1918,7 @@ exports.generateNote = async (req, res) => {
       );
       createdNew = true;
     } else if (note.status === "DRAFT") {
+      note.demand_type = demandType;
       note.period_start = period.period_start;
       note.period_end = period.period_end;
       if (req.body?.remarks !== undefined) {
@@ -1844,6 +1963,7 @@ exports.listNotes = async (req, res) => {
     const baseId = toPositiveInt(req.query.base_id);
     const fiscalYearId = toPositiveInt(req.query.fiscal_year_id);
     const month = parseMonth(req.query.month);
+    const demandType = parseDemandType(req.query.demand_type);
     const pakkhik = parsePakkhik(req.query.pakkhik);
     const status = String(req.query.status || "").trim().toUpperCase();
     const q = String(req.query.q || "").trim();
@@ -1851,8 +1971,11 @@ exports.listNotes = async (req, res) => {
     if (baseId) where.base_id = baseId;
     if (fiscalYearId) where.fiscal_year_id = fiscalYearId;
     if (month) where.month = month;
+    if (demandType) where.demand_type = demandType;
     if (pakkhik) where.pakkhik = pakkhik;
-    if (status && status !== "ALL") where.status = status;
+    if (status && status !== "ALL" && NOTE_ALLOWED_STATUSES.includes(status)) {
+      where.status = status === "SUBMITTED" ? { [Op.in]: ["SUBMITTED", "FORWARDED"] } : status;
+    }
 
     if (role === "general") {
       const assignedBaseId = getAssignedBaseId(req);
@@ -2023,7 +2146,7 @@ exports.updateNoteItems = async (req, res) => {
         }
 
         const budgetAmount = toMoney(budgetRow.budget_amount, 0);
-        const previousExpense = toMoney(previousExpenseMap.get(codeId), 0);
+        const previousIssued = toMoney(previousExpenseMap.get(codeId), 0);
         const khatName = getKhatName(budgetRow.financialCode);
 
         workingItem = await ImprestNoteItem.create(
@@ -2032,12 +2155,15 @@ exports.updateNoteItems = async (req, res) => {
             financial_code_id: codeId,
             khat_name: khatName,
             budget_amount: roundMoney(budgetAmount),
-            previous_expense: roundMoney(previousExpense),
+            previous_issued_amount: roundMoney(previousIssued),
+            previous_expense: roundMoney(previousIssued),
             current_claim: 0,
             approved_amount: 0,
             issued_amount: 0,
             adjustment_amount: 0,
-            remaining_balance: computeRemaining(budgetAmount, previousExpense, 0),
+            unadjusted_amount: 0,
+            budget_remaining: roundMoney(budgetAmount - previousIssued),
+            remaining_balance: computeRemaining(budgetAmount, previousIssued, 0),
           },
           { transaction: t }
         );
@@ -2050,10 +2176,22 @@ exports.updateNoteItems = async (req, res) => {
         await t.rollback();
         return res.status(400).json({ message: "current_claim must be a non-negative number" });
       }
+      const previousIssued = toMoney(workingItem.previous_issued_amount, toMoney(workingItem.previous_expense, 0));
+      const claimCap = roundMoney(toMoney(workingItem.budget_amount, 0) - previousIssued);
+      if (claim > claimCap) {
+        await t.rollback();
+        return res.status(400).json({
+          message: "current_claim cannot exceed remaining budget after previous issued amount",
+        });
+      }
 
       workingItem.current_claim = roundMoney(claim);
       workingItem.remarks = cleanText(raw?.remarks, 1000);
-      workingItem.remaining_balance = computeRemaining(workingItem.budget_amount, workingItem.previous_expense, claim);
+      workingItem.remaining_balance = computeRemaining(workingItem.budget_amount, previousIssued, claim);
+      workingItem.budget_remaining = roundMoney(toMoney(workingItem.budget_amount, 0) - previousIssued - toMoney(workingItem.issued_amount, 0));
+      workingItem.unadjusted_amount = roundMoney(
+        Math.max(0, toMoney(workingItem.issued_amount, 0) - toMoney(workingItem.adjustment_amount, 0))
+      );
       await workingItem.save({ transaction: t });
       touchedIds.add(Number(workingItem.id));
     }
@@ -2149,33 +2287,16 @@ exports.approveNote = async (req, res) => {
     }
 
     const note = out.note;
+    const noteStatus = normalizeNoteStatus(note.status);
 
     if (!(isAdminUser(req) || isMasterUser(req))) {
       await t.rollback();
       return res.status(403).json({ message: "Only Admin/Master can approve" });
     }
 
-    const forwardOnly = Boolean(req.body?.forward_only || req.body?.forward);
-    if (forwardOnly) {
-      if (note.status !== "SUBMITTED") {
-        await t.rollback();
-        return res.status(400).json({ message: "Only submitted note can be forwarded" });
-      }
-
-      note.status = "FORWARDED";
-      if (req.body?.remarks !== undefined) {
-        note.remarks = cleanText(req.body?.remarks, 2000);
-      }
-      await note.save({ transaction: t });
-
-      await t.commit();
-      const refreshedForward = await fetchNoteWithDetails(noteId);
-      return res.json({ message: "Imprest note forwarded", data: serializeNote(refreshedForward, req) });
-    }
-
-    if (!["SUBMITTED", "FORWARDED"].includes(String(note.status || ""))) {
+    if (!["SUBMITTED"].includes(noteStatus)) {
       await t.rollback();
-      return res.status(400).json({ message: "Only submitted/forwarded note can be approved" });
+      return res.status(400).json({ message: "Only submitted note can be approved" });
     }
 
     const items = await ImprestNoteItem.findAll({
@@ -2184,30 +2305,17 @@ exports.approveNote = async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
-    const payloadItems = Array.isArray(req.body?.items) ? req.body.items : [];
-    const mapById = new Map();
-    payloadItems.forEach((row) => {
-      const rowId = toPositiveInt(row?.id);
-      if (rowId) mapById.set(rowId, row);
-    });
-
     for (const item of items) {
-      const incoming = mapById.get(Number(item.id));
-      let approvedAmount = toMoney(incoming?.approved_amount, null);
-      if (approvedAmount === null) {
-        approvedAmount = toMoney(item.current_claim, 0);
-      }
+      const approvedAmount = toMoney(item.current_claim, 0);
       if (approvedAmount < 0) {
         await t.rollback();
-        return res.status(400).json({ message: "approved_amount must be non-negative" });
+        return res.status(400).json({ message: "current_claim must be non-negative" });
       }
 
       item.approved_amount = roundMoney(approvedAmount);
-      if (incoming && incoming.remarks !== undefined) {
-        item.remarks = cleanText(incoming.remarks, 1000);
-      }
-
-      item.remaining_balance = computeRemaining(item.budget_amount, item.previous_expense, approvedAmount);
+      const previousIssued = toMoney(item.previous_issued_amount, toMoney(item.previous_expense, 0));
+      item.remaining_balance = computeRemaining(item.budget_amount, previousIssued, approvedAmount);
+      item.budget_remaining = roundMoney(toMoney(item.budget_amount, 0) - previousIssued - toMoney(item.issued_amount, 0));
       await item.save({ transaction: t });
     }
 
@@ -2247,13 +2355,14 @@ exports.rejectNote = async (req, res) => {
     }
 
     const note = out.note;
+    const noteStatus = normalizeNoteStatus(note.status);
 
     if (!(isAdminUser(req) || isMasterUser(req))) {
       await t.rollback();
       return res.status(403).json({ message: "Only Admin/Master can reject" });
     }
 
-    if (!["DRAFT", "SUBMITTED", "FORWARDED"].includes(String(note.status || ""))) {
+    if (!["DRAFT", "SUBMITTED"].includes(noteStatus)) {
       await t.rollback();
       return res.status(400).json({ message: "This note can no longer be rejected" });
     }
@@ -2288,13 +2397,14 @@ exports.issueNote = async (req, res) => {
     }
 
     const note = out.note;
+    const noteStatus = normalizeNoteStatus(note.status);
 
     if (!(isAdminUser(req) || isMasterUser(req))) {
       await t.rollback();
       return res.status(403).json({ message: "Only Admin/Master can issue fund" });
     }
 
-    if (!["APPROVED", "FUND_ISSUED"].includes(String(note.status || ""))) {
+    if (!["APPROVED"].includes(noteStatus)) {
       await t.rollback();
       return res.status(400).json({ message: "Only approved note can be issued" });
     }
@@ -2305,91 +2415,47 @@ exports.issueNote = async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
-    const rowById = new Map();
-    const rowByCode = new Map();
-    rows.forEach((row) => {
-      rowById.set(Number(row.id), row);
-      rowByCode.set(Number(row.financial_code_id), row);
-    });
-
-    const payloadItems = Array.isArray(req.body?.items) ? req.body.items : [];
-    const issueQueue = [];
-
-    if (payloadItems.length) {
-      for (const raw of payloadItems) {
-        const rowId = toPositiveInt(raw?.id);
-        const codeId = toPositiveInt(raw?.financial_code_id);
-        const target = (rowId && rowById.get(rowId)) || (codeId && rowByCode.get(codeId));
-
-        if (!target) {
-          await t.rollback();
-          return res.status(400).json({ message: "Invalid issue item row" });
-        }
-
-        const issueNow = toMoney(raw?.issued_amount, null);
-        if (issueNow === null || issueNow < 0) {
-          await t.rollback();
-          return res.status(400).json({ message: "issued_amount must be non-negative" });
-        }
-        if (issueNow <= 0) continue;
-
-        const approvedBase = pickFirstPositive(target.approved_amount, target.current_claim);
-        const alreadyIssued = toMoney(target.issued_amount, 0);
-        const remainingAllowed = Math.max(0, roundMoney(approvedBase - alreadyIssued));
-
-        if (issueNow > remainingAllowed) {
-          await t.rollback();
-          return res.status(400).json({ message: "Issued amount exceeds approved balance" });
-        }
-
-        issueQueue.push({ row: target, issue_now: issueNow });
-      }
-    } else {
-      rows.forEach((row) => {
-        const approvedBase = pickFirstPositive(row.approved_amount, row.current_claim);
-        const alreadyIssued = toMoney(row.issued_amount, 0);
-        const remainingAllowed = Math.max(0, roundMoney(approvedBase - alreadyIssued));
-        if (remainingAllowed > 0) {
-          issueQueue.push({ row, issue_now: remainingAllowed });
-        }
-      });
-    }
-
-    if (!issueQueue.length) {
+    if (!rows.length) {
       await t.rollback();
-      return res.status(400).json({ message: "No issue amount found" });
+      return res.status(400).json({ message: "No note item found to issue" });
     }
 
     let totalIssuedNow = 0;
 
-    for (const entry of issueQueue) {
-      const row = entry.row;
-      const issueNow = toMoney(entry.issue_now, 0);
+    for (const row of rows) {
+      const claimAmount = toMoney(row.current_claim, 0);
+      if (claimAmount < 0) {
+        await t.rollback();
+        return res.status(400).json({ message: "Claim amount cannot be negative" });
+      }
 
-      const newIssued = roundMoney(toMoney(row.issued_amount, 0) + issueNow);
-      row.issued_amount = newIssued;
+      row.approved_amount = roundMoney(claimAmount);
+      row.issued_amount = roundMoney(claimAmount);
 
-      const effectiveSpent = pickFirstPositive(
-        toMoney(row.adjustment_amount, 0),
-        newIssued,
-        toMoney(row.approved_amount, 0),
-        toMoney(row.current_claim, 0)
-      );
-      row.remaining_balance = computeRemaining(row.budget_amount, row.previous_expense, effectiveSpent);
-
+      const adjusted = toMoney(row.adjustment_amount, 0);
+      row.unadjusted_amount = roundMoney(Math.max(0, claimAmount - adjusted));
+      const previousIssued = toMoney(row.previous_issued_amount, toMoney(row.previous_expense, 0));
+      row.budget_remaining = roundMoney(toMoney(row.budget_amount, 0) - previousIssued - claimAmount);
+      row.remaining_balance = roundMoney(row.budget_remaining);
       await row.save({ transaction: t });
-      totalIssuedNow += issueNow;
+      totalIssuedNow = roundMoney(totalIssuedNow + claimAmount);
+    }
+
+    if (totalIssuedNow <= 0) {
+      await t.rollback();
+      return res.status(400).json({ message: "Total claim amount must be greater than 0 for issue" });
     }
 
     const issueDate = toDateOnly(req.body?.issue_date) || todayDateOnly();
-    const voucherNo = cleanText(req.body?.voucher_no, 120);
+    const dispatchNo = cleanText(req.body?.dispatch_no ?? req.body?.voucher_no, 120);
     const remarks = cleanText(req.body?.remarks, 1000);
 
     await ImprestIssue.create(
       {
         note_id: noteId,
         issue_date: issueDate,
-        voucher_no: voucherNo,
+        dispatch_no: dispatchNo,
+        voucher_no: dispatchNo,
         total_issued_amount: roundMoney(totalIssuedNow),
         issued_by: getActorUserId(req),
         remarks,
@@ -2433,15 +2499,16 @@ exports.adjustNote = async (req, res) => {
     }
 
     const note = out.note;
+    const noteStatus = normalizeNoteStatus(note.status);
 
     if (!(isAdminUser(req) || isMasterUser(req))) {
       await t.rollback();
       return res.status(403).json({ message: "Only Admin/Master can adjust" });
     }
 
-    if (!["APPROVED", "FUND_ISSUED", "ADJUSTED"].includes(String(note.status || ""))) {
+    if (!["FUND_ISSUED", "PARTIALLY_ADJUSTED"].includes(noteStatus)) {
       await t.rollback();
-      return res.status(400).json({ message: "Only approved/issued note can be adjusted" });
+      return res.status(400).json({ message: "Only issued note can be adjusted" });
     }
 
     const rows = await ImprestNoteItem.findAll({
@@ -2459,12 +2526,17 @@ exports.adjustNote = async (req, res) => {
 
     const payloadRows = Array.isArray(req.body?.adjustments) ? req.body.adjustments : [];
     const queue = [];
+    const queuedByItemId = new Map();
 
     if (payloadRows.length) {
       for (const raw of payloadRows) {
+        const noteItemId = toPositiveInt(raw?.note_item_id);
         const rowId = toPositiveInt(raw?.id);
         const codeId = toPositiveInt(raw?.financial_code_id);
-        const target = (rowId && rowById.get(rowId)) || (codeId && rowByCode.get(codeId));
+        const target =
+          (noteItemId && rowById.get(noteItemId)) ||
+          (rowId && rowById.get(rowId)) ||
+          (codeId && rowByCode.get(codeId));
         if (!target) {
           await t.rollback();
           return res.status(400).json({ message: "Invalid adjustment row" });
@@ -2477,7 +2549,19 @@ exports.adjustNote = async (req, res) => {
         }
         if (amount <= 0) continue;
 
-        queue.push({ row: target, amount });
+        const issued = toMoney(target.issued_amount, 0);
+        const adjusted = toMoney(target.adjustment_amount, 0);
+        const pending = roundMoney(Math.max(0, issued - adjusted));
+        const targetItemId = Number(target.id);
+        const alreadyQueued = toMoney(queuedByItemId.get(targetItemId), 0);
+        const availablePending = roundMoney(Math.max(0, pending - alreadyQueued));
+        if (amount > availablePending) {
+          await t.rollback();
+          return res.status(400).json({ message: "Adjusted amount exceeds pending/unadjusted amount" });
+        }
+        queuedByItemId.set(targetItemId, roundMoney(alreadyQueued + amount));
+
+        queue.push({ row: target, amount, remarks: cleanText(raw?.remarks, 1000) });
       }
     } else {
       rows.forEach((row) => {
@@ -2485,7 +2569,7 @@ exports.adjustNote = async (req, res) => {
         const adjusted = toMoney(row.adjustment_amount, 0);
         const delta = roundMoney(Math.max(0, issued - adjusted));
         if (delta > 0) {
-          queue.push({ row, amount: delta });
+          queue.push({ row, amount: delta, remarks: null });
         }
       });
     }
@@ -2496,7 +2580,7 @@ exports.adjustNote = async (req, res) => {
     }
 
     const adjustmentDate = toDateOnly(req.body?.adjustment_date) || todayDateOnly();
-    const voucherNo = cleanText(req.body?.voucher_no, 120);
+    const adjustmentRefNo = cleanText(req.body?.adjustment_ref_no ?? req.body?.voucher_no, 120);
     const lineRemarks = cleanText(req.body?.line_remarks, 1000);
 
     const adjustmentRows = [];
@@ -2507,24 +2591,39 @@ exports.adjustNote = async (req, res) => {
 
       const newAdjusted = roundMoney(toMoney(row.adjustment_amount, 0) + amount);
       row.adjustment_amount = newAdjusted;
-      row.remaining_balance = computeRemaining(row.budget_amount, row.previous_expense, newAdjusted);
+      row.unadjusted_amount = roundMoney(Math.max(0, toMoney(row.issued_amount, 0) - newAdjusted));
+      row.remaining_balance = roundMoney(toMoney(row.budget_remaining, 0));
 
       await row.save({ transaction: t });
 
       adjustmentRows.push({
         note_id: noteId,
+        note_item_id: Number(row.id),
         financial_code_id: Number(row.financial_code_id),
         adjusted_amount: amount,
         adjustment_date: adjustmentDate,
-        voucher_no: voucherNo,
-        remarks: lineRemarks,
+        adjustment_ref_no: adjustmentRefNo,
+        voucher_no: adjustmentRefNo,
+        remarks: entry.remarks || lineRemarks,
         created_by: getActorUserId(req),
       });
     }
 
     await ImprestAdjustment.bulkCreate(adjustmentRows, { transaction: t });
 
-    note.status = "ADJUSTED";
+    const hasAnyIssued = rows.some((row) => toMoney(row.issued_amount, 0) > 0);
+    const hasAnyAdjusted = rows.some((row) => toMoney(row.adjustment_amount, 0) > 0);
+    const fullyAdjusted = rows.every(
+      (row) => toMoney(row.issued_amount, 0) <= 0 || toMoney(row.unadjusted_amount, toMoney(row.issued_amount, 0) - toMoney(row.adjustment_amount, 0)) <= 0
+    );
+
+    if (hasAnyIssued && fullyAdjusted) {
+      note.status = "ADJUSTED";
+    } else if (hasAnyAdjusted) {
+      note.status = "PARTIALLY_ADJUSTED";
+    } else {
+      note.status = "FUND_ISSUED";
+    }
     if (req.body?.remarks !== undefined) {
       note.remarks = cleanText(req.body?.remarks, 2000);
     }
@@ -2944,6 +3043,477 @@ exports.createDurationAdjustmentEntries = async (req, res) => {
     await t.rollback();
     console.error("imprest.createDurationAdjustmentEntries error:", err);
     return res.status(500).json({ message: "Failed to save duration adjustment" });
+  }
+};
+
+exports.getWorkflowReport = async (req, res) => {
+  try {
+    ensureAssociations();
+
+    const reportType = String(req.query.type || "base_yearly").trim().toLowerCase();
+    const baseId = toPositiveInt(req.query.base_id);
+    const fiscalYearId = toPositiveInt(req.query.fiscal_year_id);
+    const month = parseMonth(req.query.month);
+    const demandType = parseDemandType(req.query.demand_type);
+    const pakkhik = parsePakkhik(req.query.pakkhik);
+    const noteId = toPositiveInt(req.query.note_id);
+    const codeId = toPositiveInt(req.query.financial_code_id);
+
+    const noteWhere = {};
+    if (baseId) noteWhere.base_id = baseId;
+    if (fiscalYearId) noteWhere.fiscal_year_id = fiscalYearId;
+    if (month) noteWhere.month = month;
+    if (demandType) noteWhere.demand_type = demandType;
+    if (pakkhik) noteWhere.pakkhik = pakkhik;
+    if (noteId) noteWhere.id = noteId;
+
+    if (isGeneralUser(req)) {
+      const assignedBaseId = getAssignedBaseId(req);
+      if (!assignedBaseId) {
+        return res.status(403).json({ message: "Your account has no assigned base/section" });
+      }
+      noteWhere.base_id = assignedBaseId;
+    }
+
+    const budgetWhere = {};
+    if (noteWhere.base_id) budgetWhere.base_id = noteWhere.base_id;
+    if (fiscalYearId) budgetWhere.fiscal_year_id = fiscalYearId;
+    if (codeId) budgetWhere.financial_code_id = codeId;
+
+    const [budgets, notes] = await Promise.all([
+      ImprestBudgetAllocation.findAll({
+        where: budgetWhere,
+        include: [
+          { model: ImprestBase, as: "base", attributes: ["id", "base_name", "base_code"], required: false },
+          { model: ImprestFiscalYear, as: "fiscalYear", attributes: ["id", "name"], required: false },
+          {
+            model: ImprestFinancialCode,
+            as: "financialCode",
+            attributes: ["id", "code", "khat_name_bn", "khat_name_en"],
+            required: false,
+          },
+        ],
+        order: [["id", "ASC"]],
+      }),
+      ImprestNote.findAll({
+        where: noteWhere,
+        include: [
+          { model: ImprestBase, as: "base", attributes: ["id", "base_name", "base_code"], required: false },
+          { model: ImprestFiscalYear, as: "fiscalYear", attributes: ["id", "name"], required: false },
+          {
+            model: ImprestNoteItem,
+            as: "items",
+            include: [
+              {
+                model: ImprestFinancialCode,
+                as: "financialCode",
+                attributes: ["id", "code", "khat_name_bn", "khat_name_en"],
+                required: false,
+              },
+            ],
+            required: false,
+          },
+          {
+            model: ImprestIssue,
+            as: "issues",
+            attributes: ["id", "issue_date", "dispatch_no", "voucher_no", "total_issued_amount"],
+            required: false,
+          },
+        ],
+        order: [["id", "ASC"], [{ model: ImprestNoteItem, as: "items" }, "id", "ASC"]],
+      }),
+    ]);
+
+    const budgetRows = budgets.map((row) => (row.toJSON ? row.toJSON() : row));
+    const noteRows = notes.map((row) => (row.toJSON ? row.toJSON() : row));
+
+    const issuedItemRows = [];
+    const noteRollups = [];
+
+    noteRows.forEach((note) => {
+      const normalizedStatus = normalizeNoteStatus(note.status);
+      const base = note.base || {};
+      const fy = note.fiscalYear || {};
+      const normalizedDemandType = normalizeStoredDemandType(note);
+      const normalizedPakkhik = normalizeStoredPakkhik(note);
+      const issues = Array.isArray(note.issues) ? note.issues : [];
+      const dispatch = issues.length ? issues[issues.length - 1] : null;
+
+      let noteIssuedTotal = 0;
+      let noteAdjustedTotal = 0;
+
+      (Array.isArray(note.items) ? note.items : []).forEach((item) => {
+        const normalizedItem = item?.toJSON ? item.toJSON() : item;
+        const itemCodeId = Number(normalizedItem?.financial_code_id || 0);
+        if (!itemCodeId) return;
+        if (codeId && itemCodeId !== codeId) return;
+
+        const budgetAmount = toMoney(normalizedItem.budget_amount, 0);
+        const previousIssued = toMoney(normalizedItem.previous_issued_amount, toMoney(normalizedItem.previous_expense, 0));
+        const claimAmount = toMoney(normalizedItem.current_claim, 0);
+        const approvedAmount = toMoney(normalizedItem.approved_amount, claimAmount);
+        const issuedAmount = toMoney(normalizedItem.issued_amount, 0);
+        const adjustedAmount = toMoney(normalizedItem.adjustment_amount, 0);
+        const pendingAdjustment = roundMoney(Math.max(0, issuedAmount - adjustedAmount));
+        const budgetRemaining = roundMoney(budgetAmount - previousIssued - issuedAmount);
+
+        noteIssuedTotal = roundMoney(noteIssuedTotal + issuedAmount);
+        noteAdjustedTotal = roundMoney(noteAdjustedTotal + adjustedAmount);
+
+        issuedItemRows.push({
+          note_id: Number(note.id),
+          note_no: note.note_no,
+          status: normalizedStatus,
+          base_id: Number(note.base_id),
+          base_name: base.base_name || "-",
+          base_code: base.base_code || "-",
+          fiscal_year_id: Number(note.fiscal_year_id),
+          fiscal_year_name: fy.name || "-",
+          month: Number(note.month),
+          month_name: monthName(note.month),
+          demand_type: normalizedDemandType,
+          pakkhik: normalizedPakkhik,
+          pakkhik_label: pakkhikNameEn(normalizedPakkhik),
+          period_start: formatDateOnly(note.period_start),
+          period_end: formatDateOnly(note.period_end),
+          note_item_id: Number(normalizedItem.id),
+          financial_code_id: itemCodeId,
+          code: normalizedItem?.financialCode?.code || `CODE-${itemCodeId}`,
+          khat_name_bn: normalizedItem?.financialCode?.khat_name_bn || normalizedItem?.khat_name || null,
+          khat_name_en: normalizedItem?.financialCode?.khat_name_en || null,
+          budget_amount: budgetAmount,
+          previous_issued_amount: previousIssued,
+          claimed_amount: claimAmount,
+          approved_amount: approvedAmount,
+          issued_amount: issuedAmount,
+          adjusted_amount: adjustedAmount,
+          pending_adjustment: pendingAdjustment,
+          unadjusted_amount: pendingAdjustment,
+          budget_remaining: budgetRemaining,
+          dispatch_no: dispatch?.dispatch_no || dispatch?.voucher_no || null,
+          dispatch_date: formatDateOnly(dispatch?.issue_date),
+        });
+      });
+
+      noteRollups.push({
+        note_id: Number(note.id),
+        note_no: note.note_no,
+        base_id: Number(note.base_id),
+        base_name: base.base_name || "-",
+        base_code: base.base_code || "-",
+        fiscal_year_id: Number(note.fiscal_year_id),
+        fiscal_year_name: fy.name || "-",
+        month: Number(note.month),
+        month_name: monthName(note.month),
+        demand_type: normalizedDemandType,
+        pakkhik: normalizedPakkhik,
+        status: normalizedStatus,
+        dispatch_no: dispatch?.dispatch_no || dispatch?.voucher_no || null,
+        issued_amount: noteIssuedTotal,
+        adjusted_amount: noteAdjustedTotal,
+        pending_adjustment: roundMoney(noteIssuedTotal - noteAdjustedTotal),
+      });
+    });
+
+    const sumBudgetByBase = new Map();
+    const sumBudgetByCode = new Map();
+    const sumBudgetByBaseCode = new Map();
+
+    budgetRows.forEach((row) => {
+      const amount = toMoney(row.budget_amount, 0);
+      const bId = Number(row.base_id || 0);
+      const cId = Number(row.financial_code_id || 0);
+      if (!bId || !cId) return;
+
+      sumBudgetByBase.set(bId, roundMoney(toMoney(sumBudgetByBase.get(bId), 0) + amount));
+      sumBudgetByCode.set(cId, roundMoney(toMoney(sumBudgetByCode.get(cId), 0) + amount));
+      const key = `${bId}::${cId}`;
+      sumBudgetByBaseCode.set(key, roundMoney(toMoney(sumBudgetByBaseCode.get(key), 0) + amount));
+    });
+
+    const rowsForIssued = issuedItemRows.filter((row) => toMoney(row.issued_amount, 0) > 0);
+
+    if (reportType === "dispatch_note_adjustment") {
+      const data = rowsForIssued.map((row) => ({
+        note_id: row.note_id,
+        note_no: row.note_no,
+        status: row.status,
+        dispatch_no: row.dispatch_no || "-",
+        base_id: row.base_id,
+        base_name: row.base_name,
+        base_code: row.base_code,
+        month: row.month,
+        month_name: row.month_name,
+        demand_type: row.demand_type,
+        pakkhik: row.pakkhik,
+        pakkhik_label: row.pakkhik_label,
+        financial_code_id: row.financial_code_id,
+        code: row.code,
+        khat_name_bn: row.khat_name_bn,
+        issued_amount: row.issued_amount,
+        adjusted_amount: row.adjusted_amount,
+        pending_adjustment: row.pending_adjustment,
+      }));
+
+      return res.json({
+        type: reportType,
+        filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        data,
+      });
+    }
+
+    if (reportType === "monthly_pakkhik") {
+      const byKey = new Map();
+
+      noteRollups.forEach((row) => {
+        if (toMoney(row.issued_amount, 0) <= 0 && toMoney(row.adjusted_amount, 0) <= 0) return;
+        const key = `${row.base_id}::${row.month}`;
+        const current =
+          byKey.get(key) ||
+          {
+            base_id: row.base_id,
+            base_name: row.base_name,
+            base_code: row.base_code,
+            month: row.month,
+            month_name: row.month_name,
+            first_half_issued: 0,
+            second_half_issued: 0,
+            complementary_issued: 0,
+            total_issued: 0,
+            adjusted_amount: 0,
+            pending_adjustment: 0,
+          };
+
+        const issuedAmount = toMoney(row.issued_amount, 0);
+        const adjustedAmount = toMoney(row.adjusted_amount, 0);
+        const pending = roundMoney(issuedAmount - adjustedAmount);
+
+        if (row.demand_type === "COMPLEMENTARY") {
+          current.complementary_issued = roundMoney(current.complementary_issued + issuedAmount);
+        } else if (row.pakkhik === "FIRST_HALF") {
+          current.first_half_issued = roundMoney(current.first_half_issued + issuedAmount);
+        } else if (row.pakkhik === "SECOND_HALF") {
+          current.second_half_issued = roundMoney(current.second_half_issued + issuedAmount);
+        }
+
+        current.total_issued = roundMoney(current.total_issued + issuedAmount);
+        current.adjusted_amount = roundMoney(current.adjusted_amount + adjustedAmount);
+        current.pending_adjustment = roundMoney(current.pending_adjustment + pending);
+
+        byKey.set(key, current);
+      });
+
+      const data = Array.from(byKey.values()).sort((a, b) => {
+        if (a.base_name !== b.base_name) return String(a.base_name).localeCompare(String(b.base_name));
+        return Number(a.month) - Number(b.month);
+      });
+
+      return res.json({
+        type: reportType,
+        filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        data,
+      });
+    }
+
+    if (reportType === "code_yearly") {
+      const codeMeta = new Map();
+      const issuedByCode = new Map();
+      const adjustedByCode = new Map();
+
+      budgetRows.forEach((row) => {
+        const cId = Number(row.financial_code_id || 0);
+        if (!cId) return;
+        if (!codeMeta.has(cId)) {
+          codeMeta.set(cId, {
+            financial_code_id: cId,
+            code: row.financialCode?.code || `CODE-${cId}`,
+            khat_name_bn: row.financialCode?.khat_name_bn || null,
+            khat_name_en: row.financialCode?.khat_name_en || null,
+          });
+        }
+      });
+
+      issuedItemRows.forEach((row) => {
+        const cId = Number(row.financial_code_id || 0);
+        if (!cId) return;
+        if (!codeMeta.has(cId)) {
+          codeMeta.set(cId, {
+            financial_code_id: cId,
+            code: row.code || `CODE-${cId}`,
+            khat_name_bn: row.khat_name_bn || null,
+            khat_name_en: row.khat_name_en || null,
+          });
+        }
+        issuedByCode.set(cId, roundMoney(toMoney(issuedByCode.get(cId), 0) + toMoney(row.issued_amount, 0)));
+        adjustedByCode.set(cId, roundMoney(toMoney(adjustedByCode.get(cId), 0) + toMoney(row.adjusted_amount, 0)));
+      });
+
+      const ids = new Set([...sumBudgetByCode.keys(), ...issuedByCode.keys(), ...adjustedByCode.keys()]);
+      const data = Array.from(ids)
+        .map((cId) => {
+          const budget = toMoney(sumBudgetByCode.get(cId), 0);
+          const issued = toMoney(issuedByCode.get(cId), 0);
+          const adjusted = toMoney(adjustedByCode.get(cId), 0);
+          return {
+            ...(codeMeta.get(cId) || {
+              financial_code_id: Number(cId),
+              code: `CODE-${Number(cId)}`,
+              khat_name_bn: null,
+              khat_name_en: null,
+            }),
+            budget_amount: budget,
+            total_issued: issued,
+            total_adjusted: adjusted,
+            pending_adjustment: roundMoney(issued - adjusted),
+            budget_remaining: roundMoney(budget - issued),
+          };
+        })
+        .sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
+
+      return res.json({
+        type: reportType,
+        filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        data,
+      });
+    }
+
+    if (reportType === "budget_utilization") {
+      const baseCodeMeta = new Map();
+      const issuedByBaseCode = new Map();
+      const adjustedByBaseCode = new Map();
+
+      budgetRows.forEach((row) => {
+        const bId = Number(row.base_id || 0);
+        const cId = Number(row.financial_code_id || 0);
+        if (!bId || !cId) return;
+        const key = `${bId}::${cId}`;
+        if (!baseCodeMeta.has(key)) {
+          baseCodeMeta.set(key, {
+            base_id: bId,
+            base_name: row.base?.base_name || "-",
+            base_code: row.base?.base_code || "-",
+            financial_code_id: cId,
+            code: row.financialCode?.code || `CODE-${cId}`,
+            khat_name_bn: row.financialCode?.khat_name_bn || null,
+            khat_name_en: row.financialCode?.khat_name_en || null,
+          });
+        }
+      });
+
+      issuedItemRows.forEach((row) => {
+        const key = `${Number(row.base_id)}::${Number(row.financial_code_id)}`;
+        if (!baseCodeMeta.has(key)) {
+          baseCodeMeta.set(key, {
+            base_id: Number(row.base_id),
+            base_name: row.base_name,
+            base_code: row.base_code,
+            financial_code_id: Number(row.financial_code_id),
+            code: row.code,
+            khat_name_bn: row.khat_name_bn || null,
+            khat_name_en: row.khat_name_en || null,
+          });
+        }
+        issuedByBaseCode.set(key, roundMoney(toMoney(issuedByBaseCode.get(key), 0) + toMoney(row.issued_amount, 0)));
+        adjustedByBaseCode.set(
+          key,
+          roundMoney(toMoney(adjustedByBaseCode.get(key), 0) + toMoney(row.adjusted_amount, 0))
+        );
+      });
+
+      const keys = new Set([...sumBudgetByBaseCode.keys(), ...issuedByBaseCode.keys(), ...adjustedByBaseCode.keys()]);
+      const data = Array.from(keys)
+        .map((key) => {
+          const budget = toMoney(sumBudgetByBaseCode.get(key), 0);
+          const issued = toMoney(issuedByBaseCode.get(key), 0);
+          const adjusted = toMoney(adjustedByBaseCode.get(key), 0);
+          return {
+            ...(baseCodeMeta.get(key) || {
+              base_id: null,
+              base_name: "-",
+              base_code: "-",
+              financial_code_id: null,
+              code: "-",
+              khat_name_bn: null,
+              khat_name_en: null,
+            }),
+            budget_amount: budget,
+            cumulative_issued: issued,
+            cumulative_adjusted: adjusted,
+            pending_adjustment: roundMoney(issued - adjusted),
+            remaining_budget: roundMoney(budget - issued),
+          };
+        })
+        .sort((a, b) => {
+          if (a.base_name !== b.base_name) return String(a.base_name).localeCompare(String(b.base_name));
+          return String(a.code || "").localeCompare(String(b.code || ""));
+        });
+
+      return res.json({
+        type: reportType,
+        filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        data,
+      });
+    }
+
+    const baseMeta = new Map();
+    const issuedByBase = new Map();
+    const adjustedByBase = new Map();
+
+    budgetRows.forEach((row) => {
+      const bId = Number(row.base_id || 0);
+      if (!bId) return;
+      if (!baseMeta.has(bId)) {
+        baseMeta.set(bId, {
+          base_id: bId,
+          base_name: row.base?.base_name || "-",
+          base_code: row.base?.base_code || "-",
+        });
+      }
+    });
+
+    issuedItemRows.forEach((row) => {
+      const bId = Number(row.base_id || 0);
+      if (!bId) return;
+      if (!baseMeta.has(bId)) {
+        baseMeta.set(bId, {
+          base_id: bId,
+          base_name: row.base_name || "-",
+          base_code: row.base_code || "-",
+        });
+      }
+      issuedByBase.set(bId, roundMoney(toMoney(issuedByBase.get(bId), 0) + toMoney(row.issued_amount, 0)));
+      adjustedByBase.set(bId, roundMoney(toMoney(adjustedByBase.get(bId), 0) + toMoney(row.adjusted_amount, 0)));
+    });
+
+    const baseIds = new Set([...sumBudgetByBase.keys(), ...issuedByBase.keys(), ...adjustedByBase.keys()]);
+    const data = Array.from(baseIds)
+      .map((bId) => {
+        const budget = toMoney(sumBudgetByBase.get(bId), 0);
+        const issued = toMoney(issuedByBase.get(bId), 0);
+        const adjusted = toMoney(adjustedByBase.get(bId), 0);
+        return {
+          ...(baseMeta.get(bId) || {
+            base_id: Number(bId),
+            base_name: "-",
+            base_code: "-",
+          }),
+          budget_amount: budget,
+          total_issued: issued,
+          total_adjusted: adjusted,
+          pending_adjustment: roundMoney(issued - adjusted),
+          budget_remaining: roundMoney(budget - issued),
+        };
+      })
+      .sort((a, b) => String(a.base_name || "").localeCompare(String(b.base_name || "")));
+
+    return res.json({
+      type: "base_yearly",
+      filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+      data,
+    });
+  } catch (err) {
+    console.error("imprest.getWorkflowReport error:", err);
+    return res.status(500).json({ message: "Failed to load workflow report" });
   }
 };
 

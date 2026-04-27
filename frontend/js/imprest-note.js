@@ -51,15 +51,31 @@ function setFiscalYearOptions() {
 function setFixedSelectors() {
   const month = byId("impMonth");
   const pakkhik = byId("impPakkhik");
+  const demandType = byId("impDemandType");
   if (month) month.innerHTML = createMonthOptionsHtml(new Date().getMonth() + 1);
+  if (demandType) demandType.value = "REGULAR";
   if (pakkhik) pakkhik.innerHTML = createPakkhikOptionsHtml("FIRST_HALF");
 }
 
-function setSupplementaryVisibility() {
-  const pakkhik = String(byId("impPakkhik")?.value || "").toUpperCase();
+function setDemandTypeVisibility() {
+  const demandType = String(byId("impDemandType")?.value || "REGULAR").toUpperCase();
+  const pakkhikSelect = byId("impPakkhik");
   const block = byId("impSuppPeriodBlock");
-  if (!block) return;
-  block.style.display = pakkhik === "SUPPLEMENTARY" ? "flex" : "none";
+  if (!block || !pakkhikSelect) return;
+
+  if (demandType === "COMPLEMENTARY") {
+    block.style.display = "flex";
+    pakkhikSelect.value = "NONE";
+    pakkhikSelect.disabled = true;
+    return;
+  }
+
+  block.style.display = "none";
+  pakkhikSelect.disabled = false;
+  const current = String(pakkhikSelect.value || "").toUpperCase();
+  if (!["FIRST_HALF", "SECOND_HALF"].includes(current)) {
+    pakkhikSelect.value = "FIRST_HALF";
+  }
 }
 
 function toCodeMeta(row) {
@@ -243,7 +259,15 @@ function setMeta(note) {
     ["Note No", note.note_no || "-"],
     ["Base", note.base?.base_name || "-"],
     ["Fiscal Year", note.fiscal_year?.name || "-"],
-    ["Period", `${note.month_name || "-"} (${getPakkhikLabel(note.pakkhik)})`],
+    ["Demand Type", String(note.demand_type || "REGULAR").toUpperCase() === "COMPLEMENTARY" ? "Complementary" : "Regular"],
+    [
+      "Period",
+      `${note.month_name || "-"} (${
+        String(note.demand_type || "REGULAR").toUpperCase() === "COMPLEMENTARY"
+          ? "Complementary"
+          : getPakkhikLabel(note.pakkhik)
+      })`,
+    ],
     ["Start Date", note.period_start || "-"],
     ["End Date", note.period_end || "-"],
     ["Submitted By", note.submitted_by_name || "-"],
@@ -385,17 +409,21 @@ function readGeneratePayload() {
   const baseId = toPositiveInt(byId("impBase")?.value);
   const fiscalYearId = toPositiveInt(byId("impFiscalYear")?.value);
   const month = toPositiveInt(byId("impMonth")?.value);
-  const pakkhik = String(byId("impPakkhik")?.value || "").trim();
+  const demandType = String(byId("impDemandType")?.value || "REGULAR")
+    .trim()
+    .toUpperCase();
+  const pakkhik = demandType === "COMPLEMENTARY" ? "NONE" : String(byId("impPakkhik")?.value || "").trim();
   const remarks = String(byId("impRemarks")?.value || "").trim();
 
-  if (!baseId || !fiscalYearId || !month || !pakkhik) {
-    throw new Error("Base, fiscal year, month and pakkhik are required");
+  if (!baseId || !fiscalYearId || !month || !demandType || !pakkhik) {
+    throw new Error("Base, fiscal year, month, demand type and pakkhik are required");
   }
 
   const payload = {
     base_id: baseId,
     fiscal_year_id: fiscalYearId,
     month,
+    demand_type: demandType,
     pakkhik,
     remarks: remarks || null,
   };
@@ -404,11 +432,11 @@ function readGeneratePayload() {
     throw new Error("No budget allocation found for selected base and fiscal year");
   }
 
-  if (String(pakkhik).toUpperCase() === "SUPPLEMENTARY") {
+  if (demandType === "COMPLEMENTARY") {
     const periodStart = String(byId("impPeriodStart")?.value || "").trim();
     const periodEnd = String(byId("impPeriodEnd")?.value || "").trim();
     if (!periodStart || !periodEnd) {
-      throw new Error("Supplementary note requires period start and period end");
+      throw new Error("Complementary note requires period start and period end");
     }
     payload.period_start = periodStart;
     payload.period_end = periodEnd;
@@ -644,11 +672,12 @@ async function loadByIdFromQuery() {
     if (out.data?.base_id) byId("impBase").value = String(out.data.base_id);
     if (out.data?.fiscal_year_id) byId("impFiscalYear").value = String(out.data.fiscal_year_id);
     if (out.data?.month) byId("impMonth").value = String(out.data.month);
+    if (out.data?.demand_type) byId("impDemandType").value = String(out.data.demand_type);
     if (out.data?.pakkhik) byId("impPakkhik").value = String(out.data.pakkhik);
     if (out.data?.period_start) byId("impPeriodStart").value = String(out.data.period_start);
     if (out.data?.period_end) byId("impPeriodEnd").value = String(out.data.period_end);
 
-    setSupplementaryVisibility();
+    setDemandTypeVisibility();
     await loadBudgetCodes();
   } catch (err) {
     showToast(err.message || "Failed to load note", "error");
@@ -667,7 +696,7 @@ function bindEvents() {
   byId("impFiscalYear")?.addEventListener("change", () => {
     loadBudgetCodes().catch((err) => showToast(err.message || "Failed to load codes", "error"));
   });
-  byId("impPakkhik")?.addEventListener("change", setSupplementaryVisibility);
+  byId("impDemandType")?.addEventListener("change", setDemandTypeVisibility);
   byId("impAddCodeSearch")?.addEventListener("input", renderAddCodeList);
   byId("impAddCodeSearch")?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
@@ -710,7 +739,7 @@ function bindEvents() {
 
 async function init() {
   setFixedSelectors();
-  setSupplementaryVisibility();
+  setDemandTypeVisibility();
   bindEvents();
   await loadMasters();
   await loadBudgetCodes();

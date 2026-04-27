@@ -25,6 +25,8 @@ router.post(
   imprestController.createDurationAdjustmentEntries
 );
 
+router.get("/reports", imprestController.getWorkflowReport);
+
 router.post("/notes/generate", requireRole("admin", "general"), imprestController.generateNote);
 router.get("/notes", imprestController.listNotes);
 router.get("/notes/:id", imprestController.getNoteById);

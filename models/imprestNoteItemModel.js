@@ -21,6 +21,11 @@ const ImprestNoteItem = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    previous_issued_amount: {
+      type: DataTypes.DECIMAL(18, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
     previous_expense: {
       type: DataTypes.DECIMAL(18, 2),
       allowNull: false,
@@ -42,6 +47,16 @@ const ImprestNoteItem = sequelize.define(
       defaultValue: 0,
     },
     adjustment_amount: {
+      type: DataTypes.DECIMAL(18, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    unadjusted_amount: {
+      type: DataTypes.DECIMAL(18, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    budget_remaining: {
       type: DataTypes.DECIMAL(18, 2),
       allowNull: false,
       defaultValue: 0,

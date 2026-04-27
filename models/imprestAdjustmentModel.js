@@ -8,6 +8,10 @@ const ImprestAdjustment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    note_item_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     financial_code_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -20,6 +24,10 @@ const ImprestAdjustment = sequelize.define(
     adjustment_date: {
       type: DataTypes.DATEONLY,
       allowNull: false,
+    },
+    adjustment_ref_no: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
     },
     voucher_no: {
       type: DataTypes.STRING(120),
@@ -38,6 +46,7 @@ const ImprestAdjustment = sequelize.define(
     tableName: "imprest_adjustments",
     indexes: [
       { fields: ["note_id"] },
+      { fields: ["note_item_id"] },
       { fields: ["financial_code_id"] },
       { fields: ["adjustment_date"] },
     ],

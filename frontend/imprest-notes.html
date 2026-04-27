@@ -59,9 +59,9 @@
                 <option value="">All</option>
                 <option value="DRAFT">DRAFT</option>
                 <option value="SUBMITTED">SUBMITTED</option>
-                <option value="FORWARDED">FORWARDED</option>
                 <option value="APPROVED">APPROVED</option>
                 <option value="FUND_ISSUED">FUND ISSUED</option>
+                <option value="PARTIALLY_ADJUSTED">PARTIALLY ADJUSTED</option>
                 <option value="ADJUSTED">ADJUSTED</option>
                 <option value="REJECTED">REJECTED</option>
               </select>
@@ -146,7 +146,7 @@
             <input id="impIssueDate" class="imp-input" type="date" />
           </label>
           <label class="imp-field">
-            <span>Voucher No</span>
+            <span>Dispatch No</span>
             <input id="impIssueVoucher" class="imp-input" />
           </label>
           <label class="imp-field wide" style="max-width:none;">
@@ -162,9 +162,9 @@
                 <th>SL</th>
                 <th>খাত</th>
                 <th>কোড</th>
+                <th class="imp-right">Claimed</th>
                 <th class="imp-right">Approved</th>
-                <th class="imp-right">Already Issued</th>
-                <th class="imp-right">Issue Now</th>
+                <th class="imp-right">Issue Amount</th>
               </tr>
             </thead>
             <tbody id="impIssueRows"></tbody>
@@ -194,7 +194,7 @@
             <input id="impAdjustDate" class="imp-input" type="date" />
           </label>
           <label class="imp-field">
-            <span>Voucher No</span>
+            <span>Adjustment Ref No</span>
             <input id="impAdjustVoucher" class="imp-input" />
           </label>
           <label class="imp-field wide" style="max-width:none;">

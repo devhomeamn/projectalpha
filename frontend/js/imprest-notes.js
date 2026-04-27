@@ -62,7 +62,7 @@ function setFilterOptions() {
       <option value="">All</option>
       <option value="FIRST_HALF">1st Half</option>
       <option value="SECOND_HALF">2nd Half</option>
-      <option value="SUPPLEMENTARY">Supplementary</option>
+      <option value="NONE">None</option>
     `;
   }
 }
@@ -107,11 +107,7 @@ function renderRows() {
         actions.push(`<button class="imp-mini-btn warn" data-action="issue" data-id="${Number(row.id)}" type="button">Issue Fund</button>`);
       }
       if (row.can_adjust) {
-        actions.push(
-          `<a class="imp-mini-btn" href="imprest-adjustment.html?base_id=${Number(row.base_id)}&fiscal_year_id=${Number(
-            row.fiscal_year_id
-          )}">Duration Adj</a>`
-        );
+        actions.push(`<button class="imp-mini-btn" data-action="adjust" data-id="${Number(row.id)}" type="button">Adjust</button>`);
       }
       if (row.can_print) {
         actions.push(`<button class="imp-mini-btn" data-action="print" data-id="${Number(row.id)}" type="button">Print</button>`);
@@ -123,7 +119,11 @@ function renderRows() {
           <td>${escapeHtml(row.note_no || "-")}</td>
           <td>${escapeHtml(row.base?.base_name || "-")}</td>
           <td>${escapeHtml(row.fiscal_year?.name || "-")}</td>
-          <td>${escapeHtml(row.month_name || "-")} (${escapeHtml(getPakkhikLabel(row.pakkhik))})</td>
+          <td>${escapeHtml(row.month_name || "-")} (${
+            String(row.demand_type || "REGULAR").toUpperCase() === "COMPLEMENTARY"
+              ? "Complementary"
+              : escapeHtml(getPakkhikLabel(row.pakkhik))
+          })</td>
           <td><span class="imp-status ${normalizeStatusClass(row.status)}">${escapeHtml(row.status || "-")}</span></td>
           <td class="imp-right">${formatMoney(row.total_current_claim)}</td>
           <td class="imp-right">${formatMoney(row.total_remaining)}</td>
@@ -219,18 +219,18 @@ function renderIssueRows(items) {
 
   tbody.innerHTML = rows
     .map((item, idx) => {
+      const claimed = toNumber(item.current_claim);
       const approved = toNumber(item.approved_amount || item.current_claim);
-      const issued = toNumber(item.issued_amount);
-      const remaining = Math.max(0, Number((approved - issued).toFixed(2)));
+      const issueNow = toNumber(item.current_claim);
 
       return `
-        <tr data-item-id="${Number(item.id)}" data-code-id="${Number(item.financial_code_id)}" data-remaining="${remaining}">
+        <tr data-item-id="${Number(item.id)}" data-code-id="${Number(item.financial_code_id)}" data-claim="${issueNow}">
           <td>${idx + 1}</td>
           <td>${escapeHtml(item.khat_name || item.financial_code?.khat_name_bn || "-")}</td>
           <td>${escapeHtml(item.financial_code?.code || "-")}</td>
+          <td class="imp-right">${formatMoney(claimed)}</td>
           <td class="imp-right">${formatMoney(approved)}</td>
-          <td class="imp-right">${formatMoney(issued)}</td>
-          <td class="imp-right"><input class="imp-input issue-now" type="number" min="0" step="0.01" max="${remaining}" value="${remaining}" /></td>
+          <td class="imp-right">${formatMoney(issueNow)}</td>
         </tr>
       `;
     })
@@ -258,22 +258,13 @@ async function submitIssueForm(e) {
   const noteId = toPositiveInt(byId("impIssueId")?.value);
   if (!noteId) return;
 
-  const items = Array.from(byId("impIssueRows")?.querySelectorAll("tr") || [])
-    .map((row) => {
-      const remaining = toNumber(row.getAttribute("data-remaining"));
-      const issueNow = toNumber(row.querySelector(".issue-now")?.value);
-      if (issueNow <= 0) return null;
-      if (issueNow > remaining) throw new Error("Issue amount exceeds remaining approved amount");
-      return {
-        id: Number(row.getAttribute("data-item-id")),
-        financial_code_id: Number(row.getAttribute("data-code-id")),
-        issued_amount: Number(issueNow.toFixed(2)),
-      };
-    })
-    .filter(Boolean);
+  const totalIssueAmount = Array.from(byId("impIssueRows")?.querySelectorAll("tr") || []).reduce(
+    (sum, row) => sum + toNumber(row.getAttribute("data-claim")),
+    0
+  );
 
-  if (!items.length) {
-    showToast("Enter issue amount", "warn");
+  if (totalIssueAmount <= 0) {
+    showToast("No claim amount found for issue", "warn");
     return;
   }
 
@@ -285,9 +276,8 @@ async function submitIssueForm(e) {
       method: "POST",
       body: JSON.stringify({
         issue_date: byId("impIssueDate")?.value || null,
-        voucher_no: String(byId("impIssueVoucher")?.value || "").trim() || null,
+        dispatch_no: String(byId("impIssueVoucher")?.value || "").trim() || null,
         remarks: String(byId("impIssueRemarks")?.value || "").trim() || null,
-        items,
       }),
     });
 
@@ -335,10 +325,12 @@ async function openAdjustModal(noteId) {
   try {
     const out = await imprestFetch(`/notes/${noteId}`);
     const note = out.data;
+    const issues = ensureArray(note.issues);
+    const latestIssue = issues.length ? issues[issues.length - 1] : null;
 
     byId("impAdjustId").value = String(noteId);
     byId("impAdjustDate").value = new Date().toISOString().slice(0, 10);
-    byId("impAdjustVoucher").value = "";
+    byId("impAdjustVoucher").value = latestIssue?.dispatch_no || latestIssue?.voucher_no || "";
     byId("impAdjustRemarks").value = note.remarks || "";
     renderAdjustRows(note.items || []);
     toggleModal("impAdjustModal", true);
@@ -359,6 +351,7 @@ async function submitAdjustForm(e) {
       if (addNow <= 0) return null;
       if (addNow > pending) throw new Error("Adjustment amount exceeds pending amount");
       return {
+        note_item_id: Number(row.getAttribute("data-item-id")),
         id: Number(row.getAttribute("data-item-id")),
         financial_code_id: Number(row.getAttribute("data-code-id")),
         adjusted_amount: Number(addNow.toFixed(2)),
@@ -379,7 +372,7 @@ async function submitAdjustForm(e) {
       method: "POST",
       body: JSON.stringify({
         adjustment_date: byId("impAdjustDate")?.value || null,
-        voucher_no: String(byId("impAdjustVoucher")?.value || "").trim() || null,
+        adjustment_ref_no: String(byId("impAdjustVoucher")?.value || "").trim() || null,
         remarks: String(byId("impAdjustRemarks")?.value || "").trim() || null,
         adjustments,
       }),

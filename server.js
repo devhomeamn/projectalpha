@@ -185,13 +185,163 @@ async function ensureImprestNoteIndexes() {
   }
 }
 
+async function ensureImprestWorkflowColumns() {
+  const qi = sequelize.getQueryInterface();
+
+  try {
+    const noteCols = await qi.describeTable("imprest_notes");
+    if (!noteCols.demand_type) {
+      await qi.addColumn("imprest_notes", "demand_type", {
+        type: DataTypes.ENUM("REGULAR", "COMPLEMENTARY"),
+        allowNull: false,
+        defaultValue: "REGULAR",
+      });
+    }
+
+    try {
+      await qi.changeColumn("imprest_notes", "pakkhik", {
+        type: DataTypes.ENUM("FIRST_HALF", "SECOND_HALF", "NONE", "SUPPLEMENTARY"),
+        allowNull: false,
+      });
+    } catch (err) {
+      console.warn("Could not update imprest_notes.pakkhik enum:", err.message);
+    }
+
+    try {
+      await qi.changeColumn("imprest_notes", "status", {
+        type: DataTypes.ENUM(
+          "DRAFT",
+          "SUBMITTED",
+          "APPROVED",
+          "FUND_ISSUED",
+          "PARTIALLY_ADJUSTED",
+          "ADJUSTED",
+          "REJECTED",
+          "FORWARDED"
+        ),
+        allowNull: false,
+        defaultValue: "DRAFT",
+      });
+    } catch (err) {
+      console.warn("Could not update imprest_notes.status enum:", err.message);
+    }
+
+    await sequelize.query(`
+      UPDATE imprest_notes
+      SET demand_type = CASE
+        WHEN UPPER(COALESCE(pakkhik, '')) IN ('SUPPLEMENTARY', 'NONE') THEN 'COMPLEMENTARY'
+        ELSE 'REGULAR'
+      END
+      WHERE demand_type IS NULL OR demand_type = ''
+    `);
+    await sequelize.query(`
+      UPDATE imprest_notes
+      SET pakkhik = 'NONE'
+      WHERE UPPER(COALESCE(pakkhik, '')) = 'SUPPLEMENTARY'
+    `);
+    await sequelize.query(`
+      UPDATE imprest_notes
+      SET status = 'SUBMITTED'
+      WHERE UPPER(COALESCE(status, '')) = 'FORWARDED'
+    `);
+  } catch (err) {
+    console.warn("Could not align imprest_notes workflow columns:", err.message);
+  }
+
+  try {
+    const itemCols = await qi.describeTable("imprest_note_items");
+    if (!itemCols.previous_issued_amount) {
+      await qi.addColumn("imprest_note_items", "previous_issued_amount", {
+        type: DataTypes.DECIMAL(18, 2),
+        allowNull: false,
+        defaultValue: 0,
+      });
+    }
+    if (!itemCols.unadjusted_amount) {
+      await qi.addColumn("imprest_note_items", "unadjusted_amount", {
+        type: DataTypes.DECIMAL(18, 2),
+        allowNull: false,
+        defaultValue: 0,
+      });
+    }
+    if (!itemCols.budget_remaining) {
+      await qi.addColumn("imprest_note_items", "budget_remaining", {
+        type: DataTypes.DECIMAL(18, 2),
+        allowNull: false,
+        defaultValue: 0,
+      });
+    }
+
+    await sequelize.query(`
+      UPDATE imprest_note_items
+      SET previous_issued_amount = COALESCE(previous_issued_amount, previous_expense, 0),
+          previous_expense = COALESCE(previous_issued_amount, previous_expense, 0),
+          unadjusted_amount = GREATEST(COALESCE(issued_amount, 0) - COALESCE(adjustment_amount, 0), 0),
+          budget_remaining = COALESCE(budget_amount, 0) - COALESCE(previous_issued_amount, previous_expense, 0) - COALESCE(issued_amount, 0)
+    `);
+  } catch (err) {
+    console.warn("Could not align imprest_note_items workflow columns:", err.message);
+  }
+
+  try {
+    const adjCols = await qi.describeTable("imprest_adjustments");
+    if (!adjCols.note_item_id) {
+      await qi.addColumn("imprest_adjustments", "note_item_id", {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      });
+    }
+    if (!adjCols.adjustment_ref_no) {
+      await qi.addColumn("imprest_adjustments", "adjustment_ref_no", {
+        type: DataTypes.STRING(120),
+        allowNull: true,
+      });
+    }
+    await sequelize.query(`
+      UPDATE imprest_adjustments
+      SET adjustment_ref_no = COALESCE(adjustment_ref_no, voucher_no)
+    `);
+    await sequelize.query(`
+      UPDATE imprest_adjustments a
+      JOIN imprest_note_items i
+        ON i.note_id = a.note_id
+       AND i.financial_code_id = a.financial_code_id
+      SET a.note_item_id = i.id
+      WHERE a.note_item_id IS NULL
+    `);
+  } catch (err) {
+    console.warn("Could not align imprest_adjustments workflow columns:", err.message);
+  }
+
+  try {
+    const issueCols = await qi.describeTable("imprest_issues");
+    if (!issueCols.dispatch_no) {
+      await qi.addColumn("imprest_issues", "dispatch_no", {
+        type: DataTypes.STRING(120),
+        allowNull: true,
+      });
+    }
+    await sequelize.query(`
+      UPDATE imprest_issues
+      SET dispatch_no = COALESCE(dispatch_no, voucher_no)
+    `);
+  } catch (err) {
+    console.warn("Could not align imprest_issues workflow columns:", err.message);
+  }
+}
+
 async function startServer() {
   try {
+    // Legacy database hotfix: ensure newly introduced imprest columns exist
+    // before sequelize.sync() attempts to add indexes on them.
+    await ensureImprestWorkflowColumns();
+
     await sequelize.sync();
     await ensureUserMobileColumn();
     await ensureUserRoleEnum();
     await ensureRecordSectionEntryColumns();
     await ensureImprestNoteIndexes();
+    await ensureImprestWorkflowColumns();
     console.log('Database synced with approval system');
 
     const PORT = process.env.PORT || 4000;

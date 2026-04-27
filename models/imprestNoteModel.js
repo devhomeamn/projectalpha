@@ -21,8 +21,13 @@ const ImprestNote = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    demand_type: {
+      type: DataTypes.ENUM("REGULAR", "COMPLEMENTARY"),
+      allowNull: false,
+      defaultValue: "REGULAR",
+    },
     pakkhik: {
-      type: DataTypes.ENUM("FIRST_HALF", "SECOND_HALF", "SUPPLEMENTARY"),
+      type: DataTypes.ENUM("FIRST_HALF", "SECOND_HALF", "NONE", "SUPPLEMENTARY"),
       allowNull: false,
     },
     period_start: {
@@ -37,11 +42,12 @@ const ImprestNote = sequelize.define(
       type: DataTypes.ENUM(
         "DRAFT",
         "SUBMITTED",
-        "FORWARDED",
         "APPROVED",
         "FUND_ISSUED",
+        "PARTIALLY_ADJUSTED",
         "ADJUSTED",
-        "REJECTED"
+        "REJECTED",
+        "FORWARDED"
       ),
       allowNull: false,
       defaultValue: "DRAFT",
@@ -97,7 +103,7 @@ const ImprestNote = sequelize.define(
       },
       { name: "ix_imp_note_status", fields: ["status"] },
       { name: "ix_imp_note_base_fy", fields: ["base_id", "fiscal_year_id"] },
-      { name: "ix_imp_note_month_pk", fields: ["month", "pakkhik"] },
+      { name: "ix_imp_note_month_pk", fields: ["month", "pakkhik", "demand_type"] },
     ],
   }
 );

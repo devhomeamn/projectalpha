@@ -94,11 +94,18 @@ const TENS_BN = [
 ];
 
 function normalizeNumber(value) {
-  const n = Number(value);
+  if (value === null || value === undefined || String(value).trim() === "") return 0;
+
+  const safe = String(value)
+    .replace(/[\u09e6-\u09ef]/g, (d) => String(d.charCodeAt(0) - 0x09e6))
+    .replace(/,/g, "")
+    .trim();
+
+  const n = Number(safe);
   return Number.isFinite(n) ? n : 0;
 }
 
-export function formatMoney(value, locale = "en-US") {
+export function formatMoney(value, locale = "en-IN") {
   const n = normalizeNumber(value);
   return n.toLocaleString(locale, {
     minimumFractionDigits: 2,
@@ -111,7 +118,7 @@ export function toBanglaDigits(input) {
 }
 
 export function formatMoneyBn(value) {
-  return toBanglaDigits(formatMoney(value, "en-US"));
+  return toBanglaDigits(formatMoney(value, "en-IN"));
 }
 
 export function formatDateBn(value) {
@@ -197,6 +204,7 @@ export function getPakkhikLabel(value) {
   const text = String(value || "").toUpperCase();
   if (text === "FIRST_HALF") return "\u09e7\u09ae \u09aa\u09be\u0995\u09cd\u09b7\u09bf\u0995";
   if (text === "SECOND_HALF") return "\u09e8\u09df \u09aa\u09be\u0995\u09cd\u09b7\u09bf\u0995";
+  if (text === "NONE") return "N/A";
   if (text === "SUPPLEMENTARY") return "\u09b8\u09ae\u09cd\u09aa\u09c2\u09b0\u0995";
   return value || "-";
 }
@@ -205,6 +213,7 @@ export function getPakkhikShort(value) {
   const safe = String(value || "").toUpperCase();
   if (safe === "FIRST_HALF") return "\u09e7\u09ae";
   if (safe === "SECOND_HALF") return "\u09e8\u09df";
+  if (safe === "NONE") return "N/A";
   if (safe === "SUPPLEMENTARY") return "\u09b8\u09ae\u09cd\u09aa\u09c2\u09b0\u0995";
   return "-";
 }
@@ -222,7 +231,7 @@ export function createPakkhikOptionsHtml(selected = null) {
   return [
     `<option value="FIRST_HALF" ${safe === "FIRST_HALF" ? "selected" : ""}>1st Half</option>`,
     `<option value="SECOND_HALF" ${safe === "SECOND_HALF" ? "selected" : ""}>2nd Half</option>`,
-    `<option value="SUPPLEMENTARY" ${safe === "SUPPLEMENTARY" ? "selected" : ""}>Supplementary</option>`,
+    `<option value="NONE" ${safe === "NONE" || safe === "SUPPLEMENTARY" ? "selected" : ""}>None</option>`,
   ].join("");
 }
 

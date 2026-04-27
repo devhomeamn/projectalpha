@@ -25,12 +25,33 @@
 
         <section class="imp-card">
           <div class="imp-toolbar">
+            <label class="imp-field"><span>Report Type</span>
+              <select id="repType" class="imp-select">
+                <option value="base_yearly">1. Base-wise Yearly Summary</option>
+                <option value="code_yearly">2. Code-wise Yearly Summary</option>
+                <option value="monthly_pakkhik">3. Monthly Pakkhik Report</option>
+                <option value="dispatch_note_adjustment">4. Dispatch/Note-wise Adjustment</option>
+                <option value="budget_utilization">5. Budget Utilization</option>
+              </select>
+            </label>
             <label class="imp-field"><span>Base</span><select id="repBase" class="imp-select"><option value="">All</option></select></label>
             <label class="imp-field"><span>Fiscal Year</span><select id="repFy" class="imp-select"><option value="">All</option></select></label>
             <label class="imp-field"><span>Month</span><select id="repMonth" class="imp-select"><option value="">All</option></select></label>
-            <label class="imp-field"><span>Pakkhik</span><select id="repPakkhik" class="imp-select"><option value="">All</option></select></label>
-            <label class="imp-field"><span>Status</span><select id="repStatus" class="imp-select"><option value="">All</option><option value="APPROVED">APPROVED</option><option value="FUND_ISSUED">FUND_ISSUED</option><option value="ADJUSTED">ADJUSTED</option><option value="SUBMITTED">SUBMITTED</option><option value="REJECTED">REJECTED</option></select></label>
-            <label class="imp-field wide"><span>Search</span><input id="repSearch" class="imp-input" placeholder="Note no / remarks" /></label>
+            <label class="imp-field"><span>Demand Type</span>
+              <select id="repDemandType" class="imp-select">
+                <option value="">All</option>
+                <option value="REGULAR">Regular</option>
+                <option value="COMPLEMENTARY">Complementary</option>
+              </select>
+            </label>
+            <label class="imp-field"><span>Pakkhik</span>
+              <select id="repPakkhik" class="imp-select">
+                <option value="">All</option>
+                <option value="FIRST_HALF">1st Half</option>
+                <option value="SECOND_HALF">2nd Half</option>
+                <option value="NONE">None</option>
+              </select>
+            </label>
             <div class="imp-actions">
               <button id="repLoadBtn" class="imp-btn secondary" type="button">Load</button>
               <button id="repClearBtn" class="imp-btn secondary" type="button">Clear</button>
@@ -40,32 +61,20 @@
         </section>
 
         <section class="imp-kpi-grid">
-          <article class="imp-kpi"><p class="label">Total Notes</p><p class="value" id="repKpiNotes">0</p></article>
-          <article class="imp-kpi"><p class="label">Total Budget</p><p class="value" id="repKpiBudget">0.00</p></article>
-          <article class="imp-kpi"><p class="label">Total Claim</p><p class="value" id="repKpiClaim">0.00</p></article>
-          <article class="imp-kpi"><p class="label">Total Remaining</p><p class="value" id="repKpiRemaining">0.00</p></article>
+          <article class="imp-kpi"><p class="label">Rows</p><p class="value" id="repKpiRows">0</p></article>
+          <article class="imp-kpi"><p class="label">Budget</p><p class="value" id="repKpiBudget">0.00</p></article>
+          <article class="imp-kpi"><p class="label">Issued</p><p class="value" id="repKpiIssued">0.00</p></article>
+          <article class="imp-kpi"><p class="label">Adjusted</p><p class="value" id="repKpiAdjusted">0.00</p></article>
+          <article class="imp-kpi"><p class="label">Pending</p><p class="value" id="repKpiPending">0.00</p></article>
         </section>
 
         <section class="imp-card">
           <div class="imp-card-head">
-            <h3>Note Summary</h3>
+            <h3 id="repTableTitle">Report Data</h3>
           </div>
           <div class="imp-table-wrap">
             <table class="imp-table" id="repTable">
-              <thead>
-                <tr>
-                  <th>SL</th>
-                  <th>Note No</th>
-                  <th>Base</th>
-                  <th>Fiscal Year</th>
-                  <th>Period</th>
-                  <th>Status</th>
-                  <th class="imp-right">Budget</th>
-                  <th class="imp-right">Previous</th>
-                  <th class="imp-right">Claim</th>
-                  <th class="imp-right">Remaining</th>
-                </tr>
-              </thead>
+              <thead id="repHead"></thead>
               <tbody id="repRows"></tbody>
             </table>
           </div>
@@ -81,7 +90,7 @@
     renderPageHeader({
       icon: "analytics",
       title: "Imprest Report",
-      subtitle: "Filter-wise note summary and financial totals.",
+      subtitle: "Base/code/monthly/dispatch/utilization reports from issued and adjustment data.",
       showClock: true,
     });
   </script>

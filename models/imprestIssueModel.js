@@ -12,6 +12,10 @@ const ImprestIssue = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
+    dispatch_no: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+    },
     voucher_no: {
       type: DataTypes.STRING(120),
       allowNull: true,
