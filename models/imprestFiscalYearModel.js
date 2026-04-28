@@ -25,6 +25,8 @@ const ImprestFiscalYear = sequelize.define(
   },
   {
     tableName: "imprest_fiscal_years",
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
     indexes: [
       { fields: ["status"] },
       { fields: ["start_date", "end_date"] },

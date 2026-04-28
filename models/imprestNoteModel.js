@@ -95,6 +95,8 @@ const ImprestNote = sequelize.define(
   },
   {
     tableName: "imprest_notes",
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
     indexes: [
       {
         name: "ux_imp_note_base_fy_m_pk_ps",

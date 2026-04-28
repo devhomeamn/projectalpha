@@ -23,7 +23,9 @@ const ImprestBudgetAllocation = sequelize.define(
     },
   },
   {
-    tableName: "imprest_budget_allocations",
+    tableName: "imprest_budgets",
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
     indexes: [
       {
         name: "ux_imp_budg_base_fy_code",

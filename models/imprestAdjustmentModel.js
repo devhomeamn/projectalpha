@@ -48,6 +48,8 @@ const ImprestAdjustment = sequelize.define(
   },
   {
     tableName: "imprest_adjustments",
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
     indexes: [
       { fields: ["note_id"] },
       { fields: ["note_item_id"] },

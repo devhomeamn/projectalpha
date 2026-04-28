@@ -65,6 +65,8 @@ const ImprestDurationAdjustment = sequelize.define(
   },
   {
     tableName: "imprest_duration_adjustments",
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
     indexes: [
       { name: "ix_imp_dur_adj_base_fy", fields: ["base_id", "fiscal_year_id"] },
       { name: "ix_imp_dur_adj_key", fields: ["duration_key"] },

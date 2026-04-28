@@ -18,6 +18,7 @@ const sequelizeOptions = {
   logging: false,
   timezone: dbTimezone, // safe; MySQL will handle
   dialectOptions: {
+    charset: "utf8mb4",
     connectTimeout: 10000,
     ...(useSSL
       ? {
@@ -29,6 +30,10 @@ const sequelizeOptions = {
           },
         }
       : {}),
+  },
+  define: {
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
   },
   pool: {
     max: Number(process.env.DB_POOL_MAX || 10),

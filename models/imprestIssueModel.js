@@ -36,6 +36,8 @@ const ImprestIssue = sequelize.define(
   },
   {
     tableName: "imprest_issues",
+    charset: "utf8mb4",
+    collate: "utf8mb4_unicode_ci",
     indexes: [
       { fields: ["note_id"] },
       { fields: ["issue_date"] },
