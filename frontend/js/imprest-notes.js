@@ -27,6 +27,8 @@ const state = {
   total: 0,
   bases: [],
   fiscalYears: [],
+  adjustBudgetRows: [],
+  adjustBudgetByCode: new Map(),
 };
 
 function toggleModal(id, open) {
@@ -297,28 +299,130 @@ function renderAdjustRows(items) {
   const rows = ensureArray(items);
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="imp-empty">No item found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="imp-empty">No item found</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows
     .map((item, idx) => {
+      const itemId = toPositiveInt(item.id ?? item.note_item_id);
+      const codeId = toPositiveInt(item.financial_code_id);
       const issued = toNumber(item.issued_amount);
       const adjusted = toNumber(item.adjustment_amount);
       const pending = Math.max(0, Number((issued - adjusted).toFixed(2)));
+      const noIssueDisabled = issued > 0 ? "disabled" : "";
 
       return `
-        <tr data-item-id="${Number(item.id)}" data-code-id="${Number(item.financial_code_id)}" data-pending="${pending}">
+        <tr data-item-id="${itemId || ""}" data-code-id="${codeId || ""}" data-issued="${issued}" data-pending="${pending}">
           <td>${idx + 1}</td>
           <td>${escapeHtml(item.khat_name || item.financial_code?.khat_name_bn || "-")}</td>
           <td>${escapeHtml(item.financial_code?.code || "-")}</td>
           <td class="imp-right">${formatMoney(issued)}</td>
           <td class="imp-right">${formatMoney(adjusted)}</td>
+          <td class="imp-right">${formatMoney(pending)}</td>
           <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${pending}" value="${pending}" /></td>
+          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="0" ${noIssueDisabled} /></td>
         </tr>
       `;
     })
     .join("");
+}
+
+function buildAdjustOptionLabel(row) {
+  const code = row?.financial_code?.code || `CODE-${Number(row?.financial_code_id || 0)}`;
+  const khat = row?.financial_code?.khat_name_bn || row?.financial_code?.khat_name_en || "-";
+  return `${code} - ${khat}`;
+}
+
+function setAdjustAddCodeOptions(note) {
+  const select = byId("impAdjustAddCode");
+  if (!select) return;
+
+  const existingCodes = new Set(
+    ensureArray(note?.items)
+      .map((item) => toPositiveInt(item.financial_code_id))
+      .filter(Boolean)
+  );
+
+  const rows = ensureArray(state.adjustBudgetRows).filter((row) => {
+    const codeId = toPositiveInt(row.financial_code_id);
+    return codeId && !existingCodes.has(codeId);
+  });
+
+  state.adjustBudgetByCode = new Map();
+  rows.forEach((row) => {
+    const codeId = toPositiveInt(row.financial_code_id);
+    if (!codeId) return;
+    state.adjustBudgetByCode.set(codeId, row);
+  });
+
+  select.innerHTML =
+    '<option value="">Select khat/code</option>' +
+    rows
+      .map((row) => `<option value="${Number(row.financial_code_id)}">${escapeHtml(buildAdjustOptionLabel(row))}</option>`)
+      .join("");
+}
+
+function addAdjustCodeRow() {
+  const tbody = byId("impAdjustRows");
+  const select = byId("impAdjustAddCode");
+  const amountInput = byId("impAdjustAddAmount");
+  if (!tbody || !select || !amountInput) return;
+
+  const codeId = toPositiveInt(select.value);
+  if (!codeId) {
+    showToast("Select a khat/code first", "warn");
+    return;
+  }
+
+  const amount = toNumber(amountInput.value);
+  if (amount < 0) {
+    showToast("Adjusted amount cannot be negative", "warn");
+    return;
+  }
+
+  const exists = tbody.querySelector(`tr[data-code-id="${codeId}"]`);
+  if (exists) {
+    const noIssueInput = exists.querySelector(".adj-no-issue");
+    if (noIssueInput && amount > 0) {
+      noIssueInput.value = String(Number((toNumber(noIssueInput.value) + amount).toFixed(2)));
+    }
+    showToast("This code is already in adjustment table", "warn");
+    return;
+  }
+
+  const meta = state.adjustBudgetByCode.get(codeId);
+  if (!meta) {
+    showToast("Selected code is not available in budget setup", "warn");
+    return;
+  }
+
+  const code = meta?.financial_code?.code || `CODE-${codeId}`;
+  const khat = meta?.financial_code?.khat_name_bn || meta?.financial_code?.khat_name_en || "-";
+  const sl = (tbody.querySelectorAll("tr") || []).length + 1;
+  const initialNoIssue = Math.max(0, Number(amount.toFixed(2)));
+
+  tbody.insertAdjacentHTML(
+    "beforeend",
+    `
+      <tr data-item-id="" data-code-id="${codeId}" data-issued="0" data-pending="0">
+        <td>${sl}</td>
+        <td>${escapeHtml(khat)}</td>
+        <td>${escapeHtml(code)}</td>
+        <td class="imp-right">${formatMoney(0)}</td>
+        <td class="imp-right">${formatMoney(0)}</td>
+        <td class="imp-right">${formatMoney(0)}</td>
+        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="0" value="0" /></td>
+        <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="${initialNoIssue}" /></td>
+      </tr>
+    `
+  );
+
+  state.adjustBudgetByCode.delete(codeId);
+  const selectedOption = select.querySelector(`option[value="${codeId}"]`);
+  if (selectedOption) selectedOption.remove();
+  select.value = "";
+  amountInput.value = "0";
 }
 
 async function openAdjustModal(noteId) {
@@ -327,12 +431,18 @@ async function openAdjustModal(noteId) {
     const note = out.data;
     const issues = ensureArray(note.issues);
     const latestIssue = issues.length ? issues[issues.length - 1] : null;
+    const budgetsOut = await imprestFetch(
+      `/budgets?base_id=${Number(note.base_id)}&fiscal_year_id=${Number(note.fiscal_year_id)}`
+    );
 
     byId("impAdjustId").value = String(noteId);
     byId("impAdjustDate").value = new Date().toISOString().slice(0, 10);
     byId("impAdjustVoucher").value = latestIssue?.dispatch_no || latestIssue?.voucher_no || "";
     byId("impAdjustRemarks").value = note.remarks || "";
+    byId("impAdjustAddAmount").value = "0";
+    state.adjustBudgetRows = ensureArray(budgetsOut.data);
     renderAdjustRows(note.items || []);
+    setAdjustAddCodeOptions(note);
     toggleModal("impAdjustModal", true);
   } catch (err) {
     showToast(err.message || "Failed to load note for adjustment", "error");
@@ -347,15 +457,26 @@ async function submitAdjustForm(e) {
   const adjustments = Array.from(byId("impAdjustRows")?.querySelectorAll("tr") || [])
     .map((row) => {
       const pending = toNumber(row.getAttribute("data-pending"));
+      const issued = toNumber(row.getAttribute("data-issued"));
+      const noteItemId = toPositiveInt(row.getAttribute("data-item-id"));
+      const codeId = toPositiveInt(row.getAttribute("data-code-id"));
       const addNow = toNumber(row.querySelector(".adj-now")?.value);
-      if (addNow <= 0) return null;
+      const noIssueNow = toNumber(row.querySelector(".adj-no-issue")?.value);
       if (addNow > pending) throw new Error("Adjustment amount exceeds pending amount");
-      return {
-        note_item_id: Number(row.getAttribute("data-item-id")),
-        id: Number(row.getAttribute("data-item-id")),
-        financial_code_id: Number(row.getAttribute("data-code-id")),
+      if (noIssueNow > 0 && issued > 0) {
+        throw new Error("No-issue adjustment is allowed only when issued amount is zero");
+      }
+      if (addNow <= 0 && noIssueNow <= 0) return null;
+      const payload = {
+        financial_code_id: Number(codeId),
         adjusted_amount: Number(addNow.toFixed(2)),
+        unissued_adjusted_amount: Number(noIssueNow.toFixed(2)),
       };
+      if (noteItemId) {
+        payload.note_item_id = Number(noteItemId);
+        payload.id = Number(noteItemId);
+      }
+      return payload;
     })
     .filter(Boolean);
 
@@ -551,6 +672,7 @@ function bindEvents() {
 
   byId("impAdjustClose")?.addEventListener("click", () => toggleModal("impAdjustModal", false));
   byId("impAdjustCancel")?.addEventListener("click", () => toggleModal("impAdjustModal", false));
+  byId("impAdjustAddCodeBtn")?.addEventListener("click", addAdjustCodeRow);
   byId("impAdjustForm")?.addEventListener("submit", submitAdjustForm);
   byId("impAdjustModal")?.addEventListener("click", (e) => {
     if (e.target?.id === "impAdjustModal") toggleModal("impAdjustModal", false);

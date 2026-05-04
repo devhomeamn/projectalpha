@@ -21,6 +21,8 @@ const state = {
   selectedNoteIds: new Set(),
   selectedNotes: [],
   aggregateRows: [],
+  adjustBudgetRows: [],
+  adjustBudgetByCode: new Map(),
 };
 
 function todayDate() {
@@ -57,6 +59,10 @@ function readFilters() {
 function resetPreparedSelection() {
   state.selectedNotes = [];
   state.aggregateRows = [];
+  state.adjustBudgetRows = [];
+  state.adjustBudgetByCode = new Map();
+  if (byId("adjAddCode")) byId("adjAddCode").innerHTML = '<option value="">Select khat/code</option>';
+  if (byId("adjAddAmount")) byId("adjAddAmount").value = "0";
   byId("adjDetailCard").style.display = "none";
 }
 
@@ -114,14 +120,17 @@ function renderEntryRows(rows) {
   if (!tbody) return;
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="imp-empty">No code-wise issued row found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="imp-empty">No code-wise row found</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows
     .map((row, idx) => {
+      const issued = toNumber(row.issued_amount);
+      const noIssueDisabled = issued > 0 ? "disabled" : "";
+      const codeId = toPositiveInt(row.financial_code_id);
       return `
-        <tr data-code-id="${Number(row.financial_code_id)}" data-pending="${Number(row.pending_amount)}">
+        <tr data-code-id="${codeId || ""}" data-issued="${issued}" data-pending="${Number(row.pending_amount)}">
           <td>${idx + 1}</td>
           <td>${escapeHtml(row.khat_name_bn || "-")}</td>
           <td>${escapeHtml(row.code || "-")}</td>
@@ -131,11 +140,106 @@ function renderEntryRows(rows) {
           <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${Number(
             row.pending_amount
           )}" value="${Number(row.pending_amount)}" /></td>
+          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="0" ${noIssueDisabled} /></td>
           <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
         </tr>
       `;
     })
     .join("");
+}
+
+function buildAddCodeOptionLabel(row) {
+  const code = row?.financial_code?.code || `CODE-${Number(row?.financial_code_id || 0)}`;
+  const khat = row?.financial_code?.khat_name_bn || row?.financial_code?.khat_name_en || "-";
+  return `${code} - ${khat}`;
+}
+
+function setAddCodeOptions() {
+  const select = byId("adjAddCode");
+  if (!select) return;
+
+  const existingCodes = new Set(state.aggregateRows.map((row) => toPositiveInt(row.financial_code_id)).filter(Boolean));
+  const rows = ensureArray(state.adjustBudgetRows).filter((row) => {
+    const codeId = toPositiveInt(row.financial_code_id);
+    return codeId && !existingCodes.has(codeId);
+  });
+
+  state.adjustBudgetByCode = new Map();
+  rows.forEach((row) => {
+    const codeId = toPositiveInt(row.financial_code_id);
+    if (!codeId) return;
+    state.adjustBudgetByCode.set(codeId, row);
+  });
+
+  select.innerHTML =
+    '<option value="">Select khat/code</option>' +
+    rows
+      .map((row) => `<option value="${Number(row.financial_code_id)}">${escapeHtml(buildAddCodeOptionLabel(row))}</option>`)
+      .join("");
+}
+
+function addEntryCodeRow() {
+  const tbody = byId("adjEntryRows");
+  const select = byId("adjAddCode");
+  const amountInput = byId("adjAddAmount");
+  if (!tbody || !select || !amountInput) return;
+
+  const codeId = toPositiveInt(select.value);
+  if (!codeId) {
+    showToast("Select a khat/code first", "warn");
+    return;
+  }
+
+  const amount = toNumber(amountInput.value);
+  if (amount < 0) {
+    showToast("Adjusted amount cannot be negative", "warn");
+    return;
+  }
+
+  const existingRow = tbody.querySelector(`tr[data-code-id="${codeId}"]`);
+  if (existingRow) {
+    const noIssueInput = existingRow.querySelector(".adj-no-issue");
+    if (noIssueInput && amount > 0) {
+      noIssueInput.value = String(Number((toNumber(noIssueInput.value) + amount).toFixed(2)));
+    }
+    showToast("This code is already in adjustment table", "warn");
+    return;
+  }
+
+  const meta = state.adjustBudgetByCode.get(codeId);
+  if (!meta) {
+    showToast("Selected code is not available in budget setup", "warn");
+    return;
+  }
+
+  const code = meta?.financial_code?.code || `CODE-${codeId}`;
+  const khat = meta?.financial_code?.khat_name_bn || meta?.financial_code?.khat_name_en || "-";
+  const sl = (tbody.querySelectorAll("tr") || []).length + 1;
+  const initialNoIssue = Math.max(0, Number(amount.toFixed(2)));
+
+  tbody.insertAdjacentHTML(
+    "beforeend",
+    `
+      <tr data-code-id="${codeId}" data-issued="0" data-pending="0">
+        <td>${sl}</td>
+        <td>${escapeHtml(khat)}</td>
+        <td>${escapeHtml(code)}</td>
+        <td class="imp-right">${formatMoney(0)}</td>
+        <td class="imp-right">${formatMoney(0)}</td>
+        <td class="imp-right">${formatMoney(0)}</td>
+        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="0" value="0" /></td>
+        <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="${initialNoIssue}" /></td>
+        <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
+      </tr>
+    `
+  );
+
+  state.adjustBudgetByCode.delete(codeId);
+  const selectedOption = select.querySelector(`option[value="${codeId}"]`);
+  if (selectedOption) selectedOption.remove();
+  select.value = "";
+  amountInput.value = "0";
+  byId("adjSavedCount").textContent = String((tbody.querySelectorAll("tr") || []).length);
 }
 
 function setSelectionSummary(notes) {
@@ -157,8 +261,6 @@ function buildAggregateRows(notes) {
       if (!codeId) return;
 
       const issued = toNumber(item.issued_amount);
-      if (issued <= 0) return;
-
       const adjusted = toNumber(item.adjusted_amount ?? item.adjustment_amount);
       const bucket =
         map.get(codeId) ||
@@ -173,14 +275,13 @@ function buildAggregateRows(notes) {
 
       bucket.issued_amount = Number((bucket.issued_amount + issued).toFixed(2));
       bucket.adjusted_amount = Number((bucket.adjusted_amount + adjusted).toFixed(2));
-      bucket.pending_amount = Number((bucket.issued_amount - bucket.adjusted_amount).toFixed(2));
+      bucket.pending_amount = Math.max(0, Number((bucket.issued_amount - bucket.adjusted_amount).toFixed(2)));
 
       map.set(codeId, bucket);
     });
   });
 
   return Array.from(map.values())
-    .filter((row) => toNumber(row.issued_amount) > 0)
     .sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
 }
 
@@ -234,7 +335,7 @@ async function loadIssuedNotes() {
 
     existing.issued_amount = Number((existing.issued_amount + toNumber(row.issued_amount)).toFixed(2));
     existing.adjusted_amount = Number((existing.adjusted_amount + toNumber(row.adjusted_amount)).toFixed(2));
-    existing.pending_adjustment = Number((existing.issued_amount - existing.adjusted_amount).toFixed(2));
+    existing.pending_adjustment = Math.max(0, Number((existing.issued_amount - existing.adjusted_amount).toFixed(2)));
 
     byNote.set(key, existing);
   });
@@ -261,12 +362,19 @@ async function prepareSelectedNotes() {
   if (!notes.length) throw new Error("Selected notes could not be loaded");
 
   const baseId = Number(notes[0].base_id || 0);
+  const fiscalYearId = Number(notes[0].fiscal_year_id || 0);
   if (notes.some((x) => Number(x.base_id) !== baseId)) {
     throw new Error("Selected notes must belong to same base");
   }
+  if (notes.some((x) => Number(x.fiscal_year_id) !== fiscalYearId)) {
+    throw new Error("Selected notes must belong to same fiscal year");
+  }
+
+  const budgetsOut = await imprestFetch(`/budgets?base_id=${baseId}&fiscal_year_id=${fiscalYearId}`);
+  state.adjustBudgetRows = ensureArray(budgetsOut.data);
 
   const aggregateRows = buildAggregateRows(notes);
-  if (!aggregateRows.length) throw new Error("No code-wise issued amount found for selected notes");
+  if (!aggregateRows.length) throw new Error("No code-wise row found for selected notes");
 
   state.selectedNotes = notes;
   state.aggregateRows = aggregateRows;
@@ -275,19 +383,29 @@ async function prepareSelectedNotes() {
   setSelectionSummary(notes);
   setKpisFromRows(aggregateRows);
   renderEntryRows(aggregateRows);
+  setAddCodeOptions();
+  byId("adjAddAmount").value = "0";
 }
 
 function readAdjustmentPayloadRows() {
   const rows = Array.from(byId("adjEntryRows")?.querySelectorAll("tr") || []);
   return rows
     .map((row) => {
+      const codeId = toPositiveInt(row.getAttribute("data-code-id"));
+      if (!codeId) return null;
+      const issued = toNumber(row.getAttribute("data-issued"));
       const pending = toNumber(row.getAttribute("data-pending"));
       const amount = toNumber(row.querySelector(".adj-now")?.value);
-      if (amount <= 0) return null;
+      const noIssueAmount = toNumber(row.querySelector(".adj-no-issue")?.value);
       if (amount > pending) throw new Error("Adjusted amount exceeds pending amount");
+      if (noIssueAmount > 0 && issued > 0) {
+        throw new Error("No-issue adjustment is allowed only when issued amount is zero");
+      }
+      if (amount <= 0 && noIssueAmount <= 0) return null;
       return {
-        financial_code_id: Number(row.getAttribute("data-code-id")),
+        financial_code_id: Number(codeId),
         adjusted_amount: Number(amount.toFixed(2)),
+        unissued_adjusted_amount: Number(noIssueAmount.toFixed(2)),
         remarks: String(row.querySelector(".adj-row-remarks")?.value || "").trim() || null,
       };
     })
@@ -358,6 +476,7 @@ function bindEvents() {
   });
 
   byId("adjSaveBtn")?.addEventListener("click", saveAdjustments);
+  byId("adjAddCodeBtn")?.addEventListener("click", addEntryCodeRow);
 }
 
 async function init() {

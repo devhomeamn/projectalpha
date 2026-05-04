@@ -2585,6 +2585,13 @@ exports.adjustNote = async (req, res) => {
       rowByCode.set(Number(row.financial_code_id), row);
     });
 
+    const budgetRows = await getBudgetRows(note.base_id, note.fiscal_year_id, t);
+    const budgetByCode = new Map();
+    budgetRows.forEach((row) => {
+      budgetByCode.set(Number(row.financial_code_id), row);
+    });
+    const previousExpenseMap = await getPreviousExpenseMap(note.base_id, note.fiscal_year_id, note.period_start, t);
+
     const payloadRows = Array.isArray(req.body?.adjustments) ? req.body.adjustments : [];
     const queue = [];
     const queuedByItemId = new Map();
@@ -2594,10 +2601,40 @@ exports.adjustNote = async (req, res) => {
         const noteItemId = toPositiveInt(raw?.note_item_id);
         const rowId = toPositiveInt(raw?.id);
         const codeId = toPositiveInt(raw?.financial_code_id);
-        const target =
+        let target =
           (noteItemId && rowById.get(noteItemId)) ||
           (rowId && rowById.get(rowId)) ||
           (codeId && rowByCode.get(codeId));
+        if (!target && codeId) {
+          const budgetRow = budgetByCode.get(codeId);
+          if (budgetRow) {
+            const budgetAmount = toMoney(budgetRow.budget_amount, 0);
+            const previousIssued = toMoney(previousExpenseMap.get(codeId), 0);
+            const khatName = getKhatName(budgetRow.financialCode);
+
+            target = await ImprestNoteItem.create(
+              {
+                note_id: noteId,
+                financial_code_id: codeId,
+                khat_name: khatName,
+                budget_amount: roundMoney(budgetAmount),
+                previous_issued_amount: roundMoney(previousIssued),
+                previous_expense: roundMoney(previousIssued),
+                current_claim: 0,
+                approved_amount: 0,
+                issued_amount: 0,
+                adjustment_amount: 0,
+                unadjusted_amount: 0,
+                budget_remaining: roundMoney(budgetAmount - previousIssued),
+                remaining_balance: computeRemaining(budgetAmount, previousIssued, 0),
+              },
+              { transaction: t }
+            );
+            rows.push(target);
+            rowById.set(Number(target.id), target);
+            rowByCode.set(Number(target.financial_code_id), target);
+          }
+        }
         if (!target) {
           await t.rollback();
           return res.status(400).json({ message: "Invalid adjustment row" });
@@ -2608,7 +2645,16 @@ exports.adjustNote = async (req, res) => {
           await t.rollback();
           return res.status(400).json({ message: "adjusted_amount must be non-negative" });
         }
-        if (amount <= 0) continue;
+        const noIssueRaw = raw?.unissued_adjusted_amount;
+        const noIssueAmount =
+          noIssueRaw === undefined || noIssueRaw === null || String(noIssueRaw).trim() === ""
+            ? 0
+            : toMoney(noIssueRaw, null);
+        if (noIssueAmount === null || noIssueAmount < 0) {
+          await t.rollback();
+          return res.status(400).json({ message: "unissued_adjusted_amount must be non-negative" });
+        }
+        if (amount <= 0 && noIssueAmount <= 0) continue;
 
         const issued = toMoney(target.issued_amount, 0);
         const adjusted = toMoney(target.adjustment_amount, 0);
@@ -2620,9 +2666,17 @@ exports.adjustNote = async (req, res) => {
           await t.rollback();
           return res.status(400).json({ message: "Adjusted amount exceeds pending/unadjusted amount" });
         }
+        if (noIssueAmount > 0 && issued > 0) {
+          await t.rollback();
+          return res.status(400).json({ message: "No-issue adjustment is allowed only when issued amount is zero" });
+        }
         queuedByItemId.set(targetItemId, roundMoney(alreadyQueued + amount));
 
-        queue.push({ row: target, amount, remarks: cleanText(raw?.remarks, 1000) });
+        queue.push({
+          row: target,
+          amount: roundMoney(amount + noIssueAmount),
+          remarks: cleanText(raw?.remarks, 1000),
+        });
       }
     } else {
       rows.forEach((row) => {
@@ -2726,6 +2780,11 @@ exports.adjustSelectedNotes = async (req, res) => {
 
     const baseId = Number(notes[0]?.base_id || 0);
     const fiscalYearId = Number(notes[0]?.fiscal_year_id || 0);
+    const budgetRows = await getBudgetRows(baseId, fiscalYearId, t);
+    const budgetByCode = new Map();
+    budgetRows.forEach((row) => {
+      budgetByCode.set(Number(row.financial_code_id), row);
+    });
 
     for (const note of notes) {
       const status = normalizeNoteStatus(note.status);
@@ -2770,11 +2829,6 @@ exports.adjustSelectedNotes = async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
-    if (!rows.length) {
-      await t.rollback();
-      return res.status(400).json({ message: "No note item found for selected notes" });
-    }
-
     const noteMap = new Map();
     const rowsByNote = new Map();
     const codeBuckets = new Map();
@@ -2800,6 +2854,57 @@ exports.adjustSelectedNotes = async (req, res) => {
       codeBuckets.set(codeId, bucket);
     });
 
+    const previousExpenseByPeriodStart = new Map();
+    async function ensureUnissuedRowForCode(codeId, bucket) {
+      const targetNote = notes.find((note) => {
+        const noteId = Number(note.id || 0);
+        const noteRows = rowsByNote.get(noteId) || [];
+        return !noteRows.some((row) => Number(row.financial_code_id || 0) === Number(codeId));
+      });
+      if (!targetNote) return null;
+
+      const budgetRow = budgetByCode.get(Number(codeId));
+      if (!budgetRow) return null;
+
+      const periodStart = String(targetNote.period_start || "");
+      if (!previousExpenseByPeriodStart.has(periodStart)) {
+        previousExpenseByPeriodStart.set(
+          periodStart,
+          await getPreviousExpenseMap(baseId, fiscalYearId, targetNote.period_start, t)
+        );
+      }
+      const previousExpenseMap = previousExpenseByPeriodStart.get(periodStart);
+      const budgetAmount = toMoney(budgetRow.budget_amount, 0);
+      const previousIssued = toMoney(previousExpenseMap.get(Number(codeId)), 0);
+      const khatName = getKhatName(budgetRow.financialCode);
+
+      const created = await ImprestNoteItem.create(
+        {
+          note_id: Number(targetNote.id),
+          financial_code_id: Number(codeId),
+          khat_name: khatName,
+          budget_amount: roundMoney(budgetAmount),
+          previous_issued_amount: roundMoney(previousIssued),
+          previous_expense: roundMoney(previousIssued),
+          current_claim: 0,
+          approved_amount: 0,
+          issued_amount: 0,
+          adjustment_amount: 0,
+          unadjusted_amount: 0,
+          budget_remaining: roundMoney(budgetAmount - previousIssued),
+          remaining_balance: computeRemaining(budgetAmount, previousIssued, 0),
+        },
+        { transaction: t }
+      );
+
+      rows.push(created);
+      const targetNoteId = Number(targetNote.id);
+      if (!rowsByNote.has(targetNoteId)) rowsByNote.set(targetNoteId, []);
+      rowsByNote.get(targetNoteId).push(created);
+      bucket.rows.push(created);
+      return created;
+    }
+
     const payloadRows = Array.isArray(req.body?.adjustments) ? req.body.adjustments : [];
     if (!payloadRows.length) {
       await t.rollback();
@@ -2815,8 +2920,17 @@ exports.adjustSelectedNotes = async (req, res) => {
       }
 
       if (!codeBuckets.has(codeId)) {
-        await t.rollback();
-        return res.status(400).json({ message: `Invalid financial_code_id ${codeId} for selected notes` });
+        const budgetRow = budgetByCode.get(codeId);
+        if (!budgetRow) {
+          await t.rollback();
+          return res.status(400).json({ message: `Invalid financial_code_id ${codeId} for selected notes` });
+        }
+        codeBuckets.set(codeId, {
+          financial_code_id: codeId,
+          code: budgetRow.financialCode?.code || `CODE-${codeId}`,
+          khat_name_bn: budgetRow.financialCode?.khat_name_bn || null,
+          rows: [],
+        });
       }
 
       const amount = toMoney(raw?.adjusted_amount, null);
@@ -2824,10 +2938,21 @@ exports.adjustSelectedNotes = async (req, res) => {
         await t.rollback();
         return res.status(400).json({ message: "adjusted_amount must be non-negative" });
       }
-      if (amount <= 0) continue;
+      const noIssueRaw = raw?.unissued_adjusted_amount;
+      const noIssueAmount =
+        noIssueRaw === undefined || noIssueRaw === null || String(noIssueRaw).trim() === ""
+          ? 0
+          : toMoney(noIssueRaw, null);
+      if (noIssueAmount === null || noIssueAmount < 0) {
+        await t.rollback();
+        return res.status(400).json({ message: "unissued_adjusted_amount must be non-negative" });
+      }
+      if (amount <= 0 && noIssueAmount <= 0) continue;
 
-      const current = requestedByCode.get(codeId) || { amount: 0, remarks: null };
-      current.amount = roundMoney(current.amount + amount);
+      const current = requestedByCode.get(codeId) || { amount: 0, regular_amount: 0, no_issue_amount: 0, remarks: null };
+      current.regular_amount = roundMoney(current.regular_amount + amount);
+      current.no_issue_amount = roundMoney(current.no_issue_amount + noIssueAmount);
+      current.amount = roundMoney(current.regular_amount + current.no_issue_amount);
       const remarks = cleanText(raw?.remarks, 1000);
       if (remarks) current.remarks = remarks;
       requestedByCode.set(codeId, current);
@@ -2848,11 +2973,26 @@ exports.adjustSelectedNotes = async (req, res) => {
         }, 0)
       );
 
-      if (requested.amount > pendingTotal) {
+      if (requested.regular_amount > pendingTotal) {
         await t.rollback();
         return res.status(400).json({
           message: `Adjusted amount exceeds pending amount for code ${bucket.code || codeId}`,
         });
+      }
+      if (requested.no_issue_amount > 0) {
+        const hasUnissuedRow = bucket.rows.some((row) => toMoney(row.issued_amount, 0) <= 0);
+        if (!hasUnissuedRow) {
+          const missingNoteRow = notes.some((note) => {
+            const noteRows = rowsByNote.get(Number(note.id)) || [];
+            return !noteRows.some((row) => Number(row.financial_code_id || 0) === Number(codeId));
+          });
+          if (!missingNoteRow) {
+            await t.rollback();
+            return res.status(400).json({
+              message: `No-issue adjustment is allowed only when issued amount is zero (code ${bucket.code || codeId})`,
+            });
+          }
+        }
       }
     }
 
@@ -2865,7 +3005,6 @@ exports.adjustSelectedNotes = async (req, res) => {
 
     for (const [codeId, requested] of requestedByCode.entries()) {
       const bucket = codeBuckets.get(codeId);
-      let remaining = roundMoney(requested.amount);
 
       const sortedRows = bucket.rows.slice().sort((a, b) => {
         const noteA = noteMap.get(Number(a.note_id));
@@ -2882,31 +3021,22 @@ exports.adjustSelectedNotes = async (req, res) => {
         return Number(a.id || 0) - Number(b.id || 0);
       });
 
-      for (const row of sortedRows) {
-        if (remaining <= 0) break;
-
+      const persistAdjustment = async (row, takeAmount) => {
         const issued = toMoney(row.issued_amount, 0);
         const adjusted = toMoney(row.adjustment_amount, 0);
-        const pending = roundMoney(Math.max(0, issued - adjusted));
-        if (pending <= 0) continue;
+        const newAdjusted = roundMoney(adjusted + takeAmount);
 
-        const take = roundMoney(Math.min(remaining, pending));
-        if (take <= 0) continue;
-
-        const newAdjusted = roundMoney(adjusted + take);
         row.adjustment_amount = newAdjusted;
         row.unadjusted_amount = roundMoney(Math.max(0, issued - newAdjusted));
         row.remaining_balance = roundMoney(toMoney(row.budget_remaining, 0));
         await row.save({ transaction: t });
 
-        remaining = roundMoney(remaining - take);
         touchedNoteIds.add(Number(row.note_id));
-
         adjustmentRows.push({
           note_id: Number(row.note_id),
           note_item_id: Number(row.id),
           financial_code_id: Number(row.financial_code_id),
-          adjusted_amount: take,
+          adjusted_amount: takeAmount,
           adjustment_date: adjustmentDate,
           adjustment_ref_no: adjustmentRefNo,
           selection_note_ids: selectionNoteIdsCsv,
@@ -2914,12 +3044,51 @@ exports.adjustSelectedNotes = async (req, res) => {
           remarks: requested.remarks || lineRemarks,
           created_by: getActorUserId(req),
         });
+      };
+
+      let remainingRegular = roundMoney(requested.regular_amount);
+      for (const row of sortedRows) {
+        if (remainingRegular <= 0) break;
+
+        const issued = toMoney(row.issued_amount, 0);
+        const adjusted = toMoney(row.adjustment_amount, 0);
+        const pending = roundMoney(Math.max(0, issued - adjusted));
+        if (pending <= 0) continue;
+
+        const take = roundMoney(Math.min(remainingRegular, pending));
+        if (take <= 0) continue;
+
+        await persistAdjustment(row, take);
+        remainingRegular = roundMoney(remainingRegular - take);
       }
 
-      if (remaining > 0) {
+      if (remainingRegular > 0) {
         await t.rollback();
         return res.status(400).json({
-          message: `Could not fully allocate adjustment for code ${bucket.code || codeId}`,
+          message: `Could not fully allocate pending adjustment for code ${bucket.code || codeId}`,
+        });
+      }
+
+      let remainingNoIssue = roundMoney(requested.no_issue_amount);
+      if (remainingNoIssue > 0) {
+        const unissuedRows = sortedRows.filter((row) => toMoney(row.issued_amount, 0) <= 0);
+        if (!unissuedRows.length) {
+          const created = await ensureUnissuedRowForCode(codeId, bucket);
+          if (created) unissuedRows.push(created);
+        }
+        for (const row of unissuedRows) {
+          if (remainingNoIssue <= 0) break;
+          const take = roundMoney(remainingNoIssue);
+          if (take <= 0) continue;
+          await persistAdjustment(row, take);
+          remainingNoIssue = roundMoney(remainingNoIssue - take);
+        }
+      }
+
+      if (remainingNoIssue > 0) {
+        await t.rollback();
+        return res.status(400).json({
+          message: `Could not allocate no-issue adjustment for code ${bucket.code || codeId}`,
         });
       }
     }
@@ -3052,7 +3221,7 @@ exports.listAdjustmentDurations = async (req, res) => {
             khat_name_en: row.khat_name_en || null,
             issued_amount: toMoney(row.issued_amount, 0),
             adjusted_amount: adjustedAmount,
-            pending_amount: roundMoney(toMoney(row.issued_amount, 0) - adjustedAmount),
+            pending_amount: roundMoney(Math.max(0, toMoney(row.issued_amount, 0) - adjustedAmount)),
           };
         })
         .sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
@@ -3077,7 +3246,7 @@ exports.listAdjustmentDurations = async (req, res) => {
         note_refs: issuedBucket.notes,
         issued_total: issuedTotal,
         adjusted_total: adjustedTotal,
-        pending_total: roundMoney(issuedTotal - adjustedTotal),
+        pending_total: roundMoney(Math.max(0, issuedTotal - adjustedTotal)),
         adjustment_count: Number(adjBucket.row_count || 0),
         issued_rows: issuedRows,
       };
@@ -3370,7 +3539,7 @@ exports.createDurationAdjustmentEntries = async (req, res) => {
         duration_end: duration.duration_end,
         issued_total: issuedTotal,
         adjusted_total: roundMoney(adjustedTotal),
-        pending_total: roundMoney(issuedTotal - adjustedTotal),
+        pending_total: roundMoney(Math.max(0, issuedTotal - adjustedTotal)),
       },
     });
   } catch (err) {
@@ -3600,7 +3769,7 @@ exports.getWorkflowReport = async (req, res) => {
         dispatch_no: dispatch?.dispatch_no || dispatch?.voucher_no || null,
         issued_amount: noteIssuedTotal,
         adjusted_amount: noteAdjustedTotal,
-        pending_adjustment: roundMoney(noteIssuedTotal - noteAdjustedTotal),
+        pending_adjustment: roundMoney(Math.max(0, noteIssuedTotal - noteAdjustedTotal)),
       });
     });
 
@@ -3945,7 +4114,7 @@ exports.getWorkflowReport = async (req, res) => {
 
         const issuedAmount = toMoney(row.issued_amount, 0);
         const adjustedAmount = toMoney(row.adjusted_amount, 0);
-        const pending = roundMoney(issuedAmount - adjustedAmount);
+        const pending = roundMoney(Math.max(0, issuedAmount - adjustedAmount));
 
         if (row.demand_type === "COMPLEMENTARY") {
           current.complementary_issued = roundMoney(current.complementary_issued + issuedAmount);
@@ -4023,7 +4192,7 @@ exports.getWorkflowReport = async (req, res) => {
             budget_amount: budget,
             total_issued: issued,
             total_adjusted: adjusted,
-            pending_adjustment: roundMoney(issued - adjusted),
+            pending_adjustment: roundMoney(Math.max(0, issued - adjusted)),
             budget_remaining: roundMoney(budget - issued),
           };
         })
@@ -4098,7 +4267,7 @@ exports.getWorkflowReport = async (req, res) => {
             budget_amount: budget,
             cumulative_issued: issued,
             cumulative_adjusted: adjusted,
-            pending_adjustment: roundMoney(issued - adjusted),
+            pending_adjustment: roundMoney(Math.max(0, issued - adjusted)),
             remaining_budget: roundMoney(budget - issued),
           };
         })
@@ -4159,7 +4328,7 @@ exports.getWorkflowReport = async (req, res) => {
           budget_amount: budget,
           total_issued: issued,
           total_adjusted: adjusted,
-          pending_adjustment: roundMoney(issued - adjusted),
+          pending_adjustment: roundMoney(Math.max(0, issued - adjusted)),
           budget_remaining: roundMoney(budget - issued),
         };
       })

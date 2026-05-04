@@ -4,3 +4,7 @@ node_modules/
 *.rar
 uploads/
 .vscode
+migrations/
+*.log
+.DS_Store
+.idea/

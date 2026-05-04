@@ -94,6 +94,21 @@
             <label class="imp-field"><span>Adjustment Ref No</span><input id="adjEntryRef" class="imp-input" /></label>
             <label class="imp-field wide" style="max-width:none;"><span>Remarks (default)</span><input id="adjEntryRemarks" class="imp-input" /></label>
           </div>
+          <div class="imp-grid" style="margin-top:10px;">
+            <label class="imp-field wide" style="max-width:none;">
+              <span>Add Khat/Code</span>
+              <select id="adjAddCode" class="imp-select">
+                <option value="">Select khat/code</option>
+              </select>
+            </label>
+            <label class="imp-field">
+              <span>Adjusted Amount</span>
+              <input id="adjAddAmount" class="imp-input" type="number" min="0" step="0.01" value="0" />
+            </label>
+            <div class="imp-actions" style="align-self:end;">
+              <button id="adjAddCodeBtn" class="imp-btn secondary" type="button">Add Khat</button>
+            </div>
+          </div>
 
           <div class="imp-table-wrap" style="margin-top:10px;">
             <table class="imp-table">
@@ -106,6 +121,7 @@
                   <th class="imp-right" style="width:120px;">Adjusted</th>
                   <th class="imp-right" style="width:120px;">Pending</th>
                   <th class="imp-right" style="width:140px;">Add Adjustment</th>
+                  <th class="imp-right" style="width:150px;">No-Issue Adjustment</th>
                   <th style="width:220px;">Remarks</th>
                 </tr>
               </thead>
