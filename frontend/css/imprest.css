@@ -84,6 +84,17 @@
   box-shadow: 0 0 0 3px rgba(14, 103, 183, 0.14);
 }
 
+.imp-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.imp-input[type="number"]::-webkit-outer-spin-button,
+.imp-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .imp-textarea {
   min-height: 76px;
   resize: vertical;

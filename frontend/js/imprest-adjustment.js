@@ -13,6 +13,7 @@ import {
 } from "./imprest-common.js";
 
 const ISSUED_STATUSES = new Set(["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"]);
+const ADJUSTMENT_DRAFT_STORAGE_KEY = "imprest_adjustment_drafts_v1";
 
 const state = {
   bases: [],
@@ -23,10 +24,140 @@ const state = {
   aggregateRows: [],
   adjustBudgetRows: [],
   adjustBudgetByCode: new Map(),
+  drafts: [],
+  activeDraftId: null,
 };
 
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
+function toInputAmount(value) {
+  const n = toNumber(value);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return String(Number(n.toFixed(2)));
+}
+
+function normalizeDraftRows(rows) {
+  return ensureArray(rows)
+    .map((raw) => {
+      const codeId = toPositiveInt(raw?.financial_code_id);
+      if (!codeId) return null;
+      const adjustedAmount = Math.max(0, Number(toNumber(raw?.adjusted_amount).toFixed(2)));
+      const noIssueAmount = Math.max(0, Number(toNumber(raw?.unissued_adjusted_amount).toFixed(2)));
+      const remarks = String(raw?.remarks || "").trim() || null;
+      if (adjustedAmount <= 0 && noIssueAmount <= 0 && !remarks) return null;
+      return {
+        financial_code_id: codeId,
+        adjusted_amount: adjustedAmount,
+        unissued_adjusted_amount: noIssueAmount,
+        remarks,
+      };
+    })
+    .filter(Boolean);
+}
+
+function readDraftStore() {
+  try {
+    const raw = localStorage.getItem(ADJUSTMENT_DRAFT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((raw) => {
+        const id = String(raw?.id || "").trim();
+        if (!id) return null;
+        return {
+          id,
+          note_ids: ensureArray(raw?.note_ids).map((x) => toPositiveInt(x)).filter(Boolean),
+          filters: {
+            base_id: toPositiveInt(raw?.filters?.base_id),
+            fiscal_year_id: toPositiveInt(raw?.filters?.fiscal_year_id),
+            month: toPositiveInt(raw?.filters?.month),
+            demand_type: String(raw?.filters?.demand_type || "").trim().toUpperCase() || null,
+            pakkhik: String(raw?.filters?.pakkhik || "").trim().toUpperCase() || null,
+          },
+          adjustment_date: String(raw?.adjustment_date || "").trim() || null,
+          adjustment_ref_no: String(raw?.adjustment_ref_no || "").trim() || null,
+          remarks: String(raw?.remarks || "").trim() || null,
+          allow_over_adjustment: Boolean(raw?.allow_over_adjustment),
+          over_adjustment_note: String(raw?.over_adjustment_note || "").trim() || null,
+          adjustments: normalizeDraftRows(raw?.adjustments),
+          created_at: String(raw?.created_at || "").trim() || new Date().toISOString(),
+          updated_at: String(raw?.updated_at || "").trim() || new Date().toISOString(),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+  } catch {
+    return [];
+  }
+}
+
+function writeDraftStore(drafts) {
+  try {
+    localStorage.setItem(ADJUSTMENT_DRAFT_STORAGE_KEY, JSON.stringify(ensureArray(drafts)));
+  } catch {
+    // Ignore localStorage quota/private mode issues.
+  }
+}
+
+function findDraftById(draftId) {
+  const id = String(draftId || "").trim();
+  if (!id) return null;
+  return state.drafts.find((draft) => draft.id === id) || null;
+}
+
+function buildDraftLabel(draft) {
+  const date = String(draft?.adjustment_date || "").trim();
+  const ref = String(draft?.adjustment_ref_no || "").trim() || "No Ref";
+  const notes = ensureArray(draft?.note_ids);
+  const preview = notes.slice(0, 3).join(",");
+  const more = notes.length > 3 ? `+${notes.length - 3}` : "";
+  const notesText = notes.length ? `${preview}${more ? ` ${more}` : ""}` : "No note";
+  return `${date || "No Date"} | ${ref} | Notes: ${notesText}`;
+}
+
+function paintDraftStatus() {
+  const el = byId("adjDraftStatusText");
+  if (!el) return;
+  const activeDraft = findDraftById(state.activeDraftId);
+  if (!activeDraft) {
+    el.textContent = "Draft: New";
+    return;
+  }
+  el.textContent = `Draft: ${buildDraftLabel(activeDraft)}`;
+}
+
+function renderDraftOptions() {
+  const select = byId("adjDraftSelect");
+  if (!select) return;
+
+  const options = state.drafts
+    .map((draft) => `<option value="${escapeHtml(draft.id)}">${escapeHtml(buildDraftLabel(draft))}</option>`)
+    .join("");
+
+  select.innerHTML = '<option value="">Select saved draft</option>' + options;
+
+  const active = findDraftById(state.activeDraftId);
+  if (active) {
+    select.value = active.id;
+  } else {
+    state.activeDraftId = null;
+    select.value = "";
+  }
+
+  const selectedId = String(select.value || "").trim();
+  if (byId("adjDraftLoadBtn")) byId("adjDraftLoadBtn").disabled = !selectedId;
+  if (byId("adjDraftDeleteBtn")) byId("adjDraftDeleteBtn").disabled = !selectedId;
+  paintDraftStatus();
+}
+
+function refreshDraftState() {
+  state.drafts = readDraftStore();
+  renderDraftOptions();
+}
+
+function setActiveDraft(draftId = null) {
+  const id = String(draftId || "").trim();
+  state.activeDraftId = id || null;
+  renderDraftOptions();
 }
 
 function optionsHtml(rows, labelFn, selected = null, includeAll = false) {
@@ -62,11 +193,15 @@ function resetPreparedSelection() {
   state.adjustBudgetRows = [];
   state.adjustBudgetByCode = new Map();
   if (byId("adjAddCode")) byId("adjAddCode").innerHTML = '<option value="">Select khat/code</option>';
-  if (byId("adjAddAmount")) byId("adjAddAmount").value = "0";
+  if (byId("adjAddAmount")) byId("adjAddAmount").value = "";
+  if (byId("adjEntryDate")) byId("adjEntryDate").value = "";
+  if (byId("adjEntryRef")) byId("adjEntryRef").value = "";
+  if (byId("adjEntryRemarks")) byId("adjEntryRemarks").value = "";
   if (byId("adjAllowOver")) byId("adjAllowOver").value = "NO";
   if (byId("adjOverNote")) byId("adjOverNote").value = "";
   byId("adjDetailCard").style.display = "none";
   paintEntryTotals([]);
+  paintDraftStatus();
 }
 
 function resetAllSelection() {
@@ -223,8 +358,8 @@ function renderEntryRows(rows) {
           <td class="imp-right">${formatMoney(row.pending_amount)}</td>
           <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${Number(
             row.pending_amount
-          )}" value="${Number(row.pending_amount)}" /></td>
-          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="0" ${noIssueDisabled} /></td>
+          )}" value="" /></td>
+          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="" ${noIssueDisabled} /></td>
           <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
         </tr>
       `;
@@ -302,7 +437,7 @@ function addEntryCodeRow() {
   const code = meta?.financial_code?.code || `CODE-${codeId}`;
   const khat = meta?.financial_code?.khat_name_bn || meta?.financial_code?.khat_name_en || "-";
   const sl = (tbody.querySelectorAll("tr") || []).length + 1;
-  const initialNoIssue = Math.max(0, Number(amount.toFixed(2)));
+  const initialNoIssue = amount > 0 ? toInputAmount(amount) : "";
 
   tbody.insertAdjacentHTML(
     "beforeend",
@@ -314,7 +449,7 @@ function addEntryCodeRow() {
         <td class="imp-right">${formatMoney(0)}</td>
         <td class="imp-right">${formatMoney(0)}</td>
         <td class="imp-right">${formatMoney(0)}</td>
-        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="0" value="0" /></td>
+        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="0" value="" /></td>
         <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="${initialNoIssue}" /></td>
         <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
       </tr>
@@ -325,7 +460,7 @@ function addEntryCodeRow() {
   const selectedOption = select.querySelector(`option[value="${codeId}"]`);
   if (selectedOption) selectedOption.remove();
   select.value = "";
-  amountInput.value = "0";
+  amountInput.value = "";
   byId("adjSavedCount").textContent = String((tbody.querySelectorAll("tr") || []).length);
   applyOverModeInputConstraints();
   paintEntryTotals(Array.from(tbody.querySelectorAll("tr")));
@@ -473,7 +608,7 @@ async function prepareSelectedNotes() {
   setKpisFromRows(aggregateRows);
   renderEntryRows(aggregateRows);
   setAddCodeOptions();
-  byId("adjAddAmount").value = "0";
+  byId("adjAddAmount").value = "";
 }
 
 function readAdjustmentPayloadRows({ allowOverAdjustment = false } = {}) {
@@ -499,6 +634,195 @@ function readAdjustmentPayloadRows({ allowOverAdjustment = false } = {}) {
       };
     })
     .filter(Boolean);
+}
+
+function collectDraftRowsFromTable() {
+  const rows = Array.from(byId("adjEntryRows")?.querySelectorAll("tr") || []);
+  const payloadRows = rows.map((row) => {
+    const codeId = toPositiveInt(row.getAttribute("data-code-id"));
+    if (!codeId) return null;
+    return {
+      financial_code_id: codeId,
+      adjusted_amount: toNumber(row.querySelector(".adj-now")?.value),
+      unissued_adjusted_amount: toNumber(row.querySelector(".adj-no-issue")?.value),
+      remarks: String(row.querySelector(".adj-row-remarks")?.value || "").trim() || null,
+    };
+  });
+  return normalizeDraftRows(payloadRows);
+}
+
+function upsertDraftRecord(draft) {
+  const others = state.drafts.filter((x) => x.id !== draft.id);
+  const next = [draft, ...others].sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+  writeDraftStore(next);
+  refreshDraftState();
+  setActiveDraft(draft.id);
+}
+
+function clearActiveDraftRecord() {
+  if (!state.activeDraftId) return;
+  const next = state.drafts.filter((x) => x.id !== state.activeDraftId);
+  writeDraftStore(next);
+  refreshDraftState();
+  setActiveDraft(null);
+}
+
+function saveDraftRecord() {
+  const noteIds = Array.from(state.selectedNoteIds).sort((a, b) => a - b);
+  if (!noteIds.length) {
+    showToast("Select at least one note before saving draft", "warn");
+    return;
+  }
+
+  if (byId("adjDetailCard")?.style.display === "none") {
+    showToast("Prepare selected notes first", "warn");
+    return;
+  }
+
+  const existing = findDraftById(state.activeDraftId);
+  const now = new Date().toISOString();
+  const draft = {
+    id: existing?.id || `adj-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    note_ids: noteIds,
+    filters: readFilters(),
+    adjustment_date: String(byId("adjEntryDate")?.value || "").trim() || null,
+    adjustment_ref_no: String(byId("adjEntryRef")?.value || "").trim() || null,
+    remarks: String(byId("adjEntryRemarks")?.value || "").trim() || null,
+    allow_over_adjustment: isOverAdjustmentEnabled(),
+    over_adjustment_note: String(byId("adjOverNote")?.value || "").trim() || null,
+    adjustments: collectDraftRowsFromTable(),
+    created_at: existing?.created_at || now,
+    updated_at: now,
+  };
+
+  upsertDraftRecord(draft);
+  showToast(existing ? "Draft updated" : "Draft saved", "success");
+}
+
+function applyDraftRowsToTable(draftRows) {
+  const tbody = byId("adjEntryRows");
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  rows.forEach((row) => {
+    const nowInput = row.querySelector(".adj-now");
+    const noIssueInput = row.querySelector(".adj-no-issue");
+    const remarksInput = row.querySelector(".adj-row-remarks");
+    if (nowInput) nowInput.value = "";
+    if (noIssueInput && !noIssueInput.disabled) noIssueInput.value = "";
+    if (remarksInput) remarksInput.value = "";
+  });
+
+  let skippedRows = 0;
+  normalizeDraftRows(draftRows).forEach((entry) => {
+    const codeId = toPositiveInt(entry.financial_code_id);
+    if (!codeId) return;
+
+    let row = tbody.querySelector(`tr[data-code-id="${codeId}"]`);
+    if (!row) {
+      const select = byId("adjAddCode");
+      if (select?.querySelector(`option[value="${codeId}"]`)) {
+        const previousSelect = String(select.value || "");
+        if (byId("adjAddAmount")) byId("adjAddAmount").value = "";
+        select.value = String(codeId);
+        addEntryCodeRow();
+        select.value = previousSelect;
+        row = tbody.querySelector(`tr[data-code-id="${codeId}"]`);
+      }
+    }
+
+    if (!row) {
+      skippedRows += 1;
+      return;
+    }
+
+    const nowInput = row.querySelector(".adj-now");
+    const noIssueInput = row.querySelector(".adj-no-issue");
+    const remarksInput = row.querySelector(".adj-row-remarks");
+
+    if (nowInput) nowInput.value = toInputAmount(entry.adjusted_amount);
+    if (noIssueInput && !noIssueInput.disabled) noIssueInput.value = toInputAmount(entry.unissued_adjusted_amount);
+    if (remarksInput) remarksInput.value = String(entry.remarks || "");
+  });
+
+  paintEntryTotals(Array.from(tbody.querySelectorAll("tr")));
+  if (skippedRows > 0) {
+    showToast(`${skippedRows} draft row could not be restored (code missing in current setup)`, "warn");
+  }
+}
+
+async function loadDraftForEdit() {
+  const draftId = String(byId("adjDraftSelect")?.value || "").trim();
+  if (!draftId) {
+    showToast("Select a draft first", "warn");
+    return;
+  }
+
+  const draft = findDraftById(draftId);
+  if (!draft) {
+    showToast("Draft not found", "error");
+    refreshDraftState();
+    return;
+  }
+
+  const baseId = toPositiveInt(draft.filters?.base_id);
+  const fiscalYearId = toPositiveInt(draft.filters?.fiscal_year_id);
+  if (!baseId || !fiscalYearId) {
+    showToast("Draft is missing base/fiscal year", "error");
+    return;
+  }
+
+  byId("adjBase").value = String(baseId);
+  byId("adjFiscalYear").value = String(fiscalYearId);
+  byId("adjMonth").value = draft.filters?.month ? String(draft.filters.month) : "";
+  byId("adjDemandType").value = String(draft.filters?.demand_type || "");
+  byId("adjPakkhik").value = String(draft.filters?.pakkhik || "");
+
+  await loadIssuedNotes();
+
+  const availableNoteIdSet = new Set(ensureArray(state.noteSummaryRows).map((row) => Number(row.note_id)));
+  const selectedNoteIds = ensureArray(draft.note_ids)
+    .map((id) => toPositiveInt(id))
+    .filter((id) => id && availableNoteIdSet.has(Number(id)));
+
+  if (!selectedNoteIds.length) {
+    showToast("Draft notes are not available in current issued list", "warn");
+    setActiveDraft(draft.id);
+    return;
+  }
+
+  state.selectedNoteIds = new Set(selectedNoteIds);
+  renderNoteRows();
+  await prepareSelectedNotes();
+
+  byId("adjEntryDate").value = String(draft.adjustment_date || "");
+  byId("adjEntryRef").value = String(draft.adjustment_ref_no || "");
+  byId("adjEntryRemarks").value = String(draft.remarks || "");
+  byId("adjAllowOver").value = draft.allow_over_adjustment ? "YES" : "NO";
+  byId("adjOverNote").value = String(draft.over_adjustment_note || "");
+  applyOverModeInputConstraints();
+
+  applyDraftRowsToTable(draft.adjustments);
+  setActiveDraft(draft.id);
+  showToast("Draft loaded for edit", "success");
+}
+
+function deleteSelectedDraft() {
+  const draftId = String(byId("adjDraftSelect")?.value || "").trim();
+  if (!draftId) {
+    showToast("Select a draft first", "warn");
+    return;
+  }
+
+  const next = state.drafts.filter((x) => x.id !== draftId);
+  writeDraftStore(next);
+  refreshDraftState();
+
+  if (state.activeDraftId === draftId) {
+    setActiveDraft(null);
+  }
+
+  showToast("Draft deleted", "success");
 }
 
 async function saveAdjustments() {
@@ -544,6 +868,7 @@ async function saveAdjustments() {
     });
 
     showToast(out.message || "Adjustment saved", "success");
+    clearActiveDraftRecord();
     await loadIssuedNotes();
   } catch (err) {
     showToast(err.message || "Failed to save adjustment", "error");
@@ -571,6 +896,7 @@ function bindEvents() {
     else state.selectedNoteIds.delete(noteId);
 
     resetPreparedSelection();
+    setActiveDraft(null);
     renderNoteRows();
   });
 
@@ -585,14 +911,30 @@ function bindEvents() {
     paintEntryTotals();
   });
 
+  byId("adjDraftSelect")?.addEventListener("change", () => {
+    const selectedId = String(byId("adjDraftSelect")?.value || "").trim();
+    if (byId("adjDraftLoadBtn")) byId("adjDraftLoadBtn").disabled = !selectedId;
+    if (byId("adjDraftDeleteBtn")) byId("adjDraftDeleteBtn").disabled = !selectedId;
+  });
+
+  byId("adjDraftSaveBtn")?.addEventListener("click", saveDraftRecord);
+  byId("adjDraftLoadBtn")?.addEventListener("click", () => {
+    loadDraftForEdit().catch((err) => showToast(err.message || "Failed to load draft", "error"));
+  });
+  byId("adjDraftDeleteBtn")?.addEventListener("click", deleteSelectedDraft);
+
   byId("adjSaveBtn")?.addEventListener("click", saveAdjustments);
   byId("adjAddCodeBtn")?.addEventListener("click", addEntryCodeRow);
 }
 
 async function init() {
-  byId("adjEntryDate").value = todayDate();
+  if (byId("adjEntryDate")) byId("adjEntryDate").value = "";
+  if (byId("adjEntryRef")) byId("adjEntryRef").value = "";
+  if (byId("adjEntryRemarks")) byId("adjEntryRemarks").value = "";
+  if (byId("adjAddAmount")) byId("adjAddAmount").value = "";
   if (byId("adjAllowOver")) byId("adjAllowOver").value = "NO";
   if (byId("adjOverNote")) byId("adjOverNote").value = "";
+  refreshDraftState();
   paintSelectedNoteTotals();
   paintEntryTotals([]);
   bindEvents();

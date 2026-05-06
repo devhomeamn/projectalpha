@@ -87,6 +87,20 @@
             <div>
               <h3>Selected Notes Adjustment Entry</h3>
               <p class="imp-card-sub" id="adjSelectedLabel">No notes selected</p>
+              <p class="imp-card-sub" id="adjDraftStatusText">Draft: New</p>
+            </div>
+          </div>
+
+          <div class="imp-grid" style="margin-top:10px;">
+            <label class="imp-field wide" style="max-width:none;">
+              <span>Saved Draft Adjustment</span>
+              <select id="adjDraftSelect" class="imp-select">
+                <option value="">Select saved draft</option>
+              </select>
+            </label>
+            <div class="imp-actions" style="align-self:end;">
+              <button id="adjDraftLoadBtn" class="imp-btn secondary" type="button">Edit Draft</button>
+              <button id="adjDraftDeleteBtn" class="imp-btn danger" type="button">Delete Draft</button>
             </div>
           </div>
 
@@ -124,7 +138,7 @@
             </label>
             <label class="imp-field">
               <span>Adjusted Amount</span>
-              <input id="adjAddAmount" class="imp-input" type="number" min="0" step="0.01" value="0" />
+              <input id="adjAddAmount" class="imp-input" type="number" min="0" step="0.01" />
             </label>
             <div class="imp-actions" style="align-self:end;">
               <button id="adjAddCodeBtn" class="imp-btn secondary" type="button">Add Khat</button>
@@ -162,6 +176,7 @@
           </div>
 
           <div class="imp-actions" style="margin-top:10px;">
+            <button id="adjDraftSaveBtn" class="imp-btn secondary" type="button">Save as Draft</button>
             <button id="adjSaveBtn" class="imp-btn success" type="button">Save Adjustment</button>
           </div>
         </section>
