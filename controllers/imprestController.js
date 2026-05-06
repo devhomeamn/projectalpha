@@ -591,7 +591,7 @@ function buildNoteFlags(req, note) {
     can_reject: (isAdminUser(req) || isMasterUser(req)) && ["DRAFT", "SUBMITTED"].includes(status),
     can_issue: (isAdminUser(req) || isMasterUser(req)) && ["APPROVED"].includes(status),
     can_adjust:
-      (isAdminUser(req) || isMasterUser(req)) && ["FUND_ISSUED", "PARTIALLY_ADJUSTED"].includes(status),
+      (isAdminUser(req) || isMasterUser(req)) && ["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"].includes(status),
     can_print: canViewNote(req, note),
   };
 }
@@ -2567,9 +2567,11 @@ exports.adjustNote = async (req, res) => {
       return res.status(403).json({ message: "Only Admin/Master can adjust" });
     }
 
-    if (!["FUND_ISSUED", "PARTIALLY_ADJUSTED"].includes(noteStatus)) {
+    if (!["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"].includes(noteStatus)) {
       await t.rollback();
-      return res.status(400).json({ message: "Only issued note can be adjusted" });
+      return res
+        .status(400)
+        .json({ message: "Only FUND_ISSUED, PARTIALLY_ADJUSTED or ADJUSTED note can be adjusted" });
     }
 
     const rows = await ImprestNoteItem.findAll({
@@ -2792,10 +2794,10 @@ exports.adjustSelectedNotes = async (req, res) => {
 
     for (const note of notes) {
       const status = normalizeNoteStatus(note.status);
-      if (!["FUND_ISSUED", "PARTIALLY_ADJUSTED"].includes(status)) {
+      if (!["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"].includes(status)) {
         await t.rollback();
         return res.status(400).json({
-          message: `Only FUND_ISSUED or PARTIALLY_ADJUSTED notes can be adjusted (note: ${note.note_no || note.id}, status: ${status})`,
+          message: `Only FUND_ISSUED, PARTIALLY_ADJUSTED or ADJUSTED notes can be adjusted (note: ${note.note_no || note.id}, status: ${status})`,
         });
       }
 
