@@ -2794,7 +2794,9 @@ exports.adjustSelectedNotes = async (req, res) => {
       const status = normalizeNoteStatus(note.status);
       if (!["FUND_ISSUED", "PARTIALLY_ADJUSTED"].includes(status)) {
         await t.rollback();
-        return res.status(400).json({ message: `Only issued notes can be adjusted (note: ${note.note_no || note.id})` });
+        return res.status(400).json({
+          message: `Only FUND_ISSUED or PARTIALLY_ADJUSTED notes can be adjusted (note: ${note.note_no || note.id}, status: ${status})`,
+        });
       }
 
       if (Number(note.base_id) !== baseId) {

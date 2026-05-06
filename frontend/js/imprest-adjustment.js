@@ -12,7 +12,7 @@ import {
   toPositiveInt,
 } from "./imprest-common.js";
 
-const ISSUED_STATUSES = new Set(["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"]);
+const ISSUED_STATUSES = new Set(["FUND_ISSUED", "PARTIALLY_ADJUSTED"]);
 const ADJUSTMENT_DRAFT_STORAGE_KEY = "imprest_adjustment_drafts_v1";
 
 const state = {
