@@ -14,6 +14,7 @@ const state = {
   fiscalYears: [],
   codes: [],
   budgets: [],
+  budgetLookupSeq: 0,
 };
 
 function optionsHtml(rows, labelFn, selected = null, includeAll = false) {
@@ -84,6 +85,55 @@ async function loadBudgets() {
   const out = await imprestFetch(`/budgets${params.toString() ? `?${params.toString()}` : ""}`);
   state.budgets = ensureArray(out.data);
   renderBudgetRows();
+}
+
+function setBudgetSelectionHint(text) {
+  const hintEl = byId("baExistingHint");
+  if (!hintEl) return;
+  hintEl.textContent = String(text || "");
+}
+
+async function syncBudgetAmountFromSelection() {
+  const baseId = toPositiveInt(byId("baBase")?.value);
+  const fiscalYearId = toPositiveInt(byId("baFiscalYear")?.value);
+  const codeId = toPositiveInt(byId("baCode")?.value);
+  const amountInput = byId("baAmount");
+
+  const seq = ++state.budgetLookupSeq;
+
+  if (!baseId || !fiscalYearId || !codeId) {
+    if (amountInput) amountInput.value = "";
+    setBudgetSelectionHint("Select base, fiscal year and code to load existing allocation.");
+    return;
+  }
+
+  const params = new URLSearchParams({
+    base_id: String(baseId),
+    fiscal_year_id: String(fiscalYearId),
+    financial_code_id: String(codeId),
+  });
+
+  const out = await imprestFetch(`/budgets?${params.toString()}`);
+  if (seq !== state.budgetLookupSeq) return;
+
+  const rows = ensureArray(out.data);
+  const existing = rows.find(
+    (row) =>
+      Number(row.base_id) === Number(baseId) &&
+      Number(row.fiscal_year_id) === Number(fiscalYearId) &&
+      Number(row.financial_code_id) === Number(codeId)
+  );
+
+  if (existing) {
+    if (amountInput) amountInput.value = String(Number(existing.budget_amount || 0));
+    setBudgetSelectionHint(
+      `Existing allocation found: ${formatMoney(existing.budget_amount)}. Saving will update this amount.`
+    );
+    return;
+  }
+
+  if (amountInput) amountInput.value = "";
+  setBudgetSelectionHint("No previous allocation found for this selection. Enter a new budget amount.");
 }
 
 async function saveBase() {
@@ -187,9 +237,9 @@ async function saveBudgetAllocation() {
       body: JSON.stringify(payload),
     });
 
-    byId("baAmount").value = "";
     showToast("Budget allocation saved", "success");
     await loadBudgets();
+    await syncBudgetAmountFromSelection();
   } catch (err) {
     showToast(err.message || "Failed to save budget", "error");
   } finally {
@@ -202,6 +252,21 @@ function bindEvents() {
   byId("fcSaveBtn")?.addEventListener("click", saveFinancialCode);
   byId("fySaveBtn")?.addEventListener("click", saveFiscalYear);
   byId("baSaveBtn")?.addEventListener("click", saveBudgetAllocation);
+  byId("baBase")?.addEventListener("change", () => {
+    syncBudgetAmountFromSelection().catch((err) =>
+      showToast(err.message || "Failed to load existing allocation", "error")
+    );
+  });
+  byId("baFiscalYear")?.addEventListener("change", () => {
+    syncBudgetAmountFromSelection().catch((err) =>
+      showToast(err.message || "Failed to load existing allocation", "error")
+    );
+  });
+  byId("baCode")?.addEventListener("change", () => {
+    syncBudgetAmountFromSelection().catch((err) =>
+      showToast(err.message || "Failed to load existing allocation", "error")
+    );
+  });
 
   byId("baFilterBtn")?.addEventListener("click", () => loadBudgets().catch((err) => showToast(err.message, "error")));
   byId("baRefreshBtn")?.addEventListener("click", () => {
@@ -215,6 +280,7 @@ async function init() {
   bindEvents();
   await loadMasters();
   await loadBudgets();
+  await syncBudgetAmountFromSelection();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

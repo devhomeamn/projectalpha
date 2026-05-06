@@ -67,6 +67,7 @@
             <div class="imp-actions">
               <button id="impGenerateBtn" class="imp-btn" type="button">Generate Note</button>
             </div>
+            <div id="impGenerateCodeHint" class="imp-code-search-empty" style="width:100%;"></div>
           </div>
         </section>
 
@@ -106,10 +107,10 @@
               <tfoot>
                 <tr>
                   <td colspan="3"><strong>Total</strong></td>
-                  <td class="imp-right" id="impTotalBudget">0.00</td>
-                  <td class="imp-right" id="impTotalPrevious">0.00</td>
-                  <td class="imp-right" id="impTotalClaim">0.00</td>
-                  <td class="imp-right" id="impTotalRemaining">0.00</td>
+                  <td class="imp-right" id="impTotalBudget">0</td>
+                  <td class="imp-right" id="impTotalPrevious">0</td>
+                  <td class="imp-right" id="impTotalClaim">0</td>
+                  <td class="imp-right" id="impTotalRemaining">0</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -118,7 +119,7 @@
 
           <div class="imp-grid" style="margin-top:10px;">
             <label class="imp-field wide" style="max-width:none;">
-              <span>Add Code (Search)</span>
+              <span>Add More Code / Khat (Search)</span>
               <div class="imp-code-search-row">
                 <input
                   id="impAddCodeSearch"
@@ -126,7 +127,11 @@
                   type="text"
                   placeholder="Type code or khat name"
                 />
-                <button id="impAddCodeBtn" class="imp-mini-btn primary" type="button">Add Code</button>
+                <button id="impAddCodeBtn" class="imp-mini-btn primary" type="button">Add More</button>
+              </div>
+              <div class="imp-actions" style="margin-top:8px; margin-left:0;">
+                <button id="impSavePreferredBtn" class="imp-mini-btn success" type="button">Save Current as Preferred</button>
+                <button id="impClearPreferredBtn" class="imp-mini-btn warn" type="button">Clear Preferred</button>
               </div>
               <div id="impAddCodeList" class="imp-code-search-list"></div>
             </label>
