@@ -2765,6 +2765,10 @@ exports.adjustSelectedNotes = async (req, res) => {
 
     const selectedMonth = parseMonth(req.body?.month);
     const selectedPakkhik = parsePakkhik(req.body?.pakkhik ?? req.body?.selected_pakkhik);
+    const allowOverAdjustment =
+      req.body?.allow_over_adjustment === true ||
+      ["1", "true", "yes", "y", "on"].includes(String(req.body?.allow_over_adjustment || "").trim().toLowerCase());
+    const overAdjustmentNote = cleanText(req.body?.over_adjustment_note, 1000);
 
     const notes = await ImprestNote.findAll({
       where: { id: { [Op.in]: noteIds } },
@@ -2963,6 +2967,7 @@ exports.adjustSelectedNotes = async (req, res) => {
       return res.status(400).json({ message: "No adjustment amount found" });
     }
 
+    let totalOverRequested = 0;
     for (const [codeId, requested] of requestedByCode.entries()) {
       const bucket = codeBuckets.get(codeId);
       const pendingTotal = roundMoney(
@@ -2974,10 +2979,13 @@ exports.adjustSelectedNotes = async (req, res) => {
       );
 
       if (requested.regular_amount > pendingTotal) {
-        await t.rollback();
-        return res.status(400).json({
-          message: `Adjusted amount exceeds pending amount for code ${bucket.code || codeId}`,
-        });
+        if (!allowOverAdjustment) {
+          await t.rollback();
+          return res.status(400).json({
+            message: `Adjusted amount exceeds pending amount for code ${bucket.code || codeId}`,
+          });
+        }
+        totalOverRequested = roundMoney(totalOverRequested + (requested.regular_amount - pendingTotal));
       }
       if (requested.no_issue_amount > 0) {
         const hasUnissuedRow = bucket.rows.some((row) => toMoney(row.issued_amount, 0) <= 0);
@@ -2994,6 +3002,11 @@ exports.adjustSelectedNotes = async (req, res) => {
           }
         }
       }
+    }
+
+    if (totalOverRequested > 0 && !overAdjustmentNote) {
+      await t.rollback();
+      return res.status(400).json({ message: "over_adjustment_note is required when over adjustment is enabled" });
     }
 
     const adjustmentDate = toDateOnly(req.body?.adjustment_date) || todayDateOnly();
@@ -3021,10 +3034,15 @@ exports.adjustSelectedNotes = async (req, res) => {
         return Number(a.id || 0) - Number(b.id || 0);
       });
 
-      const persistAdjustment = async (row, takeAmount) => {
+      const persistAdjustment = async (row, takeAmount, options = {}) => {
+        const isOverRow = Boolean(options?.is_over_row);
         const issued = toMoney(row.issued_amount, 0);
         const adjusted = toMoney(row.adjustment_amount, 0);
         const newAdjusted = roundMoney(adjusted + takeAmount);
+        const mergedRemarks = cleanText(
+          [requested.remarks, lineRemarks, isOverRow ? overAdjustmentNote : null].filter(Boolean).join(" | "),
+          1000
+        );
 
         row.adjustment_amount = newAdjusted;
         row.unadjusted_amount = roundMoney(Math.max(0, issued - newAdjusted));
@@ -3041,7 +3059,7 @@ exports.adjustSelectedNotes = async (req, res) => {
           adjustment_ref_no: adjustmentRefNo,
           selection_note_ids: selectionNoteIdsCsv,
           voucher_no: adjustmentRefNo,
-          remarks: requested.remarks || lineRemarks,
+          remarks: mergedRemarks || null,
           created_by: getActorUserId(req),
         });
       };
@@ -3063,10 +3081,29 @@ exports.adjustSelectedNotes = async (req, res) => {
       }
 
       if (remainingRegular > 0) {
-        await t.rollback();
-        return res.status(400).json({
-          message: `Could not fully allocate pending adjustment for code ${bucket.code || codeId}`,
-        });
+        if (!allowOverAdjustment) {
+          await t.rollback();
+          return res.status(400).json({
+            message: `Could not fully allocate pending adjustment for code ${bucket.code || codeId}`,
+          });
+        }
+
+        let overTarget = sortedRows[0] || null;
+        if (!overTarget) {
+          overTarget = await ensureUnissuedRowForCode(codeId, bucket);
+          if (overTarget) {
+            sortedRows.push(overTarget);
+          }
+        }
+        if (!overTarget) {
+          await t.rollback();
+          return res.status(400).json({
+            message: `Could not allocate over adjustment for code ${bucket.code || codeId}`,
+          });
+        }
+
+        await persistAdjustment(overTarget, remainingRegular, { is_over_row: true });
+        remainingRegular = 0;
       }
 
       let remainingNoIssue = roundMoney(requested.no_issue_amount);

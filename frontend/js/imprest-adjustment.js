@@ -63,12 +63,91 @@ function resetPreparedSelection() {
   state.adjustBudgetByCode = new Map();
   if (byId("adjAddCode")) byId("adjAddCode").innerHTML = '<option value="">Select khat/code</option>';
   if (byId("adjAddAmount")) byId("adjAddAmount").value = "0";
+  if (byId("adjAllowOver")) byId("adjAllowOver").value = "NO";
+  if (byId("adjOverNote")) byId("adjOverNote").value = "";
   byId("adjDetailCard").style.display = "none";
+  paintEntryTotals([]);
 }
 
 function resetAllSelection() {
   state.selectedNoteIds = new Set();
   resetPreparedSelection();
+  paintSelectedNoteTotals();
+}
+
+function isOverAdjustmentEnabled() {
+  return String(byId("adjAllowOver")?.value || "NO").toUpperCase() === "YES";
+}
+
+function paintSelectedNoteTotals() {
+  const rows = ensureArray(state.noteSummaryRows).filter((row) => state.selectedNoteIds.has(Number(row.note_id)));
+  const issued = rows.reduce((sum, row) => sum + toNumber(row.issued_amount), 0);
+  const adjusted = rows.reduce((sum, row) => sum + toNumber(row.adjusted_amount), 0);
+  const pending = rows.reduce((sum, row) => sum + toNumber(row.pending_adjustment), 0);
+
+  byId("adjSelIssuedTotal").textContent = formatMoney(issued);
+  byId("adjSelAdjustedTotal").textContent = formatMoney(adjusted);
+  byId("adjSelPendingTotal").textContent = formatMoney(pending);
+}
+
+function getEntryTotalsFromTableRows(rows) {
+  let issuedTotal = 0;
+  let adjustedTotal = 0;
+  let pendingTotal = 0;
+  let addNowTotal = 0;
+  let noIssueTotal = 0;
+  let overTotal = 0;
+
+  rows.forEach((row) => {
+    const issued = toNumber(row.getAttribute("data-issued"));
+    const pending = toNumber(row.getAttribute("data-pending"));
+    const alreadyAdjusted = toNumber(row.getAttribute("data-adjusted"));
+    const addNow = toNumber(row.querySelector(".adj-now")?.value);
+    const noIssue = toNumber(row.querySelector(".adj-no-issue")?.value);
+
+    issuedTotal += issued;
+    adjustedTotal += alreadyAdjusted;
+    pendingTotal += pending;
+    addNowTotal += addNow;
+    noIssueTotal += noIssue;
+    overTotal += Math.max(0, addNow - pending);
+  });
+
+  return {
+    issuedTotal: Number(issuedTotal.toFixed(2)),
+    adjustedTotal: Number(adjustedTotal.toFixed(2)),
+    pendingTotal: Number(pendingTotal.toFixed(2)),
+    addNowTotal: Number(addNowTotal.toFixed(2)),
+    noIssueTotal: Number(noIssueTotal.toFixed(2)),
+    overTotal: Number(overTotal.toFixed(2)),
+  };
+}
+
+function paintEntryTotals(rowsInput = null) {
+  const rows = Array.from(rowsInput || byId("adjEntryRows")?.querySelectorAll("tr") || []);
+  const totals = getEntryTotalsFromTableRows(rows);
+
+  byId("adjEntryIssuedTotal").textContent = formatMoney(totals.issuedTotal);
+  byId("adjEntryAdjustedTotal").textContent = formatMoney(totals.adjustedTotal);
+  byId("adjEntryPendingTotal").textContent = formatMoney(totals.pendingTotal);
+  byId("adjEntryNowTotal").textContent = formatMoney(totals.addNowTotal);
+  byId("adjEntryNoIssueTotal").textContent = formatMoney(totals.noIssueTotal);
+  byId("adjEntryOverTotal").textContent = formatMoney(totals.overTotal);
+}
+
+function applyOverModeInputConstraints() {
+  const rows = Array.from(byId("adjEntryRows")?.querySelectorAll("tr") || []);
+  const allowOver = isOverAdjustmentEnabled();
+  rows.forEach((row) => {
+    const pending = toNumber(row.getAttribute("data-pending"));
+    const input = row.querySelector(".adj-now");
+    if (!input) return;
+    if (allowOver) {
+      input.removeAttribute("max");
+      return;
+    }
+    input.setAttribute("max", String(Number(pending.toFixed(2))));
+  });
 }
 
 function renderNoteRows() {
@@ -77,6 +156,7 @@ function renderNoteRows() {
 
   if (!state.noteSummaryRows.length) {
     tbody.innerHTML = '<tr><td colspan="9" class="imp-empty">No issued note found</td></tr>';
+    paintSelectedNoteTotals();
     return;
   }
 
@@ -102,6 +182,7 @@ function renderNoteRows() {
       `;
     })
     .join("");
+  paintSelectedNoteTotals();
 }
 
 function setKpisFromRows(rows) {
@@ -121,6 +202,7 @@ function renderEntryRows(rows) {
 
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="9" class="imp-empty">No code-wise row found</td></tr>';
+    paintEntryTotals([]);
     return;
   }
 
@@ -130,7 +212,9 @@ function renderEntryRows(rows) {
       const noIssueDisabled = issued > 0 ? "disabled" : "";
       const codeId = toPositiveInt(row.financial_code_id);
       return `
-        <tr data-code-id="${codeId || ""}" data-issued="${issued}" data-pending="${Number(row.pending_amount)}">
+        <tr data-code-id="${codeId || ""}" data-issued="${issued}" data-adjusted="${Number(
+          row.adjusted_amount
+        )}" data-pending="${Number(row.pending_amount)}">
           <td>${idx + 1}</td>
           <td>${escapeHtml(row.khat_name_bn || "-")}</td>
           <td>${escapeHtml(row.code || "-")}</td>
@@ -146,6 +230,8 @@ function renderEntryRows(rows) {
       `;
     })
     .join("");
+  applyOverModeInputConstraints();
+  paintEntryTotals(Array.from(tbody.querySelectorAll("tr")));
 }
 
 function buildAddCodeOptionLabel(row) {
@@ -202,6 +288,7 @@ function addEntryCodeRow() {
     if (noIssueInput && amount > 0) {
       noIssueInput.value = String(Number((toNumber(noIssueInput.value) + amount).toFixed(2)));
     }
+    paintEntryTotals(Array.from(tbody.querySelectorAll("tr")));
     showToast("This code is already in adjustment table", "warn");
     return;
   }
@@ -220,7 +307,7 @@ function addEntryCodeRow() {
   tbody.insertAdjacentHTML(
     "beforeend",
     `
-      <tr data-code-id="${codeId}" data-issued="0" data-pending="0">
+      <tr data-code-id="${codeId}" data-issued="0" data-adjusted="0" data-pending="0">
         <td>${sl}</td>
         <td>${escapeHtml(khat)}</td>
         <td>${escapeHtml(code)}</td>
@@ -240,6 +327,8 @@ function addEntryCodeRow() {
   select.value = "";
   amountInput.value = "0";
   byId("adjSavedCount").textContent = String((tbody.querySelectorAll("tr") || []).length);
+  applyOverModeInputConstraints();
+  paintEntryTotals(Array.from(tbody.querySelectorAll("tr")));
 }
 
 function setSelectionSummary(notes) {
@@ -387,7 +476,7 @@ async function prepareSelectedNotes() {
   byId("adjAddAmount").value = "0";
 }
 
-function readAdjustmentPayloadRows() {
+function readAdjustmentPayloadRows({ allowOverAdjustment = false } = {}) {
   const rows = Array.from(byId("adjEntryRows")?.querySelectorAll("tr") || []);
   return rows
     .map((row) => {
@@ -397,7 +486,7 @@ function readAdjustmentPayloadRows() {
       const pending = toNumber(row.getAttribute("data-pending"));
       const amount = toNumber(row.querySelector(".adj-now")?.value);
       const noIssueAmount = toNumber(row.querySelector(".adj-no-issue")?.value);
-      if (amount > pending) throw new Error("Adjusted amount exceeds pending amount");
+      if (!allowOverAdjustment && amount > pending) throw new Error("Adjusted amount exceeds pending amount");
       if (noIssueAmount > 0 && issued > 0) {
         throw new Error("No-issue adjustment is allowed only when issued amount is zero");
       }
@@ -419,9 +508,17 @@ async function saveAdjustments() {
     return;
   }
 
-  const adjustments = readAdjustmentPayloadRows();
+  const allowOverAdjustment = isOverAdjustmentEnabled();
+  const overAdjustmentNote = String(byId("adjOverNote")?.value || "").trim();
+  const adjustments = readAdjustmentPayloadRows({ allowOverAdjustment });
   if (!adjustments.length) {
     showToast("Enter at least one adjustment amount", "warn");
+    return;
+  }
+
+  const totals = getEntryTotalsFromTableRows(Array.from(byId("adjEntryRows")?.querySelectorAll("tr") || []));
+  if (allowOverAdjustment && totals.overTotal > 0 && !overAdjustmentNote) {
+    showToast("Over adjustment note is required when over amount is used", "warn");
     return;
   }
 
@@ -433,6 +530,8 @@ async function saveAdjustments() {
     adjustment_date: byId("adjEntryDate")?.value || null,
     adjustment_ref_no: String(byId("adjEntryRef")?.value || "").trim() || null,
     remarks: String(byId("adjEntryRemarks")?.value || "").trim() || null,
+    allow_over_adjustment: allowOverAdjustment,
+    over_adjustment_note: overAdjustmentNote || null,
     adjustments,
   };
 
@@ -475,12 +574,27 @@ function bindEvents() {
     renderNoteRows();
   });
 
+  byId("adjAllowOver")?.addEventListener("change", () => {
+    applyOverModeInputConstraints();
+    paintEntryTotals();
+  });
+
+  byId("adjEntryRows")?.addEventListener("input", (e) => {
+    const target = e.target;
+    if (!target.closest(".adj-now, .adj-no-issue")) return;
+    paintEntryTotals();
+  });
+
   byId("adjSaveBtn")?.addEventListener("click", saveAdjustments);
   byId("adjAddCodeBtn")?.addEventListener("click", addEntryCodeRow);
 }
 
 async function init() {
   byId("adjEntryDate").value = todayDate();
+  if (byId("adjAllowOver")) byId("adjAllowOver").value = "NO";
+  if (byId("adjOverNote")) byId("adjOverNote").value = "";
+  paintSelectedNoteTotals();
+  paintEntryTotals([]);
   bindEvents();
   await loadMasters();
 }

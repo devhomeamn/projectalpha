@@ -70,6 +70,14 @@
                 </tr>
               </thead>
               <tbody id="adjNoteRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" style="text-align:right;"><strong>Selected Total</strong></td>
+                  <td class="imp-right" id="adjSelIssuedTotal">0.00</td>
+                  <td class="imp-right" id="adjSelAdjustedTotal">0.00</td>
+                  <td class="imp-right" id="adjSelPendingTotal">0.00</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </section>
@@ -93,6 +101,19 @@
             <label class="imp-field"><span>Adjustment Date</span><input id="adjEntryDate" class="imp-input" type="date" /></label>
             <label class="imp-field"><span>Adjustment Ref No</span><input id="adjEntryRef" class="imp-input" /></label>
             <label class="imp-field wide" style="max-width:none;"><span>Remarks (default)</span><input id="adjEntryRemarks" class="imp-input" /></label>
+          </div>
+          <div class="imp-grid" style="margin-top:10px;">
+            <label class="imp-field">
+              <span>Over Adjustment</span>
+              <select id="adjAllowOver" class="imp-select">
+                <option value="NO">Not Allowed</option>
+                <option value="YES">Allow Over Adjustment</option>
+              </select>
+            </label>
+            <label class="imp-field wide" style="max-width:none;">
+              <span>Over Adjustment Note (Required if allowed)</span>
+              <input id="adjOverNote" class="imp-input" placeholder="Reason for over adjustment" />
+            </label>
           </div>
           <div class="imp-grid" style="margin-top:10px;">
             <label class="imp-field wide" style="max-width:none;">
@@ -126,6 +147,17 @@
                 </tr>
               </thead>
               <tbody id="adjEntryRows"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" style="text-align:right;"><strong>Total</strong></td>
+                  <td class="imp-right" id="adjEntryIssuedTotal">0.00</td>
+                  <td class="imp-right" id="adjEntryAdjustedTotal">0.00</td>
+                  <td class="imp-right" id="adjEntryPendingTotal">0.00</td>
+                  <td class="imp-right" id="adjEntryNowTotal">0.00</td>
+                  <td class="imp-right" id="adjEntryNoIssueTotal">0.00</td>
+                  <td class="imp-right" id="adjEntryOverTotal">0.00</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
