@@ -4,12 +4,14 @@ import {
   createMonthOptionsHtml,
   createPakkhikOptionsHtml,
   escapeHtml,
+  getFiscalStartMonth,
   getMonthNameBn,
   getPakkhikLabel,
   getPakkhikShort,
   iframePrint,
   imprestFetch,
   normalizeStatusClass,
+  preventNumberInputWheel,
   setButtonBusy,
   showToast,
   toBanglaDigits,
@@ -28,6 +30,68 @@ const state = {
 const DEFAULT_GENERATE_CODE_LIMIT = 30;
 const PREFERRED_CODES_STORAGE_KEY = "imprest_note_preferred_codes_v1";
 const codeCollator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+let impConfirmResolve = null;
+
+function ensureConfirmModal() {
+  if (byId("impConfirmModal")) return;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+      <div id="impConfirmModal" class="inv-modal" aria-hidden="true">
+        <div class="inv-modal-card narrow">
+          <div class="inv-modal-head">
+            <h4 id="impConfirmTitle">Confirm Action</h4>
+            <button id="impConfirmClose" class="inv-close" type="button">&times;</button>
+          </div>
+          <p id="impConfirmMessage" class="imp-card-sub" style="margin: 2px 0 0; font-size: 13px; color: #334155;"></p>
+          <div class="imp-actions" style="margin-top:12px;">
+            <button id="impConfirmCancel" class="imp-btn secondary" type="button">Cancel</button>
+            <button id="impConfirmOk" class="imp-btn warn" type="button">Confirm</button>
+          </div>
+        </div>
+      </div>
+    `
+  );
+
+  const closeWith = (value) => {
+    const modal = byId("impConfirmModal");
+    if (modal) {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    const resolve = impConfirmResolve;
+    impConfirmResolve = null;
+    if (resolve) resolve(Boolean(value));
+  };
+
+  byId("impConfirmClose")?.addEventListener("click", () => closeWith(false));
+  byId("impConfirmCancel")?.addEventListener("click", () => closeWith(false));
+  byId("impConfirmOk")?.addEventListener("click", () => closeWith(true));
+  byId("impConfirmModal")?.addEventListener("click", (e) => {
+    if (e.target?.id === "impConfirmModal") closeWith(false);
+  });
+}
+
+async function showConfirmModal({
+  title = "Confirm Action",
+  message = "Are you sure?",
+  confirmText = "Confirm",
+} = {}) {
+  ensureConfirmModal();
+  const modal = byId("impConfirmModal");
+  if (!modal) return false;
+  if (impConfirmResolve) return false;
+
+  byId("impConfirmTitle").textContent = String(title);
+  byId("impConfirmMessage").textContent = String(message);
+  byId("impConfirmOk").textContent = String(confirmText);
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  return new Promise((resolve) => {
+    impConfirmResolve = resolve;
+  });
+}
 
 function compareCodeText(a, b) {
   const codeA = String(a || "").trim();
@@ -71,11 +135,25 @@ function setFiscalYearOptions() {
   el.innerHTML = options || '<option value="">No fiscal year</option>';
 }
 
-function setFixedSelectors() {
+function getSelectedFiscalYearStartMonth() {
+  const fiscalYearId = toPositiveInt(byId("impFiscalYear")?.value);
+  if (!fiscalYearId) return 7;
+  const fiscalYear = (state.fiscalYears || []).find((row) => toPositiveInt(row?.id) === fiscalYearId);
+  return getFiscalStartMonth(fiscalYear, 7);
+}
+
+function refreshMonthOptions(selected = null) {
   const month = byId("impMonth");
+  if (!month) return;
+  const selectedMonth = toPositiveInt(selected) || toPositiveInt(month.value) || new Date().getMonth() + 1;
+  month.innerHTML = createMonthOptionsHtml(selectedMonth, getSelectedFiscalYearStartMonth());
+  month.value = String(selectedMonth);
+}
+
+function setFixedSelectors() {
   const pakkhik = byId("impPakkhik");
   const demandType = byId("impDemandType");
-  if (month) month.innerHTML = createMonthOptionsHtml(new Date().getMonth() + 1);
+  refreshMonthOptions(new Date().getMonth() + 1);
   if (demandType) demandType.value = "REGULAR";
   if (pakkhik) pakkhik.innerHTML = createPakkhikOptionsHtml("FIRST_HALF");
 }
@@ -515,7 +593,12 @@ function recalcTotalsAndPaint() {
     const row = byId(`imp-row-code-${codeId}`);
     if (!row) return;
     const remEl = row.querySelector(".imp-row-remaining");
-    if (remEl) remEl.textContent = formatMoneyTrim(remaining);
+    const isNegative = remaining < 0;
+    if (remEl) {
+      remEl.textContent = formatMoneyTrim(remaining);
+      remEl.classList.toggle("imp-negative", isNegative);
+    }
+    row.classList.toggle("imp-row-negative", isNegative);
   });
 
   note.total_budget = Number(totalBudget.toFixed(2));
@@ -526,7 +609,11 @@ function recalcTotalsAndPaint() {
   byId("impTotalBudget").textContent = formatMoneyTrim(note.total_budget);
   byId("impTotalPrevious").textContent = formatMoneyTrim(note.total_previous_expense);
   byId("impTotalClaim").textContent = formatMoneyTrim(note.total_current_claim);
-  byId("impTotalRemaining").textContent = formatMoneyTrim(note.total_remaining);
+  const totalRemainingEl = byId("impTotalRemaining");
+  if (totalRemainingEl) {
+    totalRemainingEl.textContent = formatMoneyTrim(note.total_remaining);
+    totalRemainingEl.classList.toggle("imp-negative", note.total_remaining < 0);
+  }
 }
 
 function renderRows(note) {
@@ -559,7 +646,7 @@ function renderRows(note) {
             data-financial-code-id="${codeId}"
             type="number"
             min="0"
-            step="0.01"
+            step="any"
             value="${claim}"
             ${editable ? "" : "disabled"}
           />
@@ -729,6 +816,12 @@ async function saveDraft() {
 async function submitNote() {
   const note = state.note;
   if (!note?.id) return;
+  const ok = await showConfirmModal({
+    title: "Submit Note",
+    message: "Submit করলে note approval flow-এ চলে যাবে। Continue করতে চান?",
+    confirmText: "Submit",
+  });
+  if (!ok) return;
 
   const button = byId("impSubmitBtn");
   const release = setButtonBusy(button, true, "Submitting...");
@@ -885,6 +978,7 @@ async function loadByIdFromQuery() {
 
     if (out.data?.base_id) byId("impBase").value = String(out.data.base_id);
     if (out.data?.fiscal_year_id) byId("impFiscalYear").value = String(out.data.fiscal_year_id);
+    refreshMonthOptions(out.data?.month);
     if (out.data?.month) byId("impMonth").value = String(out.data.month);
     if (out.data?.demand_type) byId("impDemandType").value = String(out.data.demand_type);
     if (out.data?.pakkhik) byId("impPakkhik").value = String(out.data.pakkhik);
@@ -908,6 +1002,7 @@ function bindEvents() {
     loadBudgetCodes().catch((err) => showToast(err.message || "Failed to load codes", "error"));
   });
   byId("impFiscalYear")?.addEventListener("change", () => {
+    refreshMonthOptions();
     loadBudgetCodes().catch((err) => showToast(err.message || "Failed to load codes", "error"));
   });
   byId("impDemandType")?.addEventListener("change", setDemandTypeVisibility);
@@ -954,10 +1049,12 @@ function bindEvents() {
 }
 
 async function init() {
+  preventNumberInputWheel(document);
   setFixedSelectors();
   setDemandTypeVisibility();
   bindEvents();
   await loadMasters();
+  refreshMonthOptions();
   await loadBudgetCodes();
   await loadByIdFromQuery();
 }

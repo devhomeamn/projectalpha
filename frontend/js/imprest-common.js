@@ -138,6 +138,43 @@ export function getMonthNameBn(month) {
   return MONTHS_BN[idx];
 }
 
+export function parseMonthFromDateLike(value, fallback = 1) {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  const match = text.match(/^\d{4}-(\d{2})-\d{2}$/);
+  if (match) {
+    const month = Number(match[1]);
+    if (Number.isFinite(month) && month >= 1 && month <= 12) return month;
+  }
+
+  const parsed = new Date(text);
+  const month = Number(parsed.getMonth()) + 1;
+  if (Number.isFinite(month) && month >= 1 && month <= 12) return month;
+  return fallback;
+}
+
+export function getFiscalStartMonth(fiscalYear, fallback = 1) {
+  return parseMonthFromDateLike(fiscalYear?.start_date, fallback);
+}
+
+export function getFiscalMonthOrder(startMonth = 1) {
+  const safeStart = Number(startMonth);
+  const begin = Number.isFinite(safeStart) && safeStart >= 1 && safeStart <= 12 ? Math.trunc(safeStart) : 1;
+  const order = [];
+  for (let i = 0; i < 12; i += 1) {
+    order.push(((begin - 1 + i) % 12) + 1);
+  }
+  return order;
+}
+
+export function getFiscalMonthSortIndex(month, startMonth = 1) {
+  const n = Number(month);
+  if (!Number.isFinite(n) || n < 1 || n > 12) return 99;
+  const order = getFiscalMonthOrder(startMonth);
+  const idx = order.indexOf(Math.trunc(n));
+  return idx >= 0 ? idx : 99;
+}
+
 function wordsBelowHundred(value) {
   const n = Math.trunc(Math.abs(value));
   if (n < 20) return UNITS_BN[n];
@@ -218,12 +255,15 @@ export function getPakkhikShort(value) {
   return "-";
 }
 
-export function createMonthOptionsHtml(selected = null) {
-  return MONTHS_EN.map((name, idx) => {
-    const value = idx + 1;
-    const selectedAttr = Number(selected) === value ? "selected" : "";
-    return `<option value="${value}" ${selectedAttr}>${name}</option>`;
-  }).join("");
+export function createMonthOptionsHtml(selected = null, startMonth = 1) {
+  const order = getFiscalMonthOrder(startMonth);
+  return order
+    .map((value) => {
+      const name = MONTHS_EN[value - 1] || String(value);
+      const selectedAttr = Number(selected) === value ? "selected" : "";
+      return `<option value="${value}" ${selectedAttr}>${name}</option>`;
+    })
+    .join("");
 }
 
 export function createPakkhikOptionsHtml(selected = null) {
@@ -255,4 +295,18 @@ export function iframePrint(html) {
     iframe.contentWindow.print();
     setTimeout(() => iframe.remove(), 900);
   }, 260);
+}
+
+export function preventNumberInputWheel(root = document) {
+  if (!root || typeof root.addEventListener !== "function") return;
+  root.addEventListener(
+    "wheel",
+    (e) => {
+      const input = e.target?.closest?.('input[type="number"]');
+      if (!input) return;
+      if (document.activeElement !== input) return;
+      input.blur();
+    },
+    { passive: true }
+  );
 }

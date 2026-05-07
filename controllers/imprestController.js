@@ -387,6 +387,29 @@ function parseMonth(value) {
   return null;
 }
 
+function monthFromDateLike(value, fallback = 7) {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+
+  const match = text.match(/^\d{4}-(\d{2})-\d{2}$/);
+  if (match) {
+    const month = Number(match[1]);
+    if (Number.isFinite(month) && month >= 1 && month <= 12) return month;
+  }
+
+  const parsed = new Date(text);
+  const month = Number(parsed.getMonth()) + 1;
+  if (Number.isFinite(month) && month >= 1 && month <= 12) return month;
+  return fallback;
+}
+
+function fiscalMonthSortIndex(month, fiscalStartMonth = 7) {
+  const n = toSafeInt(month, null);
+  if (!n || n < 1 || n > 12) return 99;
+  const start = toSafeInt(fiscalStartMonth, 7);
+  return (n - start + 12) % 12;
+}
+
 function parsePakkhik(value) {
   const text = String(value || "").trim().toUpperCase();
   if (!text) return null;
@@ -567,7 +590,8 @@ function canViewNote(req, note) {
 }
 
 function canEditDraft(req, note) {
-  if (note.status !== "DRAFT") return false;
+  const status = normalizeNoteStatus(note?.status);
+  if (!["DRAFT", "REJECTED"].includes(status)) return false;
   if (isAdminUser(req)) return true;
 
   if (isGeneralUser(req)) {
@@ -588,7 +612,7 @@ function buildNoteFlags(req, note) {
     can_edit_items: canEditDraft(req, note),
     can_submit: canEditDraft(req, note),
     can_approve: (isAdminUser(req) || isMasterUser(req)) && ["SUBMITTED"].includes(status),
-    can_reject: (isAdminUser(req) || isMasterUser(req)) && ["DRAFT", "SUBMITTED"].includes(status),
+    can_reject: (isAdminUser(req) || isMasterUser(req)) && ["SUBMITTED"].includes(status),
     can_issue: (isAdminUser(req) || isMasterUser(req)) && ["APPROVED"].includes(status),
     can_adjust:
       (isAdminUser(req) || isMasterUser(req)) && ["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"].includes(status),
@@ -2420,22 +2444,22 @@ exports.rejectNote = async (req, res) => {
 
     if (!(isAdminUser(req) || isMasterUser(req))) {
       await t.rollback();
-      return res.status(403).json({ message: "Only Admin/Master can reject" });
+      return res.status(403).json({ message: "Only Admin/Master can send back" });
     }
 
-    if (!["DRAFT", "SUBMITTED"].includes(noteStatus)) {
+    if (!["SUBMITTED"].includes(noteStatus)) {
       await t.rollback();
-      return res.status(400).json({ message: "This note can no longer be rejected" });
+      return res.status(400).json({ message: "Only submitted note can be sent back" });
     }
 
-    note.status = "REJECTED";
+    note.status = "DRAFT";
     note.remarks = cleanText(req.body?.remarks, 2000);
     await note.save({ transaction: t });
 
     await t.commit();
 
     const refreshed = await fetchNoteWithDetails(noteId);
-    return res.json({ message: "Imprest note rejected", data: serializeNote(refreshed, req) });
+    return res.json({ message: "Imprest note sent back for correction", data: serializeNote(refreshed, req) });
   } catch (err) {
     await t.rollback();
     console.error("imprest.rejectNote error:", err);
@@ -3629,7 +3653,12 @@ exports.getWorkflowReport = async (req, res) => {
         where: budgetWhere,
         include: [
           { model: ImprestBase, as: "base", attributes: ["id", "base_name", "base_code"], required: false },
-          { model: ImprestFiscalYear, as: "fiscalYear", attributes: ["id", "name"], required: false },
+          {
+            model: ImprestFiscalYear,
+            as: "fiscalYear",
+            attributes: ["id", "name", "start_date", "end_date"],
+            required: false,
+          },
           {
             model: ImprestFinancialCode,
             as: "financialCode",
@@ -3643,7 +3672,12 @@ exports.getWorkflowReport = async (req, res) => {
         where: noteWhere,
         include: [
           { model: ImprestBase, as: "base", attributes: ["id", "base_name", "base_code"], required: false },
-          { model: ImprestFiscalYear, as: "fiscalYear", attributes: ["id", "name"], required: false },
+          {
+            model: ImprestFiscalYear,
+            as: "fiscalYear",
+            attributes: ["id", "name", "start_date", "end_date"],
+            required: false,
+          },
           {
             model: ImprestNoteItem,
             as: "items",
@@ -3670,6 +3704,26 @@ exports.getWorkflowReport = async (req, res) => {
 
     const budgetRows = budgets.map((row) => (row.toJSON ? row.toJSON() : row));
     const noteRows = notes.map((row) => (row.toJSON ? row.toJSON() : row));
+    const fiscalStartMonth = (() => {
+      const candidates = [];
+      if (fiscalYearId) {
+        noteRows.forEach((row) => {
+          if (Number(row?.fiscal_year_id) === Number(fiscalYearId) && row?.fiscalYear) candidates.push(row.fiscalYear);
+        });
+        budgetRows.forEach((row) => {
+          if (Number(row?.fiscal_year_id) === Number(fiscalYearId) && row?.fiscalYear) candidates.push(row.fiscalYear);
+        });
+      } else {
+        if (noteRows[0]?.fiscalYear) candidates.push(noteRows[0].fiscalYear);
+        if (budgetRows[0]?.fiscalYear) candidates.push(budgetRows[0].fiscalYear);
+      }
+
+      for (const fiscalYear of candidates) {
+        const startMonth = monthFromDateLike(fiscalYear?.start_date, null);
+        if (startMonth) return startMonth;
+      }
+      return 7;
+    })();
     const noteNoById = new Map(
       noteRows
         .map((row) => [Number(row.id), row.note_no || null])
@@ -3678,6 +3732,7 @@ exports.getWorkflowReport = async (req, res) => {
 
     const selectionByItemId = new Map();
     const selectionByNoteCode = new Map();
+    let noteAdjustmentRows = [];
     const noteIdsForSelection = Array.from(
       new Set(
         noteRows
@@ -3687,9 +3742,17 @@ exports.getWorkflowReport = async (req, res) => {
     );
 
     if (noteIdsForSelection.length) {
-      const adjustmentRows = await ImprestAdjustment.findAll({
+      noteAdjustmentRows = await ImprestAdjustment.findAll({
         where: { note_id: { [Op.in]: noteIdsForSelection } },
-        attributes: ["note_id", "note_item_id", "financial_code_id", "selection_note_ids"],
+        attributes: ["note_id", "note_item_id", "financial_code_id", "selection_note_ids", "adjusted_amount"],
+        include: [
+          {
+            model: ImprestFinancialCode,
+            as: "financialCode",
+            attributes: ["id", "code", "khat_name_bn", "khat_name_en"],
+            required: false,
+          },
+        ],
       });
 
       const mergeSelection = (targetMap, key, ids) => {
@@ -3699,7 +3762,7 @@ exports.getWorkflowReport = async (req, res) => {
         targetMap.set(key, current);
       };
 
-      adjustmentRows.forEach((row) => {
+      noteAdjustmentRows.forEach((row) => {
         const ids = parseIdList(row.selection_note_ids || row.note_id);
         if (!ids.length) return;
 
@@ -3715,6 +3778,17 @@ exports.getWorkflowReport = async (req, res) => {
         }
       });
     }
+
+    const reportBaseMeta =
+      (baseId &&
+        (noteRows.find((row) => Number(row?.base_id || 0) === Number(baseId))?.base ||
+          budgetRows.find((row) => Number(row?.base_id || 0) === Number(baseId))?.base)) ||
+      null;
+    const reportFiscalYearMeta =
+      (fiscalYearId &&
+        (noteRows.find((row) => Number(row?.fiscal_year_id || 0) === Number(fiscalYearId))?.fiscalYear ||
+          budgetRows.find((row) => Number(row?.fiscal_year_id || 0) === Number(fiscalYearId))?.fiscalYear)) ||
+      null;
 
     const issuedItemRows = [];
     const noteRollups = [];
@@ -4174,7 +4248,7 @@ exports.getWorkflowReport = async (req, res) => {
 
       const data = Array.from(byKey.values()).sort((a, b) => {
         if (a.base_name !== b.base_name) return String(a.base_name).localeCompare(String(b.base_name));
-        return Number(a.month) - Number(b.month);
+        return fiscalMonthSortIndex(a.month, fiscalStartMonth) - fiscalMonthSortIndex(b.month, fiscalStartMonth);
       });
 
       return res.json({
@@ -4187,7 +4261,8 @@ exports.getWorkflowReport = async (req, res) => {
     if (reportType === "code_yearly") {
       const codeMeta = new Map();
       const issuedByCode = new Map();
-      const adjustedByCode = new Map();
+      const adjustedByCodeFromItems = new Map();
+      const adjustedByCodeFromAdjustments = new Map();
 
       budgetRows.forEach((row) => {
         const cId = Number(row.financial_code_id || 0);
@@ -4214,15 +4289,43 @@ exports.getWorkflowReport = async (req, res) => {
           });
         }
         issuedByCode.set(cId, roundMoney(toMoney(issuedByCode.get(cId), 0) + toMoney(row.issued_amount, 0)));
-        adjustedByCode.set(cId, roundMoney(toMoney(adjustedByCode.get(cId), 0) + toMoney(row.adjusted_amount, 0)));
+        adjustedByCodeFromItems.set(
+          cId,
+          roundMoney(toMoney(adjustedByCodeFromItems.get(cId), 0) + toMoney(row.adjusted_amount, 0))
+        );
       });
 
-      const ids = new Set([...sumBudgetByCode.keys(), ...issuedByCode.keys(), ...adjustedByCode.keys()]);
+      noteAdjustmentRows.forEach((row) => {
+        const cId = Number(row.financial_code_id || 0);
+        if (!cId) return;
+        if (codeId && cId !== codeId) return;
+        if (!codeMeta.has(cId)) {
+          codeMeta.set(cId, {
+            financial_code_id: cId,
+            code: row.financialCode?.code || `CODE-${cId}`,
+            khat_name_bn: row.financialCode?.khat_name_bn || null,
+            khat_name_en: row.financialCode?.khat_name_en || null,
+          });
+        }
+        adjustedByCodeFromAdjustments.set(
+          cId,
+          roundMoney(toMoney(adjustedByCodeFromAdjustments.get(cId), 0) + toMoney(row.adjusted_amount, 0))
+        );
+      });
+
+      const ids = new Set([
+        ...sumBudgetByCode.keys(),
+        ...issuedByCode.keys(),
+        ...adjustedByCodeFromItems.keys(),
+        ...adjustedByCodeFromAdjustments.keys(),
+      ]);
       const data = Array.from(ids)
         .map((cId) => {
           const budget = toMoney(sumBudgetByCode.get(cId), 0);
           const issued = toMoney(issuedByCode.get(cId), 0);
-          const adjusted = toMoney(adjustedByCode.get(cId), 0);
+          const adjustedFromItems = toMoney(adjustedByCodeFromItems.get(cId), 0);
+          const adjustedFromAdjustments = toMoney(adjustedByCodeFromAdjustments.get(cId), 0);
+          const adjusted = roundMoney(Math.max(adjustedFromItems, adjustedFromAdjustments));
           return {
             ...(codeMeta.get(cId) || {
               financial_code_id: Number(cId),
@@ -4233,7 +4336,7 @@ exports.getWorkflowReport = async (req, res) => {
             budget_amount: budget,
             total_issued: issued,
             total_adjusted: adjusted,
-            pending_adjustment: roundMoney(Math.max(0, issued - adjusted)),
+            pending_adjustment: roundMoney(issued - adjusted),
             budget_remaining: roundMoney(budget - issued),
           };
         })
@@ -4242,6 +4345,10 @@ exports.getWorkflowReport = async (req, res) => {
       return res.json({
         type: reportType,
         filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        meta: {
+          base_name: reportBaseMeta?.base_name || null,
+          fiscal_year_name: reportFiscalYearMeta?.name || null,
+        },
         data,
       });
     }

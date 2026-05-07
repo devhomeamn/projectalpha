@@ -6,6 +6,7 @@ import {
   escapeHtml,
   formatMoney,
   formatMoneyBn,
+  getFiscalStartMonth,
   getMonthNameBn,
   getPakkhikLabel,
   getPagination,
@@ -13,6 +14,7 @@ import {
   iframePrint,
   imprestFetch,
   normalizeStatusClass,
+  preventNumberInputWheel,
   setButtonBusy,
   showToast,
   toBanglaDigits,
@@ -38,10 +40,25 @@ function toggleModal(id, open) {
   modal.setAttribute("aria-hidden", open ? "false" : "true");
 }
 
+function getSelectedFiscalYearStartMonth() {
+  const fiscalYearId = toPositiveInt(byId("impListFiscalYear")?.value);
+  if (!fiscalYearId) return 7;
+  const fiscalYear = ensureArray(state.fiscalYears).find((row) => toPositiveInt(row?.id) === fiscalYearId);
+  return getFiscalStartMonth(fiscalYear, 7);
+}
+
+function setMonthFilterOptions(selected = null) {
+  const monthSelect = byId("impListMonth");
+  if (!monthSelect) return;
+  const selectedMonth = toPositiveInt(selected ?? monthSelect.value);
+  monthSelect.innerHTML =
+    '<option value="">All</option>' + createMonthOptionsHtml(selectedMonth, getSelectedFiscalYearStartMonth());
+  monthSelect.value = selectedMonth ? String(selectedMonth) : "";
+}
+
 function setFilterOptions() {
   const baseSelect = byId("impListBase");
   const fySelect = byId("impListFiscalYear");
-  const monthSelect = byId("impListMonth");
   const pakkhikSelect = byId("impListPakkhik");
 
   if (baseSelect) {
@@ -58,7 +75,7 @@ function setFilterOptions() {
       state.fiscalYears.map((row) => `<option value="${Number(row.id)}">${escapeHtml(row.name)}</option>`).join("");
   }
 
-  if (monthSelect) monthSelect.innerHTML = '<option value="">All</option>' + createMonthOptionsHtml();
+  setMonthFilterOptions();
   if (pakkhikSelect) {
     pakkhikSelect.innerHTML = `
       <option value="">All</option>
@@ -103,7 +120,9 @@ function renderRows() {
         actions.push(`<button class="imp-mini-btn success" data-action="approve" data-id="${Number(row.id)}" type="button">Approve</button>`);
       }
       if (row.can_reject) {
-        actions.push(`<button class="imp-mini-btn danger" data-action="reject" data-id="${Number(row.id)}" type="button">Reject</button>`);
+        actions.push(
+          `<button class="imp-mini-btn warn" data-action="reject" data-id="${Number(row.id)}" type="button">Send Back</button>`
+        );
       }
       if (row.can_issue) {
         actions.push(`<button class="imp-mini-btn warn" data-action="issue" data-id="${Number(row.id)}" type="button">Issue Fund</button>`);
@@ -128,7 +147,9 @@ function renderRows() {
           })</td>
           <td><span class="imp-status ${normalizeStatusClass(row.status)}">${escapeHtml(row.status || "-")}</span></td>
           <td class="imp-right">${formatMoney(row.total_current_claim)}</td>
-          <td class="imp-right">${formatMoney(row.total_remaining)}</td>
+          <td class="imp-right ${toNumber(row.total_remaining) < 0 ? "imp-negative" : ""}">${formatMoney(
+            row.total_remaining
+          )}</td>
           <td><div class="imp-row-actions">${actions.join("")}</div></td>
         </tr>
       `;
@@ -171,12 +192,12 @@ async function loadMasters() {
 function openActionModal(type, rowId) {
   const titles = {
     approve: "Approve Note",
-    reject: "Reject Note",
+    reject: "Send Back Note",
   };
   byId("impActionType").value = type;
   byId("impActionId").value = String(rowId);
   byId("impActionTitle").textContent = titles[type] || "Take Action";
-  byId("impActionSubmit").textContent = type === "approve" ? "Approve" : "Reject";
+  byId("impActionSubmit").textContent = type === "approve" ? "Approve" : "Send Back";
   byId("impActionRemarks").value = "";
   toggleModal("impActionModal", true);
 }
@@ -200,10 +221,10 @@ async function submitActionForm(e) {
     });
 
     toggleModal("impActionModal", false);
-    showToast(`Note ${actionType === "approve" ? "approved" : "rejected"} successfully`, "success");
+    showToast(`Note ${actionType === "approve" ? "approved" : "sent back"} successfully`, "success");
     await loadRows(state.page);
   } catch (err) {
-    showToast(err.message || `Failed to ${actionType} note`, "error");
+    showToast(err.message || `Failed to ${actionType === "approve" ? "approve" : "send back"} note`, "error");
   } finally {
     release();
   }
@@ -320,8 +341,8 @@ function renderAdjustRows(items) {
           <td class="imp-right">${formatMoney(issued)}</td>
           <td class="imp-right">${formatMoney(adjusted)}</td>
           <td class="imp-right">${formatMoney(pending)}</td>
-          <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${pending}" value="${pending}" /></td>
-          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="0" ${noIssueDisabled} /></td>
+          <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="any" max="${pending}" value="${pending}" /></td>
+          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="any" value="0" ${noIssueDisabled} /></td>
         </tr>
       `;
     })
@@ -412,8 +433,8 @@ function addAdjustCodeRow() {
         <td class="imp-right">${formatMoney(0)}</td>
         <td class="imp-right">${formatMoney(0)}</td>
         <td class="imp-right">${formatMoney(0)}</td>
-        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="0" value="0" /></td>
-        <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="${initialNoIssue}" /></td>
+        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="any" max="0" value="0" /></td>
+        <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="any" value="${initialNoIssue}" /></td>
       </tr>
     `
   );
@@ -604,10 +625,13 @@ async function printNote(noteId) {
 
 function bindEvents() {
   byId("impListSearchBtn")?.addEventListener("click", () => loadRows(1).catch((err) => showToast(err.message, "error")));
+  byId("impListFiscalYear")?.addEventListener("change", () => {
+    setMonthFilterOptions();
+  });
   byId("impListClearBtn")?.addEventListener("click", () => {
     byId("impListBase").value = "";
     byId("impListFiscalYear").value = "";
-    byId("impListMonth").value = "";
+    setMonthFilterOptions("");
     byId("impListPakkhik").value = "";
     byId("impListStatus").value = "";
     byId("impListSearch").value = "";
@@ -680,6 +704,7 @@ function bindEvents() {
 }
 
 async function init() {
+  preventNumberInputWheel(document);
   bindEvents();
   await loadMasters();
   await loadRows(1);

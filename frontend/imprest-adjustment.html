@@ -138,7 +138,7 @@
             </label>
             <label class="imp-field">
               <span>Adjusted Amount</span>
-              <input id="adjAddAmount" class="imp-input" type="number" min="0" step="0.01" />
+              <input id="adjAddAmount" class="imp-input" type="number" min="0" step="any" />
             </label>
             <div class="imp-actions" style="align-self:end;">
               <button id="adjAddCodeBtn" class="imp-btn secondary" type="button">Add Khat</button>
@@ -173,6 +173,9 @@
                 </tr>
               </tfoot>
             </table>
+          </div>
+          <div class="imp-table-summary">
+            Add Adjustment + No-Issue Adjustment Total: <strong id="adjEntryCombinedTotal">0.00</strong>
           </div>
 
           <div class="imp-actions" style="margin-top:10px;">

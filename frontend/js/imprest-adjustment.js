@@ -4,8 +4,11 @@ import {
   ensureArray,
   escapeHtml,
   formatMoney,
+  getFiscalMonthSortIndex,
+  getFiscalStartMonth,
   getPakkhikLabel,
   imprestFetch,
+  preventNumberInputWheel,
   setButtonBusy,
   showToast,
   toNumber,
@@ -14,6 +17,7 @@ import {
 
 const ISSUED_STATUSES = new Set(["FUND_ISSUED", "PARTIALLY_ADJUSTED", "ADJUSTED"]);
 const ADJUSTMENT_DRAFT_STORAGE_KEY = "imprest_adjustment_drafts_v1";
+let adjConfirmResolve = null;
 
 const state = {
   bases: [],
@@ -27,6 +31,67 @@ const state = {
   drafts: [],
   activeDraftId: null,
 };
+
+function ensureConfirmModal() {
+  if (byId("adjConfirmModal")) return;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+      <div id="adjConfirmModal" class="inv-modal" aria-hidden="true">
+        <div class="inv-modal-card narrow">
+          <div class="inv-modal-head">
+            <h4 id="adjConfirmTitle">Confirm Action</h4>
+            <button id="adjConfirmClose" class="inv-close" type="button">&times;</button>
+          </div>
+          <p id="adjConfirmMessage" class="imp-card-sub" style="margin: 2px 0 0; font-size: 13px; color: #334155;"></p>
+          <div class="imp-actions" style="margin-top:12px;">
+            <button id="adjConfirmCancel" class="imp-btn secondary" type="button">Cancel</button>
+            <button id="adjConfirmOk" class="imp-btn warn" type="button">Confirm</button>
+          </div>
+        </div>
+      </div>
+    `
+  );
+
+  const closeWith = (value) => {
+    const modal = byId("adjConfirmModal");
+    if (modal) {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    const resolve = adjConfirmResolve;
+    adjConfirmResolve = null;
+    if (resolve) resolve(Boolean(value));
+  };
+
+  byId("adjConfirmClose")?.addEventListener("click", () => closeWith(false));
+  byId("adjConfirmCancel")?.addEventListener("click", () => closeWith(false));
+  byId("adjConfirmOk")?.addEventListener("click", () => closeWith(true));
+  byId("adjConfirmModal")?.addEventListener("click", (e) => {
+    if (e.target?.id === "adjConfirmModal") closeWith(false);
+  });
+}
+
+async function showConfirmModal({
+  title = "Confirm Action",
+  message = "Are you sure?",
+  confirmText = "Confirm",
+} = {}) {
+  ensureConfirmModal();
+  const modal = byId("adjConfirmModal");
+  if (!modal) return false;
+  if (adjConfirmResolve) return false;
+
+  byId("adjConfirmTitle").textContent = String(title);
+  byId("adjConfirmMessage").textContent = String(message);
+  byId("adjConfirmOk").textContent = String(confirmText);
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  return new Promise((resolve) => {
+    adjConfirmResolve = resolve;
+  });
+}
 
 function toInputAmount(value) {
   const n = toNumber(value);
@@ -171,10 +236,25 @@ function optionsHtml(rows, labelFn, selected = null, includeAll = false) {
   return opts.join("");
 }
 
+function getSelectedFiscalYearStartMonth() {
+  const fiscalYearId = toPositiveInt(byId("adjFiscalYear")?.value);
+  if (!fiscalYearId) return 7;
+  const fiscalYear = ensureArray(state.fiscalYears).find((row) => toPositiveInt(row?.id) === fiscalYearId);
+  return getFiscalStartMonth(fiscalYear, 7);
+}
+
+function setMonthFilterOptions(selected = null) {
+  const monthSelect = byId("adjMonth");
+  if (!monthSelect) return;
+  const selectedMonth = toPositiveInt(selected ?? monthSelect.value);
+  monthSelect.innerHTML = '<option value="">All</option>' + createMonthOptionsHtml(selectedMonth, getSelectedFiscalYearStartMonth());
+  monthSelect.value = selectedMonth ? String(selectedMonth) : "";
+}
+
 function setFilterOptions() {
   byId("adjBase").innerHTML = optionsHtml(state.bases, (r) => `${r.base_name} (${r.base_code})`);
   byId("adjFiscalYear").innerHTML = optionsHtml(state.fiscalYears, (r) => r.name);
-  byId("adjMonth").innerHTML = '<option value="">All</option>' + createMonthOptionsHtml();
+  setMonthFilterOptions();
 }
 
 function readFilters() {
@@ -254,6 +334,7 @@ function getEntryTotalsFromTableRows(rows) {
     pendingTotal: Number(pendingTotal.toFixed(2)),
     addNowTotal: Number(addNowTotal.toFixed(2)),
     noIssueTotal: Number(noIssueTotal.toFixed(2)),
+    combinedTotal: Number((addNowTotal + noIssueTotal).toFixed(2)),
     overTotal: Number(overTotal.toFixed(2)),
   };
 }
@@ -267,6 +348,7 @@ function paintEntryTotals(rowsInput = null) {
   byId("adjEntryPendingTotal").textContent = formatMoney(totals.pendingTotal);
   byId("adjEntryNowTotal").textContent = formatMoney(totals.addNowTotal);
   byId("adjEntryNoIssueTotal").textContent = formatMoney(totals.noIssueTotal);
+  byId("adjEntryCombinedTotal").textContent = formatMoney(totals.combinedTotal);
   byId("adjEntryOverTotal").textContent = formatMoney(totals.overTotal);
 }
 
@@ -356,10 +438,10 @@ function renderEntryRows(rows) {
           <td class="imp-right">${formatMoney(row.issued_amount)}</td>
           <td class="imp-right">${formatMoney(row.adjusted_amount)}</td>
           <td class="imp-right">${formatMoney(row.pending_amount)}</td>
-          <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="${Number(
+          <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="any" max="${Number(
             row.pending_amount
           )}" value="" /></td>
-          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="" ${noIssueDisabled} /></td>
+          <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="any" value="" ${noIssueDisabled} /></td>
           <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
         </tr>
       `;
@@ -449,8 +531,8 @@ function addEntryCodeRow() {
         <td class="imp-right">${formatMoney(0)}</td>
         <td class="imp-right">${formatMoney(0)}</td>
         <td class="imp-right">${formatMoney(0)}</td>
-        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="0.01" max="0" value="" /></td>
-        <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="0.01" value="${initialNoIssue}" /></td>
+        <td class="imp-right"><input class="imp-input adj-now" type="number" min="0" step="any" max="0" value="" /></td>
+        <td class="imp-right"><input class="imp-input adj-no-issue" type="number" min="0" step="any" value="${initialNoIssue}" /></td>
         <td><input class="imp-input adj-row-remarks" value="" placeholder="Optional" /></td>
       </tr>
     `
@@ -564,8 +646,11 @@ async function loadIssuedNotes() {
     byNote.set(key, existing);
   });
 
+  const fiscalStartMonth = getSelectedFiscalYearStartMonth();
   state.noteSummaryRows = Array.from(byNote.values()).sort((a, b) => {
-    if (a.month !== b.month) return Number(a.month) - Number(b.month);
+    const monthOrderDiff =
+      getFiscalMonthSortIndex(a.month, fiscalStartMonth) - getFiscalMonthSortIndex(b.month, fiscalStartMonth);
+    if (monthOrderDiff !== 0) return monthOrderDiff;
     return String(a.note_no || "").localeCompare(String(b.note_no || ""));
   });
 
@@ -777,6 +862,7 @@ async function loadDraftForEdit() {
   byId("adjMonth").value = draft.filters?.month ? String(draft.filters.month) : "";
   byId("adjDemandType").value = String(draft.filters?.demand_type || "");
   byId("adjPakkhik").value = String(draft.filters?.pakkhik || "");
+  setMonthFilterOptions(draft.filters?.month);
 
   await loadIssuedNotes();
 
@@ -846,6 +932,13 @@ async function saveAdjustments() {
     return;
   }
 
+  const ok = await showConfirmModal({
+    title: "Save Adjustment",
+    message: "এই adjustment entry save করতে চান?",
+    confirmText: "Save Adjustment",
+  });
+  if (!ok) return;
+
   const filters = readFilters();
   const payload = {
     note_ids: noteIds,
@@ -880,6 +973,12 @@ async function saveAdjustments() {
 function bindEvents() {
   byId("adjLoadBtn")?.addEventListener("click", () => {
     loadIssuedNotes().catch((err) => showToast(err.message || "Failed to load notes", "error"));
+  });
+
+  byId("adjFiscalYear")?.addEventListener("change", () => {
+    setMonthFilterOptions();
+    resetAllSelection();
+    renderNoteRows();
   });
 
   byId("adjPrepareBtn")?.addEventListener("click", () => {
@@ -928,6 +1027,7 @@ function bindEvents() {
 }
 
 async function init() {
+  preventNumberInputWheel(document);
   if (byId("adjEntryDate")) byId("adjEntryDate").value = "";
   if (byId("adjEntryRef")) byId("adjEntryRef").value = "";
   if (byId("adjEntryRemarks")) byId("adjEntryRemarks").value = "";

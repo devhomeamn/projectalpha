@@ -4,6 +4,8 @@ import {
   ensureArray,
   escapeHtml,
   formatMoney,
+  getFiscalMonthSortIndex,
+  getFiscalStartMonth,
   imprestFetch,
   showToast,
   toNumber,
@@ -128,6 +130,23 @@ const state = {
   rows: [],
 };
 
+function getSelectedFiscalYearStartMonth() {
+  const fiscalYearId = Number(byId("repFy")?.value || 0);
+  if (!Number.isFinite(fiscalYearId) || fiscalYearId <= 0) return 7;
+  const fiscalYear = ensureArray(state.fiscalYears).find((row) => Number(row?.id) === fiscalYearId);
+  return getFiscalStartMonth(fiscalYear, 7);
+}
+
+function setMonthFilterOptions(selected = null) {
+  const monthSelect = byId("repMonth");
+  if (!monthSelect) return;
+  const selectedMonth = Number(selected ?? monthSelect.value);
+  const safeSelectedMonth = Number.isFinite(selectedMonth) && selectedMonth >= 1 && selectedMonth <= 12 ? selectedMonth : null;
+  monthSelect.innerHTML =
+    '<option value="">All</option>' + createMonthOptionsHtml(safeSelectedMonth, getSelectedFiscalYearStartMonth());
+  monthSelect.value = safeSelectedMonth ? String(safeSelectedMonth) : "";
+}
+
 function setFilterOptions() {
   byId("repBase").innerHTML =
     '<option value="">All</option>' +
@@ -137,7 +156,7 @@ function setFilterOptions() {
     '<option value="">All</option>' +
     state.fiscalYears.map((r) => `<option value="${Number(r.id)}">${escapeHtml(r.name)}</option>`).join("");
 
-  byId("repMonth").innerHTML = '<option value="">All</option>' + createMonthOptionsHtml();
+  setMonthFilterOptions();
 }
 
 function getConfig() {
@@ -153,6 +172,116 @@ function compactList(values, max = 6) {
   const rows = ensureArray(values).map((x) => String(x || "").trim()).filter(Boolean);
   if (rows.length <= max) return rows.join(", ");
   return `${rows.slice(0, max).join(", ")} ... +${rows.length - max}`;
+}
+
+function getSelectedOptionText(id) {
+  const el = byId(id);
+  if (!el) return "";
+  const option = el.options?.[el.selectedIndex] || null;
+  return String(option?.textContent || "").trim();
+}
+
+function normalizeFilterLabel(text) {
+  const value = String(text || "").trim();
+  if (!value || value.toLowerCase() === "all") return "";
+  return value;
+}
+
+function resolveReportTitle(config) {
+  if (state.type !== "code_yearly") return config.title;
+  const baseName = normalizeFilterLabel(state.meta?.base_name || getSelectedOptionText("repBase"));
+  if (!baseName) return config.title;
+  return `${config.title} - ${baseName}`;
+}
+
+function buildReportContextText() {
+  const meta = state.meta || {};
+  const parts = [];
+
+  if (state.type === "adjustment_period_detail") {
+    if (meta.base_name) parts.push(`Base: ${meta.base_name}`);
+    if (meta.fiscal_year_name) parts.push(`FY: ${meta.fiscal_year_name}`);
+    if (meta.requested_month) parts.push(`Requested Month: ${meta.requested_month}`);
+    if (meta.requested_pakkhik) parts.push(`Requested Pakkhik: ${meta.requested_pakkhik}`);
+    if (ensureArray(meta.scope_pakkhiks).length) {
+      parts.push(`Adjusted Against Pakkhik: ${compactList(meta.scope_pakkhiks, 8)}`);
+    }
+    if (ensureArray(meta.scope_periods).length) {
+      parts.push(`Periods: ${compactList(meta.scope_periods, 6)}`);
+    }
+    return parts.join(" | ");
+  }
+
+  if (state.type === "code_yearly") {
+    const baseName = normalizeFilterLabel(meta.base_name || getSelectedOptionText("repBase"));
+    const fiscalYearName = normalizeFilterLabel(meta.fiscal_year_name || getSelectedOptionText("repFy"));
+    if (baseName) parts.push(`Base: ${baseName}`);
+    if (fiscalYearName) parts.push(`FY: ${fiscalYearName}`);
+    return parts.join(" | ");
+  }
+
+  return "";
+}
+
+function formatMoneyByColumn(value, colKey) {
+  const n = toNumber(value);
+  if (state.type === "code_yearly" && colKey === "pending_adjustment" && n < 0) {
+    return `(${formatMoney(Math.abs(n))})`;
+  }
+  return formatMoney(n);
+}
+
+function formatReportCell(row, col) {
+  const value = row?.[col.key];
+  if (!col.money) return escapeHtml(value ?? "-");
+  return formatMoneyByColumn(value, col.key);
+}
+
+function getColumnTotals(rows, config) {
+  const totals = {};
+  config.columns.forEach((col) => {
+    if (!col.money) return;
+    const sum = rows.reduce((acc, row) => acc + toNumber(row?.[col.key]), 0);
+    totals[col.key] = Number(sum.toFixed(2));
+  });
+  return totals;
+}
+
+function normalizeRowsByReportType(rows, type) {
+  const list = ensureArray(rows);
+  if (type !== "code_yearly") return list;
+  return list.map((row) => {
+    const issued = toNumber(row?.total_issued, 0);
+    const adjusted = toNumber(row?.total_adjusted, 0);
+    return {
+      ...(row || {}),
+      pending_adjustment: Number((issued - adjusted).toFixed(2)),
+    };
+  });
+}
+
+function renderFooter(config) {
+  const tfoot = byId("repFoot");
+  if (!tfoot) return;
+
+  const hasMoneyColumn = config.columns.some((col) => col.money);
+  if (!state.rows.length || !hasMoneyColumn) {
+    tfoot.innerHTML = "";
+    return;
+  }
+
+  const totals = getColumnTotals(state.rows, config);
+  const cells = config.columns
+    .map((col) => {
+      if (!col.money) return `<td class="imp-total-empty">-</td>`;
+      const totalValue = toNumber(totals[col.key]);
+      const isNegativeMoney = totalValue < 0;
+      const className = `${col.right ? "imp-right" : ""}${isNegativeMoney ? " imp-negative" : ""}`.trim();
+      return `<td class="${className}">${formatMoneyByColumn(totalValue, col.key)}</td>`;
+    })
+    .join("");
+
+  tfoot.innerHTML = `<tr><td class="imp-total-label">Total</td>${cells}</tr>`;
 }
 
 function readFilters() {
@@ -193,26 +322,10 @@ function renderKpis() {
 
 function renderTable() {
   const config = getConfig();
-  byId("repTableTitle").textContent = config.title;
+  byId("repTableTitle").textContent = resolveReportTitle(config);
   const contextEl = byId("repContext");
   if (contextEl) {
-    if (state.type === "adjustment_period_detail") {
-      const meta = state.meta || {};
-      const parts = [];
-      if (meta.base_name) parts.push(`Base: ${meta.base_name}`);
-      if (meta.fiscal_year_name) parts.push(`FY: ${meta.fiscal_year_name}`);
-      if (meta.requested_month) parts.push(`Requested Month: ${meta.requested_month}`);
-      if (meta.requested_pakkhik) parts.push(`Requested Pakkhik: ${meta.requested_pakkhik}`);
-      if (ensureArray(meta.scope_pakkhiks).length) {
-        parts.push(`Adjusted Against Pakkhik: ${compactList(meta.scope_pakkhiks, 8)}`);
-      }
-      if (ensureArray(meta.scope_periods).length) {
-        parts.push(`Periods: ${compactList(meta.scope_periods, 6)}`);
-      }
-      contextEl.textContent = parts.join(" | ");
-    } else {
-      contextEl.textContent = "";
-    }
+    contextEl.textContent = buildReportContextText();
   }
 
   byId("repHead").innerHTML = `
@@ -225,8 +338,10 @@ function renderTable() {
   `;
 
   const tbody = byId("repRows");
+  const tfoot = byId("repFoot");
   if (!state.rows.length) {
     tbody.innerHTML = `<tr><td colspan="${config.columns.length + 1}" class="imp-empty">No report data found</td></tr>`;
+    if (tfoot) tfoot.innerHTML = "";
     return;
   }
 
@@ -235,8 +350,10 @@ function renderTable() {
       const cells = config.columns
         .map((col) => {
           const value = row[col.key];
-          const text = col.money ? formatMoney(value) : escapeHtml(value ?? "-");
-          return `<td class="${col.right ? "imp-right" : ""}">${text}</td>`;
+          const text = formatReportCell(row, col);
+          const isNegativeMoney = col.money && toNumber(value) < 0;
+          const className = `${col.right ? "imp-right" : ""}${isNegativeMoney ? " imp-negative" : ""}`;
+          return `<td class="${className.trim()}">${text}</td>`;
         })
         .join("");
       const isBaseSummaryRow =
@@ -251,6 +368,8 @@ function renderTable() {
       return `<tr${attrs}${style}><td>${idx + 1}</td>${cells}</tr>`;
     })
     .join("");
+
+  renderFooter(config);
 }
 
 async function loadReport() {
@@ -265,7 +384,15 @@ async function loadReport() {
   const out = await imprestFetch(`/reports?${params.toString()}`);
   state.view = String(out.view || "default").trim().toLowerCase() || "default";
   state.meta = out.meta || null;
-  state.rows = ensureArray(out.data);
+  state.rows = normalizeRowsByReportType(out.data, state.type);
+
+  if (state.type === "monthly_pakkhik") {
+    const fiscalStartMonth = getSelectedFiscalYearStartMonth();
+    state.rows.sort((a, b) => {
+      if (a.base_name !== b.base_name) return String(a.base_name || "").localeCompare(String(b.base_name || ""));
+      return getFiscalMonthSortIndex(a.month, fiscalStartMonth) - getFiscalMonthSortIndex(b.month, fiscalStartMonth);
+    });
+  }
 
   renderTable();
   renderKpis();
@@ -274,13 +401,15 @@ async function loadReport() {
 function buildPrintHtml() {
   const config = getConfig();
   const ag = aggregateKpis(state.rows, config);
+  const contextText = buildReportContextText();
+  const totals = getColumnTotals(state.rows, config);
+  const hasMoneyColumn = config.columns.some((col) => col.money);
 
   const rowsHtml = state.rows
     .map((row, idx) => {
       const cells = config.columns
         .map((col) => {
-          const value = row[col.key];
-          const text = col.money ? formatMoney(value) : escapeHtml(value ?? "-");
+          const text = formatReportCell(row, col);
           const align = col.right ? "text-align:right;" : "";
           return `<td style="${align}">${text}</td>`;
         })
@@ -288,6 +417,21 @@ function buildPrintHtml() {
       return `<tr><td>${idx + 1}</td>${cells}</tr>`;
     })
     .join("");
+
+  const totalRowHtml = hasMoneyColumn && state.rows.length
+    ? `<tr>
+         <td><strong>Total</strong></td>
+         ${config.columns
+           .map((col) => {
+              if (!col.money) return "<td>-</td>";
+              const value = toNumber(totals[col.key]);
+              const align = col.right ? "text-align:right;" : "";
+              const color = value < 0 ? "color:#b91c1c;font-weight:700;" : "";
+              return `<td style="${align}${color}">${formatMoneyByColumn(value, col.key)}</td>`;
+            })
+            .join("")}
+       </tr>`
+    : "";
 
   const headerCells = config.columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("");
 
@@ -307,7 +451,8 @@ function buildPrintHtml() {
         </style>
       </head>
       <body>
-        <h2>${escapeHtml(config.title)}</h2>
+        <h2>${escapeHtml(resolveReportTitle(config))}</h2>
+        ${contextText ? `<div class="meta">${escapeHtml(contextText)}</div>` : ""}
         <div class="meta">
           Rows: ${ag.count} | Budget: ${formatMoney(ag.budget)} | Issued: ${formatMoney(ag.issued)} | Adjusted: ${formatMoney(ag.adjusted)} | Pending: ${formatMoney(ag.pending)}
         </div>
@@ -319,6 +464,7 @@ function buildPrintHtml() {
             </tr>
           </thead>
           <tbody>${rowsHtml || `<tr><td colspan="${config.columns.length + 1}" style="text-align:center;">No data</td></tr>`}</tbody>
+          ${totalRowHtml ? `<tfoot>${totalRowHtml}</tfoot>` : ""}
         </table>
       </body>
     </html>
@@ -359,13 +505,14 @@ function bindEvents() {
     byId("repType").value = "base_yearly";
     byId("repBase").value = "";
     byId("repFy").value = "";
-    byId("repMonth").value = "";
+    setMonthFilterOptions("");
     byId("repDemandType").value = "";
     byId("repPakkhik").value = "";
     loadReport().catch((err) => showToast(err.message, "error"));
   });
 
   byId("repType")?.addEventListener("change", () => loadReport().catch((err) => showToast(err.message, "error")));
+  byId("repFy")?.addEventListener("change", () => setMonthFilterOptions());
   byId("repRows")?.addEventListener("click", (e) => {
     if (!(state.type === "adjustment_by_base" && state.view === "base_summary")) return;
     const row = e.target.closest("tr[data-base-id]");
