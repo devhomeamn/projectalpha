@@ -528,6 +528,14 @@ function pakkhikNameEn(pakkhik) {
   return text || "-";
 }
 
+function pakkhikSortIndex(pakkhik) {
+  const text = String(pakkhik || "").toUpperCase();
+  if (text === "FIRST_HALF") return 1;
+  if (text === "SECOND_HALF") return 2;
+  if (text === "NONE" || text === "SUPPLEMENTARY") return 3;
+  return 9;
+}
+
 function formatDateOnly(value) {
   if (!value) return null;
   const text = String(value);
@@ -3744,7 +3752,7 @@ exports.getWorkflowReport = async (req, res) => {
     if (noteIdsForSelection.length) {
       noteAdjustmentRows = await ImprestAdjustment.findAll({
         where: { note_id: { [Op.in]: noteIdsForSelection } },
-        attributes: ["note_id", "note_item_id", "financial_code_id", "selection_note_ids", "adjusted_amount"],
+        attributes: ["note_id", "note_item_id", "financial_code_id", "selection_note_ids", "adjusted_amount", "remarks"],
         include: [
           {
             model: ImprestFinancialCode,
@@ -4254,6 +4262,203 @@ exports.getWorkflowReport = async (req, res) => {
       return res.json({
         type: reportType,
         filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        data,
+      });
+    }
+
+    if (reportType === "code_wise_details") {
+      if (!fiscalYearId || !codeId) {
+        return res.status(400).json({ message: "fiscal_year_id and financial_code_id are required" });
+      }
+
+      const budgetAmount = roundMoney(
+        budgetRows.reduce((sum, row) => {
+          if (Number(row.financial_code_id || 0) !== Number(codeId)) return sum;
+          return sum + toMoney(row.budget_amount, 0);
+        }, 0)
+      );
+
+      const filteredRows = issuedItemRows.filter((row) => Number(row.financial_code_id || 0) === Number(codeId));
+      const noteMetaById = new Map();
+      const byPeriod = new Map();
+
+      filteredRows.forEach((row) => {
+        const monthVal = Number(row.month || 0);
+        if (!monthVal || monthVal < 1 || monthVal > 12) return;
+        const periodStart = String(row.period_start || "");
+        const yearMatch = periodStart.match(/^(\d{4})-\d{2}-\d{2}$/);
+        const periodYear = yearMatch ? Number(yearMatch[1]) : null;
+        const pakkhikKey = String(row.pakkhik || "").toUpperCase();
+        const pakkhikLabel =
+          row.demand_type === "COMPLEMENTARY" ? "Complementary" : row.pakkhik_label || pakkhikNameEn(row.pakkhik);
+        const noteIdVal = Number(row.note_id || 0);
+        if (!noteIdVal) return;
+        const issuedAmount = toMoney(row.issued_amount, 0);
+        const periodKey = `${periodYear || 0}::${monthVal}::${pakkhikKey}`;
+
+        noteMetaById.set(noteIdVal, {
+          note_id: noteIdVal,
+          period_key: periodKey,
+          issued_amount: issuedAmount,
+        });
+
+        const current =
+          byPeriod.get(periodKey) ||
+          {
+            period_year: periodYear,
+            month: monthVal,
+            month_name: monthName(monthVal),
+            pakkhik: pakkhikKey,
+            pakkhik_label: pakkhikLabel,
+            issued_amount: 0,
+            adjusted_scope_total: 0,
+            pending_scope_total: 0,
+            adjusted_allocated: 0,
+            adjusted_anchor_count: 0,
+            brace_start_count: 0,
+            brace_mid_count: 0,
+            brace_end_count: 0,
+          };
+
+        current.issued_amount = roundMoney(current.issued_amount + issuedAmount);
+        byPeriod.set(periodKey, current);
+      });
+
+      const scopedAdjustment = new Map();
+      noteAdjustmentRows.forEach((adjRow) => {
+        if (Number(adjRow.financial_code_id || 0) !== Number(codeId)) return;
+        const adjustedAmount = toMoney(adjRow.adjusted_amount, 0);
+        if (adjustedAmount <= 0) return;
+
+        const scopedNoteIds = parseIdList(adjRow.selection_note_ids || adjRow.note_id)
+          .map((id) => Number(id))
+          .filter((id) => noteMetaById.has(id));
+        if (!scopedNoteIds.length) return;
+
+        const scopeKey = scopedNoteIds.slice().sort((a, b) => a - b).join(",");
+        const current = scopedAdjustment.get(scopeKey) || {
+          scope_note_ids: scopedNoteIds.slice().sort((a, b) => a - b),
+          adjusted_amount: 0,
+        };
+        current.adjusted_amount = roundMoney(current.adjusted_amount + adjustedAmount);
+        scopedAdjustment.set(scopeKey, current);
+      });
+
+      scopedAdjustment.forEach((scope) => {
+        const periodWeights = new Map();
+        let totalWeight = 0;
+
+        scope.scope_note_ids.forEach((noteIdVal) => {
+          const meta = noteMetaById.get(Number(noteIdVal));
+          if (!meta) return;
+          const pKey = meta.period_key;
+          if (!pKey) return;
+          const weight = Math.max(0, toMoney(meta.issued_amount, 0)) || 1;
+          periodWeights.set(pKey, toMoney(periodWeights.get(pKey), 0) + weight);
+          totalWeight += weight;
+        });
+        if (totalWeight <= 0) return;
+
+        const scopePeriodKeys = Array.from(periodWeights.keys()).sort((a, b) => {
+          const rowA = byPeriod.get(a);
+          const rowB = byPeriod.get(b);
+          if (!rowA || !rowB) return String(a).localeCompare(String(b));
+          const monthDiff =
+            fiscalMonthSortIndex(rowA.month, fiscalStartMonth) -
+            fiscalMonthSortIndex(rowB.month, fiscalStartMonth);
+          if (monthDiff !== 0) return monthDiff;
+          const pakkhikDiff = pakkhikSortIndex(rowA.pakkhik) - pakkhikSortIndex(rowB.pakkhik);
+          if (pakkhikDiff !== 0) return pakkhikDiff;
+          return Number(rowA.period_year || 0) - Number(rowB.period_year || 0);
+        });
+        const anchorPeriodKey = scopePeriodKeys[0] || null;
+        const scopeSize = scopePeriodKeys.length;
+        const scopeIssuedTotal = roundMoney(
+          scope.scope_note_ids.reduce((sum, noteIdVal) => {
+            const meta = noteMetaById.get(Number(noteIdVal));
+            return sum + toMoney(meta?.issued_amount, 0);
+          }, 0)
+        );
+        const scopePendingOrOver = roundMoney(scopeIssuedTotal - toMoney(scope.adjusted_amount, 0));
+
+        scopePeriodKeys.forEach((periodKey, idx) => {
+          const weight = toMoney(periodWeights.get(periodKey), 0);
+          const periodRow = byPeriod.get(periodKey);
+          if (!periodRow) return;
+          if (periodKey === anchorPeriodKey) {
+            periodRow.adjusted_scope_total = roundMoney(
+              toMoney(periodRow.adjusted_scope_total, 0) + toMoney(scope.adjusted_amount, 0)
+            );
+            periodRow.pending_scope_total = roundMoney(
+              toMoney(periodRow.pending_scope_total, 0) + toMoney(scopePendingOrOver, 0)
+            );
+            periodRow.adjusted_anchor_count = Number(periodRow.adjusted_anchor_count || 0) + 1;
+          }
+          if (scopeSize > 1) {
+            if (idx === 0) periodRow.brace_start_count = Number(periodRow.brace_start_count || 0) + 1;
+            else if (idx === scopeSize - 1) periodRow.brace_end_count = Number(periodRow.brace_end_count || 0) + 1;
+            else periodRow.brace_mid_count = Number(periodRow.brace_mid_count || 0) + 1;
+          }
+          const share = (toMoney(scope.adjusted_amount, 0) * weight) / totalWeight;
+          periodRow.adjusted_allocated = roundMoney(toMoney(periodRow.adjusted_allocated, 0) + share);
+          byPeriod.set(periodKey, periodRow);
+        });
+      });
+
+      const codeMetaFromBudget = budgetRows.find((row) => Number(row.financial_code_id || 0) === Number(codeId));
+      const codeMetaFromIssued = filteredRows[0] || null;
+
+      const data = Array.from(byPeriod.values())
+        .filter((row) => toMoney(row.issued_amount, 0) > 0)
+        .map((row) => {
+          const basePeriodLabel = `${String(row.month_name || monthName(row.month)).toUpperCase()}/${row.period_year || "-"} - ${row.pakkhik_label}`;
+          const braceRole =
+            Number(row.brace_start_count || 0) > 0
+              ? "start"
+              : Number(row.brace_mid_count || 0) > 0
+                ? "mid"
+                : Number(row.brace_end_count || 0) > 0
+                  ? "end"
+                  : "none";
+          const hasAnchorValue = Number(row.adjusted_anchor_count || 0) > 0;
+
+          return {
+            period_label: basePeriodLabel,
+            brace_role: braceRole,
+            budget_amount: budgetAmount,
+            issued_amount: roundMoney(row.issued_amount),
+            adjusted_amount: hasAnchorValue ? roundMoney(toMoney(row.adjusted_scope_total, 0)) : null,
+            pending_adjusted: hasAnchorValue ? roundMoney(toMoney(row.pending_scope_total, 0)) : null,
+            sort_month_index: fiscalMonthSortIndex(row.month, fiscalStartMonth),
+            sort_pakkhik_index: pakkhikSortIndex(row.pakkhik),
+          };
+        })
+        .sort((a, b) => {
+          if (a.sort_month_index !== b.sort_month_index) return a.sort_month_index - b.sort_month_index;
+          if (a.sort_pakkhik_index !== b.sort_pakkhik_index) return a.sort_pakkhik_index - b.sort_pakkhik_index;
+          return String(a.period_label || "").localeCompare(String(b.period_label || ""));
+        })
+        .map((row) => {
+          const { sort_month_index, sort_pakkhik_index, ...rest } = row;
+          return rest;
+        });
+
+      let cumulativeIssued = 0;
+      data.forEach((row) => {
+        cumulativeIssued = roundMoney(cumulativeIssued + toMoney(row.issued_amount, 0));
+        row.cumulative_issued = cumulativeIssued;
+      });
+
+      return res.json({
+        type: reportType,
+        filters: { base_id: baseId, fiscal_year_id: fiscalYearId, month, demand_type: demandType, pakkhik, note_id: noteId, financial_code_id: codeId },
+        meta: {
+          base_name: reportBaseMeta?.base_name || null,
+          fiscal_year_name: reportFiscalYearMeta?.name || null,
+          code: codeMetaFromBudget?.financialCode?.code || codeMetaFromIssued?.code || `CODE-${Number(codeId)}`,
+          khat_name_bn: codeMetaFromBudget?.financialCode?.khat_name_bn || codeMetaFromIssued?.khat_name_bn || null,
+          budget_amount: budgetAmount,
+        },
         data,
       });
     }

@@ -34,9 +34,11 @@
                 <option value="budget_utilization">5. Budget Utilization</option>
                 <option value="adjustment_by_base">6. Adjustment by Base</option>
                 <option value="adjustment_period_detail">7. Adjustment Period Detail</option>
+                <option value="code_wise_details">8. Code-wise Monthly Issue</option>
               </select>
             </label>
             <label class="imp-field"><span>Base</span><select id="repBase" class="imp-select"><option value="">All</option></select></label>
+            <label class="imp-field"><span>Code</span><select id="repCode" class="imp-select"><option value="">All</option></select></label>
             <label class="imp-field"><span>Fiscal Year</span><select id="repFy" class="imp-select"><option value="">All</option></select></label>
             <label class="imp-field"><span>Month</span><select id="repMonth" class="imp-select"><option value="">All</option></select></label>
             <label class="imp-field"><span>Demand Type</span>
@@ -72,7 +74,9 @@
 
         <section class="imp-card">
           <div class="imp-card-head">
-            <div>
+            <div class="imp-report-title-stack">
+              <p class="imp-report-office" id="repOfficeTitle">Office of the SFC Air</p>
+              <p class="imp-report-section" id="repSectionTitle">Imprest Section</p>
               <h3 id="repTableTitle">Report Data</h3>
               <p id="repContext" class="imp-card-sub"></p>
             </div>
