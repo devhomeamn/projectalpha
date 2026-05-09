@@ -141,6 +141,7 @@ const state = {
   view: "default",
   meta: null,
   rows: [],
+  hasLoaded: false,
 };
 
 const REPORT_OFFICE_TITLE = "Office of the SFC Air";
@@ -411,7 +412,10 @@ function renderTable() {
   const tbody = byId("repRows");
   const tfoot = byId("repFoot");
   if (!state.rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${config.columns.length + 1}" class="imp-empty">No report data found</td></tr>`;
+    const emptyMessage = state.hasLoaded
+      ? "No report data found"
+      : "Select filters and click Load to view report data";
+    tbody.innerHTML = `<tr><td colspan="${config.columns.length + 1}" class="imp-empty">${emptyMessage}</td></tr>`;
     if (tfoot) tfoot.innerHTML = "";
     return;
   }
@@ -448,6 +452,7 @@ async function loadReport() {
   state.type = filters.type;
 
   if (state.type === "code_wise_details" && (!filters.fiscal_year_id || !filters.financial_code_id)) {
+    state.hasLoaded = false;
     state.view = "default";
     state.meta = null;
     state.rows = [];
@@ -462,6 +467,7 @@ async function loadReport() {
     if (filters[key]) params.set(key, String(filters[key]));
   });
 
+  state.hasLoaded = true;
   const out = await imprestFetch(`/reports?${params.toString()}`);
   state.view = String(out.view || "default").trim().toLowerCase() || "default";
   state.meta = out.meta || null;
@@ -616,10 +622,24 @@ function bindEvents() {
     setMonthFilterOptions("");
     byId("repDemandType").value = "";
     byId("repPakkhik").value = "";
-    loadReport().catch((err) => showToast(err.message, "error"));
+    state.type = "base_yearly";
+    state.hasLoaded = false;
+    state.view = "default";
+    state.meta = null;
+    state.rows = [];
+    renderTable();
+    renderKpis();
   });
 
-  byId("repType")?.addEventListener("change", () => loadReport().catch((err) => showToast(err.message, "error")));
+  byId("repType")?.addEventListener("change", () => {
+    state.type = byId("repType")?.value || "base_yearly";
+    state.hasLoaded = false;
+    state.view = "default";
+    state.meta = null;
+    state.rows = [];
+    renderTable();
+    renderKpis();
+  });
   byId("repFy")?.addEventListener("change", () => setMonthFilterOptions());
   byId("repRows")?.addEventListener("click", (e) => {
     if (!(state.type === "adjustment_by_base" && state.view === "base_summary")) return;
@@ -636,7 +656,13 @@ function bindEvents() {
 async function init() {
   bindEvents();
   await loadMasters();
-  await loadReport();
+  state.type = byId("repType")?.value || "base_yearly";
+  state.hasLoaded = false;
+  state.view = "default";
+  state.meta = null;
+  state.rows = [];
+  renderTable();
+  renderKpis();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

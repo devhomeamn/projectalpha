@@ -341,6 +341,12 @@
   color: #991b1b;
 }
 
+.imp-btn.imp-btn-sm {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
 .imp-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(150px, 1fr));

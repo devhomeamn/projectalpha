@@ -10,12 +10,14 @@ router.post("/bases", requireRole("admin"), imprestController.createBase);
 
 router.get("/financial-codes", imprestController.listFinancialCodes);
 router.post("/financial-codes", requireRole("admin"), imprestController.createFinancialCode);
+router.put("/financial-codes/:id", requireRole("admin"), imprestController.updateFinancialCode);
 
 router.get("/fiscal-years", imprestController.listFiscalYears);
 router.post("/fiscal-years", requireRole("admin"), imprestController.createFiscalYear);
 
 router.post("/budgets", requireRole("admin", "master"), imprestController.createBudget);
 router.get("/budgets", imprestController.listBudgets);
+router.delete("/budgets/:id", requireRole("admin", "master"), imprestController.deleteBudget);
 
 router.get("/adjustments/durations", imprestController.listAdjustmentDurations);
 router.get("/adjustments/entries", imprestController.listDurationAdjustmentEntries);

@@ -45,12 +45,21 @@
             <article class="imp-card" style="margin:0; flex:1 1 360px;">
               <h4>Add Financial Code</h4>
               <div class="imp-grid" style="margin-top:8px;">
+                <label class="imp-field">
+                  <span>Edit Existing</span>
+                  <select id="fcExisting" class="imp-select">
+                    <option value="">+ Add New Code</option>
+                  </select>
+                </label>
                 <label class="imp-field"><span>Code</span><input id="fcCode" class="imp-input" /></label>
                 <label class="imp-field"><span>খাত (বাংলা)</span><input id="fcNameBn" class="imp-input" /></label>
                 <label class="imp-field"><span>Khat (English)</span><input id="fcNameEn" class="imp-input" /></label>
                 <label class="imp-field"><span>Status</span><select id="fcStatus" class="imp-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
               </div>
-              <div class="imp-actions" style="margin-top:10px;"><button id="fcSaveBtn" class="imp-btn" type="button">Save Code</button></div>
+              <div class="imp-actions" style="margin-top:10px;">
+                <button id="fcResetBtn" class="imp-btn secondary" type="button" hidden>Cancel Edit</button>
+                <button id="fcSaveBtn" class="imp-btn" type="button">Save Code</button>
+              </div>
             </article>
 
             <article class="imp-card" style="margin:0; flex:1 1 320px;">
@@ -101,6 +110,7 @@
                   <th>Financial Code</th>
                   <th>খাত</th>
                   <th class="imp-right">Budget Amount</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody id="baRows"></tbody>

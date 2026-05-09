@@ -367,7 +367,7 @@ function renderAddCodeList() {
   }
 
   const query = String(byId("impAddCodeSearch")?.value || "");
-  const rows = getAddableCodesBySearch(query).slice(0, 20);
+  const rows = getAddableCodesBySearch(query);
 
   if (!rows.length) {
     const text = String(query || "").trim()

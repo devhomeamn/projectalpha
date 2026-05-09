@@ -15,7 +15,12 @@ const state = {
   codes: [],
   budgets: [],
   budgetLookupSeq: 0,
+  editingFinancialCodeId: null,
 };
+
+function normalizeFinancialCodeInputValue(value) {
+  return String(value ?? "").replace(/[^\d\u09e6-\u09ef]/g, "");
+}
 
 function optionsHtml(rows, labelFn, selected = null, includeAll = false) {
   const opts = [];
@@ -35,6 +40,16 @@ function paintSelects() {
 
   byId("baFilterBase").innerHTML = optionsHtml(state.bases, (r) => `${r.base_name} (${r.base_code})`, null, true);
   byId("baFilterFy").innerHTML = optionsHtml(state.fiscalYears, (r) => r.name, null, true);
+
+  const fcExisting = byId("fcExisting");
+  if (fcExisting) {
+    const opts = ['<option value="">+ Add New Code</option>'];
+    state.codes.forEach((row) => {
+      opts.push(`<option value="${Number(row.id)}">${escapeHtml(`${row.code} - ${row.khat_name_bn || ""}`)}</option>`);
+    });
+    fcExisting.innerHTML = opts.join("");
+    fcExisting.value = state.editingFinancialCodeId ? String(state.editingFinancialCodeId) : "";
+  }
 }
 
 function renderBudgetRows() {
@@ -42,7 +57,7 @@ function renderBudgetRows() {
   if (!tbody) return;
 
   if (!state.budgets.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="imp-empty">No budget allocation found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="imp-empty">No budget allocation found</td></tr>';
     return;
   }
 
@@ -56,10 +71,49 @@ function renderBudgetRows() {
         <td>${escapeHtml(row.financial_code?.code || "-")}</td>
         <td>${escapeHtml(row.financial_code?.khat_name_bn || "-")}</td>
         <td class="imp-right">${formatMoney(row.budget_amount)}</td>
+        <td>
+          <button class="imp-btn danger imp-btn-sm" type="button" data-budget-delete="${Number(row.id)}">Delete</button>
+        </td>
       </tr>
     `;
     })
     .join("");
+}
+
+function resetFinancialCodeForm() {
+  state.editingFinancialCodeId = null;
+  byId("fcExisting").value = "";
+  byId("fcCode").value = "";
+  byId("fcNameBn").value = "";
+  byId("fcNameEn").value = "";
+  byId("fcStatus").value = "active";
+  byId("fcSaveBtn").textContent = "Save Code";
+  const resetBtn = byId("fcResetBtn");
+  if (resetBtn) resetBtn.hidden = true;
+}
+
+function startFinancialCodeEdit(selectedId) {
+  const codeId = toPositiveInt(selectedId);
+  if (!codeId) {
+    resetFinancialCodeForm();
+    return;
+  }
+
+  const target = state.codes.find((row) => Number(row.id) === Number(codeId));
+  if (!target) {
+    resetFinancialCodeForm();
+    return;
+  }
+
+  state.editingFinancialCodeId = Number(target.id);
+  byId("fcExisting").value = String(target.id);
+  byId("fcCode").value = String(target.code || "");
+  byId("fcNameBn").value = String(target.khat_name_bn || "");
+  byId("fcNameEn").value = String(target.khat_name_en || "");
+  byId("fcStatus").value = String(target.status || "active");
+  byId("fcSaveBtn").textContent = "Update Code";
+  const resetBtn = byId("fcResetBtn");
+  if (resetBtn) resetBtn.hidden = false;
 }
 
 async function loadMasters() {
@@ -73,6 +127,15 @@ async function loadMasters() {
   state.codes = ensureArray(codesOut.data);
   state.fiscalYears = ensureArray(fyOut.data);
   paintSelects();
+
+  if (state.editingFinancialCodeId) {
+    const stillExists = state.codes.some((row) => Number(row.id) === Number(state.editingFinancialCodeId));
+    if (stillExists) {
+      startFinancialCodeEdit(state.editingFinancialCodeId);
+    } else {
+      resetFinancialCodeForm();
+    }
+  }
 }
 
 async function loadBudgets() {
@@ -164,25 +227,36 @@ async function saveBase() {
 }
 
 async function saveFinancialCode() {
+  const codeInput = byId("fcCode");
+  const code = normalizeFinancialCodeInputValue(codeInput?.value || "");
+  if (codeInput) codeInput.value = code;
+
+  if (!code) {
+    showToast("Code must be numeric only", "error");
+    return;
+  }
+
   const payload = {
-    code: String(byId("fcCode")?.value || "").trim(),
+    code,
     khat_name_bn: String(byId("fcNameBn")?.value || "").trim(),
     khat_name_en: String(byId("fcNameEn")?.value || "").trim() || null,
     status: String(byId("fcStatus")?.value || "active"),
   };
 
+  const editingId = toPositiveInt(state.editingFinancialCodeId);
+  const path = editingId ? `/financial-codes/${editingId}` : "/financial-codes";
+  const method = editingId ? "PUT" : "POST";
+
   const button = byId("fcSaveBtn");
   const release = setButtonBusy(button, true, "Saving...");
   try {
-    await imprestFetch("/financial-codes", {
-      method: "POST",
+    await imprestFetch(path, {
+      method,
       body: JSON.stringify(payload),
     });
 
-    byId("fcCode").value = "";
-    byId("fcNameBn").value = "";
-    byId("fcNameEn").value = "";
-    showToast("Financial code saved", "success");
+    resetFinancialCodeForm();
+    showToast(editingId ? "Financial code updated" : "Financial code saved", "success");
     await loadMasters();
     await loadBudgets();
   } catch (err) {
@@ -247,9 +321,35 @@ async function saveBudgetAllocation() {
   }
 }
 
+async function deleteBudgetAllocation(idValue) {
+  const budgetId = toPositiveInt(idValue);
+  if (!budgetId) return;
+
+  const ok = window.confirm("Delete this budget allocation? It will fail if already used in note/adjustment.");
+  if (!ok) return;
+
+  try {
+    await imprestFetch(`/budgets/${budgetId}`, { method: "DELETE" });
+    showToast("Budget allocation deleted", "success");
+    await loadBudgets();
+    await syncBudgetAmountFromSelection();
+  } catch (err) {
+    showToast(err.message || "Failed to delete budget allocation", "error");
+  }
+}
+
 function bindEvents() {
   byId("baseSaveBtn")?.addEventListener("click", saveBase);
   byId("fcSaveBtn")?.addEventListener("click", saveFinancialCode);
+  byId("fcResetBtn")?.addEventListener("click", resetFinancialCodeForm);
+  byId("fcExisting")?.addEventListener("change", (e) => {
+    startFinancialCodeEdit(e.target?.value);
+  });
+  byId("fcCode")?.addEventListener("input", (e) => {
+    const normalized = normalizeFinancialCodeInputValue(e.target?.value || "");
+    if (normalized !== e.target.value) e.target.value = normalized;
+  });
+
   byId("fySaveBtn")?.addEventListener("click", saveFiscalYear);
   byId("baSaveBtn")?.addEventListener("click", saveBudgetAllocation);
   byId("baBase")?.addEventListener("change", () => {
@@ -273,6 +373,12 @@ function bindEvents() {
     byId("baFilterBase").value = "";
     byId("baFilterFy").value = "";
     loadBudgets().catch((err) => showToast(err.message, "error"));
+  });
+
+  byId("baRows")?.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.("[data-budget-delete]");
+    if (!btn) return;
+    deleteBudgetAllocation(btn.getAttribute("data-budget-delete"));
   });
 }
 

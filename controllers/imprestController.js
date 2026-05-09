@@ -348,6 +348,14 @@ function cleanText(value, maxLength = 2000) {
   return text.slice(0, maxLength);
 }
 
+function parseFinancialCodeText(value) {
+  const normalized = String(value ?? "").replace(/\s+/g, "").trim();
+  const code = cleanText(normalized, 60);
+  if (!code) return null;
+  if (!/^[0-9\u09e6-\u09ef]+$/.test(code)) return null;
+  return code;
+}
+
 function toDateOnly(value) {
   if (!value) return null;
   const text = String(value).trim();
@@ -1669,13 +1677,13 @@ exports.listFinancialCodes = async (req, res) => {
 
 exports.createFinancialCode = async (req, res) => {
   try {
-    const code = cleanText(req.body?.code, 60);
+    const code = parseFinancialCodeText(req.body?.code);
     const khatNameBn = cleanText(req.body?.khat_name_bn, 255);
     const khatNameEn = cleanText(req.body?.khat_name_en, 255);
     const statusRaw = String(req.body?.status || "active").trim().toLowerCase();
     const status = statusRaw === "inactive" ? "inactive" : "active";
 
-    if (!code) return res.status(400).json({ message: "code is required" });
+    if (!code) return res.status(400).json({ message: "code must contain digits only" });
     if (!khatNameBn) return res.status(400).json({ message: "khat_name_bn is required" });
 
     const existing = await ImprestFinancialCode.findOne({ where: { code } });
@@ -1694,6 +1702,46 @@ exports.createFinancialCode = async (req, res) => {
   } catch (err) {
     console.error("imprest.createFinancialCode error:", err);
     return res.status(500).json({ message: "Failed to create financial code" });
+  }
+};
+
+exports.updateFinancialCode = async (req, res) => {
+  try {
+    const codeId = toPositiveInt(req.params.id);
+    if (!codeId) return res.status(400).json({ message: "Invalid code id" });
+
+    const code = parseFinancialCodeText(req.body?.code);
+    const khatNameBn = cleanText(req.body?.khat_name_bn, 255);
+    const khatNameEn = cleanText(req.body?.khat_name_en, 255);
+    const statusRaw = String(req.body?.status || "active").trim().toLowerCase();
+    const status = statusRaw === "inactive" ? "inactive" : "active";
+
+    if (!code) return res.status(400).json({ message: "code must contain digits only" });
+    if (!khatNameBn) return res.status(400).json({ message: "khat_name_bn is required" });
+
+    const row = await ImprestFinancialCode.findByPk(codeId);
+    if (!row) return res.status(404).json({ message: "Financial code not found" });
+
+    const existing = await ImprestFinancialCode.findOne({
+      where: {
+        code,
+        id: { [Op.ne]: codeId },
+      },
+    });
+    if (existing) {
+      return res.status(400).json({ message: "Financial code already exists" });
+    }
+
+    row.code = code;
+    row.khat_name_bn = khatNameBn;
+    row.khat_name_en = khatNameEn;
+    row.status = status;
+    await row.save();
+
+    return res.json({ message: "Financial code updated", data: serializeFinancialCode(row) });
+  } catch (err) {
+    console.error("imprest.updateFinancialCode error:", err);
+    return res.status(500).json({ message: "Failed to update financial code" });
   }
 };
 
@@ -1887,6 +1935,81 @@ exports.listBudgets = async (req, res) => {
   } catch (err) {
     console.error("imprest.listBudgets error:", err);
     return res.status(500).json({ message: "Failed to load budgets" });
+  }
+};
+
+exports.deleteBudget = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    ensureAssociations();
+
+    const budgetId = toPositiveInt(req.params.id);
+    if (!budgetId) {
+      await t.rollback();
+      return res.status(400).json({ message: "Invalid budget id" });
+    }
+
+    const budgetRow = await ImprestBudgetAllocation.findByPk(budgetId, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+    if (!budgetRow) {
+      await t.rollback();
+      return res.status(404).json({ message: "Budget allocation not found" });
+    }
+
+    const baseId = Number(budgetRow.base_id || 0);
+    const fiscalYearId = Number(budgetRow.fiscal_year_id || 0);
+    const financialCodeId = Number(budgetRow.financial_code_id || 0);
+
+    const scopeWhere = {
+      base_id: baseId,
+      fiscal_year_id: fiscalYearId,
+    };
+
+    const [noteUsageCount, adjustmentUsageCount] = await Promise.all([
+      ImprestNoteItem.count({
+        where: { financial_code_id: financialCodeId },
+        include: [
+          {
+            model: ImprestNote,
+            as: "note",
+            required: true,
+            attributes: [],
+            where: scopeWhere,
+          },
+        ],
+        transaction: t,
+      }),
+      ImprestAdjustment.count({
+        where: { financial_code_id: financialCodeId },
+        include: [
+          {
+            model: ImprestNote,
+            as: "note",
+            required: true,
+            attributes: [],
+            where: scopeWhere,
+          },
+        ],
+        transaction: t,
+      }),
+    ]);
+
+    if (noteUsageCount > 0 || adjustmentUsageCount > 0) {
+      await t.rollback();
+      return res.status(400).json({
+        message: "This budget allocation is already used in note/adjustment and cannot be deleted",
+      });
+    }
+
+    await budgetRow.destroy({ transaction: t });
+    await t.commit();
+    return res.json({ message: "Budget allocation deleted" });
+  } catch (err) {
+    await t.rollback();
+    console.error("imprest.deleteBudget error:", err);
+    return res.status(500).json({ message: "Failed to delete budget allocation" });
   }
 };
 exports.generateNote = async (req, res) => {
